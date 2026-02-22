@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Растения против Зомби - Онлайн</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: white; overflow-x: hidden; }
+        
+        /* Анимированный фон */
+        .bg-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+        .particle { position: absolute; font-size: 1.5rem; opacity: 0.3; animation: float 15s infinite ease-in-out; }
+        @keyframes float { 0%,100% { transform: translateY(100vh) rotate(0deg); opacity: 0; } 10% { opacity: 0.3; } 90% { opacity: 0.3; } 100% { transform: translateY(-100px) rotate(360deg); opacity: 0; } }
+        
+        #mainMenu, #authScreen, #profileScreen, #leaderboardScreen, #shopScreen, #adminScreen, #waitingScreen, #gameScreen, #gameEndScreen, #matchHistoryScreen, #profileViewScreen { display: none; }
+        #mainMenu { display: flex; }
+        
+        .screen { display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; position: relative; z-index: 1; }
+        
+        /* Анимация появления экрана */
+        .screen.animate-in { animation: screenIn 0.5s ease-out; }
+        @keyframes screenIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .game-title { font-size: 3.5rem; font-weight: bold; margin-bottom: 10px; background: linear-gradient(90deg, #4ade80, #22c55e, #16a34a); background-size: 200% 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 3s ease infinite; }
+        @keyframes gradientShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .game-subtitle { font-size: 1.2rem; color: #94a3b8; margin-bottom: 30px; }
+        
+        .btn { padding: 12px 30px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
+        .btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s; }
+        .btn:hover::before { left: 100%; }
+        .btn-primary { background: linear-gradient(90deg, #4ade80, #22c55e); color: #1a1a2e; }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(74, 222, 128, 0.4); }
+        .btn-secondary { background: linear-gradient(90deg, #6366f1, #8b5cf6); color: white; }
+        .btn-secondary:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4); }
+        .btn-danger { background: linear-gradient(90deg, #ef4444, #dc2626); color: white; }
+        .btn-danger:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4); }
+        .btn-warning { background: linear-gradient(90deg, #f59e0b, #d97706); color: white; }
+        .btn-warning:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4); }
+        
+        .btn:active { transform: translateY(0); }
+        
+        .menu-buttons { display: flex; flex-direction: column; gap: 12px; min-width: 250px; }
+        
+        .auth-box { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; min-width: 300px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); animation: boxFloat 3s ease-in-out infinite; }
+        @keyframes boxFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .auth-tabs { display: flex; margin-bottom: 20px; }
+        .auth-tab { flex: 1; padding: 10px; background: rgba(255,255,255,0.1); border: none; color: white; cursor: pointer; transition: all 0.3s; }
+        .auth-tab:first-child { border-radius: 8px 0 0 8px; }
+        .auth-tab:last-child { border-radius: 0 8px 8px 0; }
+        .auth-tab.active { background: linear-gradient(90deg, #4ade80, #22c55e); color: #1a1a2e; }
+        .auth-tab:hover:not(.active) { background: rgba(255,255,255,0.2); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #94a3b8; }
+        .form-group input { width: 100%; padding: 12px; border: 2px solid rgba(255,255,255,0.2); border-radius: 6px; background: rgba(255,255,255,0.1); color: white; transition: all 0.3s; }
+        .form-group input:focus { outline: none; border-color: #4ade80; box-shadow: 0 0 15px rgba(74, 222, 128, 0.3); }
+        .auth-message { padding: 10px; border-radius: 6px; margin-bottom: 15px; text-align: center; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .auth-message.error { background: rgba(239,68,68,0.3); border: 1px solid #ef4444; }
+        .auth-message.success { background: rgba(74,222,128,0.3); border: 1px solid #4ade80; }
+        
+        .profile-header { width: 100%; max-width: 700px; display: flex; justify-content: space-between; align-items: center; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #1a1a2e; animation: avatarPulse 2s ease-in-out infinite; }
+        @keyframes avatarPulse { 0%,100% { box-shadow: 0 0 20px rgba(74, 222, 128, 0.5); } 50% { box-shadow: 0 0 40px rgba(74, 222, 128, 0.8); } }
+        .level-badge { background: linear-gradient(90deg, #f59e0b, #d97706); padding: 3px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; animation: badgeGlow 2s ease-in-out infinite; }
+        @keyframes badgeGlow { 0%,100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); } 50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.8); } }
+        .user-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat { text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: #4ade80; animation: statCount 0.5s ease-out; }
+        @keyframes statCount { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .stat-label { font-size: 0.8rem; color: #94a3b8; }
+        .profile-menu { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 700px; }
+        .profile-btn { padding: 15px 25px; min-width: 150px; }
+        
+        .leaderboard-container { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; max-width: 500px; width: 100%; backdrop-filter: blur(10px); }
+        .leaderboard-title { font-size: 1.8rem; text-align: center; margin-bottom: 20px; color: #fbbf24; animation: titlePulse 2s ease-in-out infinite; }
+        @keyframes titlePulse { 0%,100% { text-shadow: 0 0 20px rgba(251, 191, 36, 0.5); } 50% { text-shadow: 0 0 40px rgba(251, 191, 36, 0.8); } }
+        .leaderboard-row { display: flex; justify-content: space-between; padding: 12px; border-radius: 8px; margin-bottom: 8px; background: rgba(255,255,255,0.05); transition: all 0.3s; animation: rowSlide 0.5s ease-out backwards; }
+        .leaderboard-row:nth-child(2) { animation-delay: 0.1s; }
+        .leaderboard-row:nth-child(3) { animation-delay: 0.2s; }
+        .leaderboard-row:nth-child(4) { animation-delay: 0.3s; }
+        .leaderboard-row:nth-child(5) { animation-delay: 0.4s; }
+        @keyframes rowSlide { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+        .leaderboard-row:hover { background: rgba(255,255,255,0.15); transform: translateX(10px); }
+        .leaderboard-row.header { background: rgba(251,191,36,0.2); font-weight: bold; }
+        .leaderboard-row.top-3 { background: rgba(251,191,36,0.1); }
+        .rank { width: 40px; text-align: center; font-weight: bold; }
+        .rank.gold { color: #fbbf24; animation: goldShine 1.5s ease-in-out infinite; }
+        @keyframes goldShine { 0%,100% { text-shadow: 0 0 10px #fbbf24; } 50% { text-shadow: 0 0 25px #fbbf24, 0 0 50px #fbbf24; } }
+        .rank.silver { color: #94a3b8; }
+        .rank.bronze { color: #cd7f32; }
+        .username { flex: 1; padding: 0 10px; }
+        
+        .shop-container { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; max-width: 600px; width: 100%; backdrop-filter: blur(10px); }
+        .promo-section { margin-bottom: 25px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; animation: promoPulse 2s ease-in-out infinite; }
+        @keyframes promoPulse { 0%,100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); } 50% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.4); } }
+        .promo-input-group { display: flex; gap: 10px; }
+        .promo-input-group input { flex: 1; padding: 10px; border-radius: 6px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); color: white; transition: all 0.3s; }
+        .promo-input-group input:focus { border-color: #f59e0b; outline: none; }
+        .shop-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+        .shop-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); animation: itemFloat 3s ease-in-out infinite; }
+        .shop-item:nth-child(1) { animation-delay: 0s; }
+        .shop-item:nth-child(2) { animation-delay: 0.2s; }
+        .shop-item:nth-child(3) { animation-delay: 0.4s; }
+        .shop-item:nth-child(4) { animation-delay: 0.6s; }
+        @keyframes itemFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .shop-item:hover { transform: scale(1.05) translateY(-5px); background: rgba(255,255,255,0.15); box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
+        .shop-item-icon { font-size: 2.5rem; margin-bottom: 10px; animation: iconBounce 2s ease-in-out infinite; }
+        @keyframes iconBounce { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        
+        .admin-container { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; max-width: 800px; width: 100%; backdrop-filter: blur(10px); }
+        .admin-title { font-size: 1.8rem; text-align: center; margin-bottom: 20px; color: #ef4444; animation: adminPulse 2s ease-in-out infinite; }
+        @keyframes adminPulse { 0%,100% { text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); } 50% { text-shadow: 0 0 40px rgba(239, 68, 68, 0.8); } }
+        .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .admin-stat { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; text-align: center; transition: all 0.3s; animation: statAppear 0.5s ease-out backwards; }
+        .admin-stat:nth-child(1) { animation-delay: 0.1s; }
+        .admin-stat:nth-child(2) { animation-delay: 0.2s; }
+        .admin-stat:nth-child(3) { animation-delay: 0.3s; }
+        .admin-stat:nth-child(4) { animation-delay: 0.4s; }
+        @keyframes statAppear { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        .admin-stat:hover { background: rgba(255,255,255,0.15); transform: translateY(-5px); }
+        .admin-stat-value { font-size: 1.5rem; font-weight: bold; color: #4ade80; }
+        .admin-section { margin-bottom: 20px; }
+        .admin-section h3 { margin-bottom: 10px; color: #6366f1; }
+        .admin-form { display: flex; flex-direction: column; gap: 10px; max-width: 300px; }
+        .admin-users-list { max-height: 200px; overflow-y: auto; }
+        .admin-user-row { display: flex; justify-content: space-between; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 5px; font-size: 0.9rem; transition: all 0.3s; }
+        .admin-user-row:hover { background: rgba(255,255,255,0.1); }
+        
+        .match-history-container { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; max-width: 600px; width: 100%; backdrop-filter: blur(10px); }
+        .match-row { display: flex; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; transition: all 0.3s; animation: matchSlide 0.5s ease-out backwards; }
+        .match-row:nth-child(odd) { animation-delay: 0.1s; }
+        .match-row:nth-child(even) { animation-delay: 0.2s; }
+        @keyframes matchSlide { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .match-row:hover { background: rgba(255,255,255,0.1); }
+        .match-winner { color: #4ade80; font-weight: bold; }
+        .match-loser { color: #ef4444; }
+        
+        .game-header { width: 100%; max-width: 800px; display: flex; justify-content: space-between; padding: 10px 20px; background: rgba(0,0,0,0.5); border-radius: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        .game-timer { font-size: 1.3rem; color: #fbbf24; animation: timerBlink 1s ease-in-out infinite; }
+        @keyframes timerBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .game-arena { width: 100%; max-width: 800px; aspect-ratio: 16/9; background: linear-gradient(180deg, #1e3a5f, #0f172a); border-radius: 12px; border: 3px solid rgba(255,255,255,0.2); position: relative; overflow: hidden; }
+        .game-arena::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.05), transparent); animation: arenaWave 3s ease-in-out infinite; }
+        @keyframes arenaWave { 0%,100% { transform: translateX(-100%); } 50% { transform: translateX(100%); } }
+        .game-lanes { display: flex; height: 100%; position: relative; z-index: 1; }
+        .game-lane { flex: 1; border-right: 1px solid rgba(255,255,255,0.1); position: relative; transition: background 0.3s; }
+        .game-lane:hover { background: rgba(255,255,255,0.05); }
+        .game-lane:last-child { border: none; }
+        .game-unit { position: absolute; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; top: 50%; transform: translateY(-50%); transition: all 0.3s; animation: unitSpawn 0.5s ease-out; }
+        @keyframes unitSpawn { from { transform: translateY(-50%) scale(0); opacity: 0; } to { transform: translateY(-50%) scale(1); opacity: 1; } }
+        .game-unit.plant { background: linear-gradient(135deg, #4ade80, #22c55e); box-shadow: 0 0 15px #4ade80; }
+        .game-unit.zombie { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 0 15px #ef4444; }
+        .game-unit.attack { animation: attack 0.3s ease-in-out; }
+        @keyframes attack { 0%,100% { transform: translateY(-50%) scale(1); } 50% { transform: translateY(-50%) scale(1.2); } }
+        .game-unit.damage { animation: damage 0.3s ease-in-out; }
+        @keyframes damage { 0%,100% { filter: brightness(1); } 50% { filter: brightness(2); } }
+        
+        .game-controls { width: 100%; max-width: 800px; margin-top: 15px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+        .unit-btn { width: 60px; height: 60px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 1.5rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); animation: btnAppear 0.5s ease-out backwards; }
+        .unit-btn:nth-child(1) { animation-delay: 0.1s; }
+        .unit-btn:nth-child(2) { animation-delay: 0.2s; }
+        .unit-btn:nth-child(3) { animation-delay: 0.3s; }
+        .unit-btn:nth-child(4) { animation-delay: 0.4s; }
+        .unit-btn:nth-child(5) { animation-delay: 0.5s; }
+        @keyframes btnAppear { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .unit-btn:hover { transform: scale(1.1) translateY(-5px); border-color: #4ade80; box-shadow: 0 10px 20px rgba(74, 222, 128, 0.3); }
+        .unit-btn.selected { border-color: #4ade80; background: rgba(74,222,128,0.3); animation: selectedPulse 1s ease-in-out infinite; }
+        @keyframes selectedPulse { 0%,100% { box-shadow: 0 0 15px rgba(74, 222, 128, 0.5); } 50% { box-shadow: 0 0 25px rgba(74, 222, 128, 0.8); } }
+        .unit-btn .cost { font-size: 0.6rem; color: #fbbf24; }
+        
+        .game-chat { position: absolute; right: 10px; top: 10px; width: 180px; height: 150px; background: rgba(0,0,0,0.5); border-radius: 8px; padding: 8px; overflow-y: auto; font-size: 0.75rem; }
+        .chat-message { margin-bottom: 5px; animation: chatSlide 0.3s ease-out; }
+        @keyframes chatSlide { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        .chat-username { color: #4ade80; font-weight: bold; }
+        .chat-input-group { display: flex; gap: 5px; margin-top: 5px; }
+        .chat-input { flex: 1; padding: 5px; border-radius: 4px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 0.8rem; transition: all 0.3s; }
+        .chat-input:focus { border-color: #4ade80; outline: none; }
+        
+        .waiting-animation { font-size: 5rem; animation: waitPulse 1.5s ease-in-out infinite; }
+        @keyframes waitPulse { 0%,100% { transform: scale(1) rotate(0deg); } 25% { transform: scale(1.1) rotate(5deg); } 75% { transform: scale(1.1) rotate(-5deg); } }
+        
+        .game-result { font-size: 3rem; margin-bottom: 15px; animation: resultAppear 0.8s ease-out; }
+        @keyframes resultAppear { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+        .game-result.win { color: #4ade80; animation: winCelebrate 1s ease-in-out infinite; }
+        @keyframes winCelebrate { 0%,100% { text-shadow: 0 0 30px rgba(74, 222, 128, 0.8); } 50% { text-shadow: 0 0 60px rgba(74, 222, 128, 1), 0 0 100px rgba(74, 222, 128, 0.5); } }
+        .game-result.lose { color: #ef4444; }
+        .game-result.draw { color: #fbbf24; animation: drawPulse 2s ease-in-out infinite; }
+        @keyframes drawPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .rewards { font-size: 1.5rem; color: #fbbf24; margin-bottom: 25px; animation: rewardBounce 1s ease-out; }
+        @keyframes rewardBounce { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        
+        .profile-view { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; text-align: center; }
+        .profile-avatar { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(90deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 20px; }
+        
+        @media (max-width: 600px) {
+            .game-title { font-size: 2rem; }
+            .profile-header { flex-direction: column; text-align: center; }
+            .user-stats { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-particles" id="bgParticles"></div>
+    
+    <div id="mainMenu" class="screen animate-in">
+        <h1 class="game-title">🌻 PvZ Онлайн 🧟</h1>
+        <p class="game-subtitle">Мультиплеер с друзьями</p>
+        <div class="menu-buttons">
+            <button class="btn btn-primary" onclick="showAuth('login')">Вход</button>
+            <button class="btn btn-secondary" onclick="showAuth('register')">Регистрация</button>
+            <button class="btn btn-warning" onclick="showLeaderboard()">Лидерборд</button>
+        </div>
+    </div>
+    
+    <div id="authScreen" class="screen">
+        <div class="auth-box">
+            <h2 id="authTitle">Вход</h2>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showAuthTab('login')">Вход</button>
+                <button class="auth-tab" onclick="showAuthTab('register')">Регистрация</button>
+            </div>
+            <div id="authMessage"></div>
+            <form onsubmit="handleAuth(event)">
+                <div class="form-group"><label>Имя</label><input type="text" id="username" required minlength="3" maxlength="20"></div>
+                <div class="form-group"><label>Пароль</label><input type="password" id="password" required minlength="4"></div>
+                <button type="submit" class="btn btn-primary" style="width:100%" id="authSubmitBtn">Войти</button>
+            </form>
+            <button class="btn btn-secondary" style="width:100%;margin-top:10px" onclick="showMainMenu()">Назад</button>
+        </div>
+    </div>
+    
+    <div id="profileScreen" class="screen">
+        <div class="profile-header">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div>
+                    <h2 id="profileUsername">Игрок</h2>
+                    <span class="level-badge" id="profileLevel">Уровень 1</span>
+                    <span id="profileRole" style="color:#6366f1;margin-left:10px">Игрок</span>
+                </div>
+            </div>
+            <div class="user-stats">
+                <div class="stat"><div class="stat-value" id="statCoins">0</div><div class="stat-label">Монет</div></div>
+                <div class="stat"><div class="stat-value" id="statWins">0</div><div class="stat-label">Побед</div></div>
+                <div class="stat"><div class="stat-value" id="statXP">0</div><div class="stat-label">Опыта</div></div>
+            </div>
+        </div>
+        <div class="profile-menu">
+            <button class="btn btn-primary profile-btn" onclick="findGame()">Играть</button>
+            <button class="btn btn-secondary profile-btn" onclick="showShop()">Магазин</button>
+            <button class="btn btn-warning profile-btn" onclick="showLeaderboard()">Лидерборд</button>
+            <button class="btn btn-secondary profile-btn" onclick="showMatchHistory()">История игр</button>
+            <button class="btn btn-secondary profile-btn" id="adminBtn" style="display:none" onclick="showAdmin()">Админ</button>
+            <button class="btn btn-danger profile-btn" onclick="logout()">Выход</button>
+        </div>
+    </div>
+    
+    <div id="leaderboardScreen" class="screen">
+        <h2 class="leaderboard-title">🏆 Топ игроки</h2>
+        <div class="leaderboard-container">
+            <div class="leaderboard-row header">
+                <span class="rank">#</span><span class="username">Игрок</span><span>Ур.</span><span>Победы</span>
+            </div>
+            <div id="leaderboardList"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="shopScreen" class="screen">
+        <h2 style="font-size:1.8rem;margin-bottom:20px">🏪 Магазин</h2>
+        <div class="shop-container">
+            <div class="promo-section">
+                <h3>🎁 Промокод</h3>
+                <div class="promo-input-group">
+                    <input type="text" id="promoCode" placeholder="Код">
+                    <button class="btn btn-warning" onclick="activatePromo()">Активировать</button>
+                </div>
+                <p id="promoMessage" style="margin-top:10px;color:#94a3b8"></p>
+            </div>
+            <div style="margin-bottom:15px"><button class="btn btn-warning" onclick="getDailyReward()" style="width:100%">🎁 Ежедневная награда</button></div>
+            <h3 style="margin-bottom:15px">Растения</h3>
+            <div class="shop-items">
+                <div class="shop-item"><div class="shop-item-icon">🌻</div><div>Подсолнух</div><div style="color:#fbbf24">50💰</div></div>
+                <div class="shop-item"><div class="shop-item-icon">🟢</div><div>Горохострел</div><div style="color:#fbbf24">50💰</div></div>
+                <div class="shop-item"><div class="shop-item-icon">🥜</div><div>Стеноорех</div><div style="color:#fbbf24">75💰</div></div>
+                <div class="shop-item"><div class="shop-item-icon">🍒</div><div>Вишня</div><div style="color:#fbbf24">150💰</div></div>
+            </div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="matchHistoryScreen" class="screen">
+        <h2 class="leaderboard-title">📜 История матчей</h2>
+        <div class="match-history-container">
+            <div id="matchList"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="adminScreen" class="screen">
+        <h2 class="admin-title">⚙️ Админ-панель</h2>
+        <div class="admin-container">
+            <div class="admin-stats">
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalUsers">0</div><div>Игроков</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalWins">0</div><div>Побед</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalGames">0</div><div>Игр</div></div>
+                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalCoins">0</div><div>Монет</div></div>
+            </div>
+            <div class="admin-section">
+                <h3>🎁 Новый промокод</h3>
+                <form class="admin-form" onsubmit="createPromo(event)">
+                    <input type="text" id="newPromoCode" placeholder="Код" required style="padding:8px;border-radius:6px;">
+                    <input type="number" id="newPromoReward" placeholder="Награда" required style="padding:8px;border-radius:6px;">
+                    <input type="number" id="newPromoMaxUses" placeholder="Лимит" value="100" required style="padding:8px;border-radius:6px;">
+                    <button type="submit" class="btn btn-warning">Создать</button>
+                </form>
+            </div>
+            <div class="admin-section">
+                <h3>👥 Игроки</h3>
+                <div class="admin-users-list" id="adminUsersList" style="font-size:0.8rem"></div>
+            </div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="waitingScreen" class="screen">
+        <div class="waiting-animation">🌱</div>
+        <p style="font-size:1.5rem;margin-top:20px">Поиск противника...</p>
+        <button class="btn btn-danger" style="margin-top:30px" onclick="cancelQueue()">Отмена</button>
+    </div>
+    
+    <div id="gameScreen" class="screen" style="padding:10px">
+        <div class="game-header">
+            <div><span>Вы: </span><span id="mySide">-</span></div>
+            <div><span>Противник: </span><span id="opponentName">-</span></div>
+            <div class="game-timer" id="gameTimer">3:00</div>
+        </div>
+        <div class="game-arena" id="gameArena">
+            <div class="game-lanes" id="gameLanes"></div>
+            <div class="game-chat" id="gameChat">
+                <div id="chatMessages"></div>
+                <div class="chat-input-group">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Сообщение" onkeypress="if(event.key==='Enter')sendChat()">
+                    <button class="btn btn-primary" style="padding:5px 10px;font-size:0.7rem" onclick="sendChat()">→</button>
+                </div>
+            </div>
+        </div>
+        <div class="game-controls" id="gameControls"></div>
+        <button class="btn btn-danger" style="margin-top:15px" onclick="leaveGame()">Выход</button>
+    </div>
+    
+    <div id="gameEndScreen" class="screen">
+        <h2 class="game-result" id="gameResultTitle">Победа!</h2>
+        <p class="rewards" id="gameRewards">+50 монет</p>
+        <button class="btn btn-primary" onclick="backToProfile()">В меню</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Создание фоновых частиц
+        function createParticles() {
+            const container = document.getElementById('bgParticles');
+            const emojis = ['🌻', '🧟', '🌱', '🍄', '💀', '🌿', '🥜', '🟢'];
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+        createParticles();
+        
+        let currentUser = null, sessionId = localStorage.getItem('sessionId'), socket = null, gameState = null, selectedUnit = null;
+        
+        const units = {
+            plant: [
+                {id:'peashooter',icon:'🟢',name:'Горох',health:100,damage:20,cost:50},
+                {id:'sunflower',icon:'🌻',name:'Солнце',health:80,cost:50},
+                {id:'wallnut',icon:'🥜',name:'Стена',health:200,cost:50},
+                {id:'cherrybomb',icon:'🍒',name:'Вишня',health:100,damage:1800,cost:150},
+                {id:'iceshroom',icon:'🧊',name:'Лед',health:80,cost:75}
+            ],
+            zombie: [
+                {id:'zombie',icon:'🧟',name:'Зомби',health:100,damage:20,cost:50},
+                {id:'conehead',icon:'🧢',name:'Конус',health:150,damage:20,cost:75},
+                {id:'buckethead',icon:'🪣',name:'Ведро',health:200,damage:20,cost:100}
+            ]
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => { checkSession(); initGameLanes(); });
+        
+        async function checkSession() {
+            if (!sessionId) return;
+            try {
+                const res = await fetch('/api/check-session', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) { currentUser = data.user; showProfile(); }
+            } catch(e) {}
+        }
+        
+        function hideAllScreens() {
+            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+        }
+        
+        function showScreen(id) {
+            hideAllScreens();
+            const screen = document.getElementById(id);
+            screen.style.display = 'flex';
+            screen.classList.remove('animate-in');
+            void screen.offsetWidth; // Trigger reflow
+            screen.classList.add('animate-in');
+        }
+        
+        function showMainMenu() { showScreen('mainMenu'); }
+        
+        function showAuth(tab) { showScreen('authScreen'); showAuthTab(tab); }
+        
+        function showAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-tab')[tab==='login'?0:1].classList.add('active');
+            document.getElementById('authTitle').textContent = tab==='login'?'Вход':'Регистрация';
+            document.getElementById('authForm')?.setAttribute('data-type', tab);
+            document.getElementById('authSubmitBtn').textContent = tab==='login'?'Войти':'Регистрация';
+        }
+        
+        function showProfile() {
+            showScreen('profileScreen');
+            document.getElementById('userAvatar').textContent = currentUser.username[0].toUpperCase();
+            document.getElementById('profileUsername').textContent = currentUser.username;
+            document.getElementById('profileLevel').textContent = 'Уровень ' + currentUser.level;
+            document.getElementById('profileRole').textContent = currentUser.role==='admin'?'Админ':'Игрок';
+            document.getElementById('statCoins').textContent = currentUser.coins;
+            document.getElementById('statWins').textContent = currentUser.wins;
+            document.getElementById('statXP').textContent = currentUser.xp;
+            document.getElementById('adminBtn').style.display = currentUser.role==='admin'?'block':'none';
+        }
+        
+        async function handleAuth(e) {
+            e.preventDefault();
+            const type = document.querySelector('form').getAttribute('data-type') || 'login';
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            try {
+                const res = await fetch(type==='login'?'/api/login':'/api/register', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+                const data = await res.json();
+                const msg = document.getElementById('authMessage');
+                msg.textContent = data.message;
+                msg.className = 'auth-message ' + (data.success?'success':'error');
+                msg.style.display = 'block';
+                if (data.success) {
+                    sessionId = data.sessionId; localStorage.setItem('sessionId', sessionId);
+                    currentUser = data.user;
+                    setTimeout(() => showProfile(), 1000);
+                }
+            } catch(e) { document.getElementById('authMessage').textContent = 'Ошибка'; document.getElementById('authMessage').style.display = 'block'; }
+        }
+        
+        async function logout() {
+            try { await fetch('/api/logout', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})}); } catch(e) {}
+            sessionId = null; localStorage.removeItem('sessionId'); currentUser = null; showMainMenu();
+        }
+        
+        async function showLeaderboard() {
+            showScreen('leaderboardScreen');
+            try {
+                const res = await fetch('/api/leaderboard');
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('leaderboardList').innerHTML = data.leaders.map((p,i) =>
+                        `<div class="leaderboard-row ${i<3?'top-3':''}">
+                            <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
+                            <span class="username">${p.username}</span>
+                            <span>${p.level}</span>
+                            <span>${p.wins}</span>
+                        </div>`
+                    ).join('');
+                }
+            } catch(e) {}
+        }
+        
+        async function showMatchHistory() {
+            showScreen('matchHistoryScreen');
+            try {
+                const res = await fetch('/api/match-history');
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('matchList').innerHTML = data.matches.length ? data.matches.map(m =>
+                        `<div class="match-row">
+                            <span class="match-winner">${m.winner}</span>
+                            <span>vs</span>
+                            <span class="match-loser">${m.loser}</span>
+                        </div>`
+                    ).join('') : '<p style="text-align:center;color:#94a3b8">Нет матчей</p>';
+                }
+            } catch(e) {}
+        }
+        
+        async function showShop() { showScreen('shopScreen'); document.getElementById('promoMessage').textContent = ''; }
+        
+        async function activatePromo() {
+            const code = document.getElementById('promoCode').value.trim();
+            if (!code) return;
+            try {
+                const res = await fetch('/api/promocode', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId,code})});
+                const data = await res.json();
+                const msg = document.getElementById('promoMessage');
+                msg.textContent = data.message;
+                msg.style.color = data.success?'#4ade80':'#ef4444';
+                if (data.success && data.coins!==undefined) currentUser.coins = data.coins;
+            } catch(e) {}
+        }
+        
+        async function getDailyReward() {
+            try {
+                const res = await fetch('/api/daily-reward', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) { currentUser.coins = data.coins; }
+            } catch(e) {}
+        }
+        
+        async function showAdmin() {
+            if (currentUser?.role!=='admin') return;
+            showScreen('adminScreen');
+            try {
+                const res = await fetch('/api/admin/stats', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('adminTotalUsers').textContent = data.stats.totalUsers;
+                    document.getElementById('adminTotalWins').textContent = data.stats.totalWins;
+                    document.getElementById('adminTotalGames').textContent = data.stats.totalGames;
+                    document.getElementById('adminTotalCoins').textContent = data.stats.totalCoins;
+                }
+                const res2 = await fetch('/api/admin/users', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data2 = await res2.json();
+                if (data2.success) {
+                    document.getElementById('adminUsersList').innerHTML = data2.users.map(u =>
+                        `<div class="admin-user-row"><span>${u.username}</span><span>${u.role}</span><span>${u.coins}💰</span><span>${u.wins}п</span></div>`
+                    ).join('');
+                }
+            } catch(e) {}
+        }
+        
+        async function createPromo(e) {
+            e.preventDefault();
+            try {
+                const res = await fetch('/api/admin/create-promo', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+                    sessionId, code:document.getElementById('newPromoCode').value.trim(),
+                    reward:document.getElementById('newPromoReward').value,
+                    maxUses:document.getElementById('newPromoMaxUses').value
+                })});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) {}
+        }
+        
+        function backToProfile() { if (currentUser) checkSession().then(() => currentUser && showProfile()); else showMainMenu(); }
+        
+        function initGameLanes() {
+            const lanes = document.getElementById('gameLanes');
+            lanes.innerHTML = '';
+            for (let i=0;i<5;i++) { const l=document.createElement('div'); l.className='game-lane'; l.dataset.lane=i; lanes.appendChild(l); }
+        }
+        
+        function findGame() {
+            if (!socket) { socket = io(); initSocketListeners(); }
+            showScreen('waitingScreen');
+            document.getElementById('chatMessages').innerHTML = '';
+            socket.emit('findGame', {sessionId});
+        }
+        
+        function initSocketListeners() {
+            socket.on('waiting', () => {});
+            socket.on('gameStart', (data) => startGame(data));
+            socket.on('gameTimer', (data) => updateGameTimer(data.time));
+            socket.on('opponentPlanted', (data) => placeOpponentUnit(data));
+            socket.on('opponentZombie', (data) => placeOpponentUnit(data));
+            socket.on('gameEnd', (data) => endGame(data));
+            socket.on('chatMessage', (data) => addChatMessage(data));
+            socket.on('error', (data) => { alert(data.message); backToProfile(); });
+        }
+        
+        function startGame(data) {
+            showScreen('gameScreen');
+            const myPlayer = data.players.find(p => p.id === socket.id);
+            gameState = { mySide: myPlayer.side, opponent: data.players.find(p => p.id !== socket.id), units: [] };
+            document.getElementById('mySide').textContent = myPlayer.side==='plant'?'🌻 Растения':'🧟 Зомби';
+            document.getElementById('opponentName').textContent = gameState.opponent.username;
+            initGameControls();
+        }
+        
+        function initGameControls() {
+            const myUnits = units[gameState.mySide];
+            document.getElementById('gameControls').innerHTML = myUnits.map(u =>
+                `<button class="unit-btn" onclick="selectUnit('${u.id}')" data-unit="${u.id}">${u.icon}<span class="cost">${u.cost}</span></button>`
+            ).join('');
+        }
+        
+        function selectUnit(id) { selectedUnit = id; document.querySelectorAll('.unit-btn').forEach(b => b.classList.toggle('selected', b.dataset.unit===id)); }
+        
+        document.getElementById('gameArena').addEventListener('click', (e) => {
+            if (!selectedUnit || !gameState) return;
+            const lane = e.target.closest('.game-lane');
+            if (!lane) return;
+            const laneIndex = parseInt(lane.dataset.lane);
+            const unitData = units[gameState.mySide].find(u => u.id === selectedUnit);
+            if (!unitData) return;
+            if (currentUser.coins < unitData.cost) { alert('Нет монет!'); return; }
+            placeUnit(laneIndex, unitData, gameState.mySide);
+            socket.emit(gameState.mySide==='plant'?'plantPlaced':'zombiePlaced', {lane:laneIndex,unitId:selectedUnit});
+            currentUser.coins -= unitData.cost;
+        });
+        
+        function placeUnit(laneIndex, unitData, side) {
+            const lane = document.querySelector(`.game-lane[data-lane="${laneIndex}"]`);
+            const unit = document.createElement('div');
+            unit.className = `game-unit ${side}`;
+            unit.innerHTML = unitData.icon;
+            unit.style.top = '50%'; unit.style.transform = 'translateY(-50%)';
+            lane.appendChild(unit);
+            gameState.units.push({element:unit,...unitData,lane:laneIndex,side,health:unitData.health});
+        }
+        
+        function placeOpponentUnit(data) {
+            const unitData = units[gameState.mySide==='plant'?'zombie':'plant'].find(u => u.id === data.unitId);
+            placeUnit(data.lane, unitData, gameState.mySide==='plant'?'zombie':'plant');
+        }
+        
+        function updateGameTimer(s) { const m=Math.floor(s/60),sec=s%60; document.getElementById('gameTimer').textContent = `${m}:${sec.toString().padStart(2,'0')}`; }
+        
+        function sendChat() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (msg && socket) { socket.emit('sendMessage', {message:msg}); input.value = ''; }
+        }
+        
+        function addChatMessage(data) {
+            const div = document.createElement('div');
+            div.className = 'chat-message';
+            div.innerHTML = `<span class="chat-username">${data.username}:</span> ${data.message}`;
+            document.getElementById('chatMessages').appendChild(div);
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        }
+        
+        function cancelQueue() { if (socket) socket.emit('leaveQueue'); backToProfile(); }
+        function leaveGame() { if (socket) socket.emit('leaveQueue'); backToProfile(); }
+        
+        function endGame(data) {
+            showScreen('gameEndScreen');
+            const title = document.getElementById('gameResultTitle');
+            const rewards = document.getElementById('gameRewards');
+            if (data.winner==='draw') { title.textContent='Ничья!'; title.className='game-result draw'; rewards.textContent='+20 монет'; }
+            else if (data.winnerSide===gameState.mySide) { title.textContent='Победа!'; title.className='game-result win'; rewards.textContent='+50 монет'; currentUser.wins++; }
+            else { title.textContent='Поражение'; title.className='game-result lose'; rewards.textContent='+10 монет'; currentUser.losses++; }
+            currentUser.coins += data.winnerSide===gameState.mySide?data.rewards.winner:data.rewards.loser;
+            checkSession();
+        }
+    </script>
+</body>
+</html>
