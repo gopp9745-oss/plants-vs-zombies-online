@@ -316,6 +316,14 @@
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
     </div>
     
+    <div id="tutorialScreen" class="screen">
+        <h2 class="leaderboard-title" style="color:#4ade80">📚 Обучение</h2>
+        <div class="match-history-container" style="max-width:700px;text-align:left">
+            <div id="tutorialContent"></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:20px" id="tutorialNextBtn" onclick="nextTutorialStep()">Далее →</button>
+    </div>
+    
     <div id="adminScreen" class="screen">
         <h2 class="admin-title">⚙️ Админ-панель</h2>
         <div class="admin-container">
@@ -495,7 +503,7 @@
         }
         
         function hideAllScreens() {
-            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen'].forEach(id => document.getElementById(id).style.display = 'none');
         }
         
         function showScreen(id) {
@@ -547,7 +555,8 @@
                 if (data.success) {
                     sessionId = data.sessionId; localStorage.setItem('sessionId', sessionId);
                     currentUser = data.user;
-                    setTimeout(() => showProfile(), 1000);
+                    // Показываем обучение после регистрации
+                    setTimeout(() => startTutorial(), 1000);
                 }
             } catch(e) { document.getElementById('authMessage').textContent = 'Ошибка'; document.getElementById('authMessage').style.display = 'block'; }
         }
@@ -901,6 +910,64 @@
             else { title.textContent='Поражение'; title.className='game-result lose'; rewards.textContent='+10 монет'; currentUser.losses++; }
             currentUser.coins += data.winnerSide===gameState.mySide?data.rewards.winner:data.rewards.loser;
             checkSession();
+        }
+        
+        // Обучение
+        const tutorialSteps = [
+            {
+                title: '👋 Добро пожаловать!',
+                content: 'Это онлайн игра "Растения против Зомби". Вы будете играть против других игроков в режиме реального времени!'
+            },
+            {
+                title: '🌻 Выберите сторону',
+                content: 'В начале игры вы можете быть либо 🌻 Растением (защитник) либо 🧟 Зомби (атакующий). Всё зависит от случайного выбора!'
+            },
+            {
+                title: '💰 Зарабатывайте монеты',
+                content: 'Выигрывая матчи, вы получаете монеты. Также их можно получить: выполняя ежедневные награды, активируя промокоды и повышая уровень!'
+            },
+            {
+                title: '🏆 Путь Славы',
+                content: 'Набирайте опыт и повышайте уровень! За каждый уровень вы получаете награды: монеты и звания (Новичок, Опытный, Мастер, Легенда и другие).'
+            },
+            {
+                title: '🏪 Магазин',
+                content: 'В магазине можно купить растения и зомби. Магазин обновляется каждые 5 минут - следите за новинками!'
+            },
+            {
+                title: '🎮 Удачи!',
+                content: 'Теперь вы готовы к игре! Нажмите "Играть" и найдите противника. Удачи в бою!'
+            }
+        ];
+        let tutorialStep = 0;
+        
+        function startTutorial() {
+            tutorialStep = 0;
+            showTutorial();
+        }
+        
+        function showTutorial() {
+            showScreen('tutorialScreen');
+            const step = tutorialSteps[tutorialStep];
+            document.getElementById('tutorialContent').innerHTML = `
+                <h3 style="color:#4ade80;margin-bottom:15px;text-align:center">${step.title}</h3>
+                <p style="font-size:1.1rem;line-height:1.6;margin-bottom:20px">${step.content}</p>
+                <div style="text-align:center;color:#94a3b8">Шаг ${tutorialStep + 1} из ${tutorialSteps.length}</div>
+            `;
+            document.getElementById('tutorialNextBtn').textContent = tutorialStep === tutorialSteps.length - 1 ? 'Начать игру! 🎮' : 'Далее →';
+        }
+        
+        function nextTutorialStep() {
+            if (tutorialStep < tutorialSteps.length - 1) {
+                tutorialStep++;
+                showTutorial();
+            } else {
+                showProfile();
+            }
+        }
+        
+        function skipTutorial() {
+            showProfile();
         }
     </script>
 </body>
