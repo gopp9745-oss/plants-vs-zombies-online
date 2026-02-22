@@ -434,12 +434,14 @@
     
     <div id="gameScreen" class="screen" style="padding:10px">
         <div class="game-header">
+            <div style="color:#ef4444" id="zombieHouseHP">🏠 100%</div>
             <div><span>Вы: </span><span id="mySide">-</span></div>
             <div class="resource-display">
                 <div class="resource sun" id="sunDisplay">🌻 50</div>
                 <div class="resource brain" id="brainDisplay">🧠 50</div>
             </div>
             <div><span>Противник: </span><span id="opponentName">-</span></div>
+            <div style="color:#4ade80" id="plantHouseHP">🏠 100%</div>
             <div class="game-timer" id="gameTimer">3:00</div>
         </div>
         <div class="game-arena" id="gameArena">
@@ -484,40 +486,59 @@
         
         const units = {
             plant: [
-                // Basic plants (Level 1+)
-                {id:'peashooter',icon:'🟢',name:'Горох',health:100,damage:20,cost:50,level:1,skins:['🟢','🥒','🌿']},
-                {id:'sunflower',icon:'🌻',name:'Солнце',health:80,cost:50,level:1,skins:['🌻','🌼','🌺']},
-                {id:'wallnut',icon:'🥜',name:'Стена',health:200,cost:50,level:1,skins:['🥜','🥔','🌰']},
-                // Medium plants (Level 3+)
-                {id:'snowpea',icon:'❄️',name:'Мороз',health:100,damage:25,cost:75,level:3,skins:['❄️','🌨️','⛄']},
-                {id:'chomper',icon:'👄',name:'Хапун',health:150,damage:40,cost:75,level:3,skins:['👄','🦷','🐊']},
-                {id:'repeater',icon:'🔫',name:'Дубль',health:100,damage:40,cost:100,level:3,skins:['🔫','🏹','⚔️']},
-                // Advanced plants (Level 5+)
-                {id:'cherrybomb',icon:'🍒',name:'Вишня',health:100,damage:1800,cost:150,level:5,skins:['🍒','🍓','🍅']},
-                {id:'iceshroom',icon:'🧊',name:'Лед',health:80,cost:75,level:5,skins:['🧊','💎','🔷']},
-                {id:'squash',icon:'🎃',name:'Тыква',health:150,damage:100,cost:100,level:5,skins:['🎃','🥒','🍆']},
-                // Premium plants (Level 10+)
-                {id:'twinsunflower',icon:'🌞',name:'Двойня',health:120,cost:150,level:10,skins:['🌞','⭐','☀️']},
-                {id:'melonpult',icon:'🍉',name:'Арбуз',health:150,damage:80,cost:200,level:10,skins:['🍉','🍈','🍍']},
-                {id:'cattail',icon:'🐱',name:'Котоушка',health:100,damage:30,cost:150,level:10,skins:['🐱','🐯','🦁']}
+                // === АТАКУЮЩИЕ РАСТЕНИЯ ===
+                {id:'peashooter',icon:'🟢',name:'Горохострел',desc:'Стреляет горошинами в зомби. Базовая атака.',health:100,damage:20,attackSpeed:1.5,cost:50,level:1,type:'attacker',skins:['🟢','🥒','🌿']},
+                {id:'repeater',icon:'🔫',name:'Двуствол',desc:'Стреляет двумя горошинами за раз. Сильная атака.',health:100,damage:40,attackSpeed:1.5,cost:100,level:3,type:'attacker',skins:['🔫','🏹','⚔️']},
+                {id:'snowpea',icon:'❄️',name:'Морозник',desc:'Стреляет ледяными горошинами, замедляет зомби.',health:100,damage:25,attackSpeed:1.5,cost:75,level:3,type:'attacker',slow:0.5,skins:['❄️','🌨️','⛄']},
+                {id:'melonpult',icon:'🍉',name:'Арбузомет',desc:'Стреляет тяжелыми арбузами. Большой урон.',health:150,damage:80,attackSpeed:2,cost:200,level:10,type:'attacker',skins:['🍉','🍈','🍍']},
+                {id:'chomper',icon:'👄',name:'Хапунец',desc:'Поедает зомби целиком. Очень большой урон, но долго переваривает.',health:150,damage:200,attackSpeed:5,cost:75,level:3,type:'attacker',skins:['👄','🦷','🐊']},
+                {id:'cattail',icon:'🐱',name:'Котоушка',desc:'Атакует зомби на любой линии. Универсальный стрелок.',health:100,damage:30,attackSpeed:1.5,cost:150,level:10,type:'attacker',skins:['🐱','🐯','🦁']},
+                
+                // === СОЛНЦЕДОБЫВАТЕЛИ ===
+                {id:'sunflower',icon:'🌻',name:'Солнечник',desc:'Производит солнце каждые 10 сек. Основа экономики.',health:80,sunProduction:10,sunSpeed:10,cost:50,level:1,type:'producer',skins:['🌻','🌼','🌺']},
+                {id:'twinsunflower',icon:'🌞',name:'Двойняшка',desc:'Производит солнце в 2 раза быстрее. Экономический MVP.',health:120,sunProduction:20,sunSpeed:10,cost:150,level:10,type:'producer',skins:['🌞','⭐','☀️']},
+                {id:'moonglow',icon:'🌙',name:'Лунарик',desc:'Производит лунный свет (даёт больше солнца но днём медленнее).',health:60,sunProduction:25,sunSpeed:15,cost:200,level:15,type:'producer',skins:['🌙','🌛','✨']},
+                
+                // === ЗАЩИТНИКИ ===
+                {id:'wallnut',icon:'🥜',name:'Орешек',desc:'Прочная стена. Защищает другие растения. Большое HP.',health:400,cost:50,level:1,type:'defender',skins:['🥜','🥔','🌰']},
+                {id:'tallnut',icon:'🌴',name:'Великан',desc:'Невероятно прочный страж. Зомби не могут его съесть.',health:800,cost:125,level:5,type:'defender',skins:['🌴','🌲','🌳']},
+                {id:'puffshroom',icon:'🍄',name:'Дымовичок',desc:'Маленький защитник с быстрой атакой на короткие дистанции.',health:60,damage:10,attackSpeed:0.8,cost:30,level:1,type:'hybrid',skins:['🍄','🦟','🐛']},
+                
+                // === ВЗРЫВЧАТКА ===
+                {id:'cherrybomb',icon:'🍒',name:'Вишнёвая бомба',desc:'Взрывается нанося огромный урон всем зомби на поле!',health:100,damage:1800,attackSpeed:0,cost:150,level:5,type:'explosive',skins:['🍒','🍓','🍅']},
+                {id:'potatomine',icon:'🥔',name:'Картошка-мина',desc:'Взрывается когда зомби подходит близко. Большой урон.',health:50,damage:300,attackSpeed:0,cost:50,level:1,type:'explosive',skins:['🥔','🍠','🥖']},
+                {id:'squash',icon:'🎃',name:'Тыквогон',desc:'Выпрыгивает и раздавливает зомби. Один выстрел - один зомби.',health:150,damage:400,attackSpeed:0,cost:100,level:5,type:'explosive',skins:['🎃','🥒','🍆']},
+                {id:'iceshroom',icon:'🧊',name:'Ледяник',desc:'Взрывается и замораживает всех зомби.',health:80,damage:100,attackSpeed:0,cost:75,level:5,type:'explosive',freeze:3,skins:['🧊','💎','🔷']},
+                
+                // === СПЕЦИАЛЬНЫЕ ===
+                {id:'scaredyshroom',icon:'😱',name:'Трусишка',desc:'Стреляет только когда зомби близко. Экономит ресурсы.',health:80,damage:15,attackSpeed:2,cost:40,level:1,type:'attacker',skins:['😱','😨','😰']},
+                {id:'hypnoshroom',icon:'🌀',name:'Гипноз',desc:'Превращает зомби в союзника на 15 сек!',health:60,attackSpeed:0,cost:150,level:10,type:'special',skins:['🌀','🔮','💫']},
+                {id:'magnetshroom',icon:'🧲',name:'Магнетик',desc:'Притягивает металлические предметы зомби (ведра, шлемы).',health:100,attackSpeed:0,cost:100,level:5,type:'special',skins:['🧲','🧭','🔩']}
             ],
             zombie: [
-                // Basic zombies (Level 1+)
-                {id:'zombie',icon:'🧟',name:'Зомби',health:100,damage:20,cost:50,level:1,skins:['🧟','💀','👻']},
-                {id:'conehead',icon:'🧢',name:'Конус',health:150,damage:20,cost:75,level:1,skins:['🧢','🎩','👑']},
-                {id:'buckethead',icon:'🪣',name:'Ведро',health:200,damage:20,cost:100,level:1,skins:['🪣','🛒','📦']},
-                // Medium zombies (Level 3+)
-                {id:'football',icon:'🏈',name:'Спорт',health:250,damage:25,cost:125,level:3,skins:['🏈','⚽','🏀']},
-                {id:'dancing',icon:'💃',name:'Танцор',health:100,damage:20,cost:100,level:3,skins:['💃','🕺','🎭']},
-                {id:'dolphin',icon:'🐬',name:'Дельфин',health:120,damage:30,cost:100,level:3,skins:['🐬','🦈','🐳']},
-                // Advanced zombies (Level 5+)
-                {id:'digger',icon:'⛏️',name:'Копатель',health:150,damage:35,cost:125,level:5,skins:['⛏️','🔧','⚒️']},
-                {id:'bungee',icon:'🪝',name:'Крюк',health:80,damage:50,cost:150,level:5,skins:['🪝','🎣','🪤']},
-                {id:'gargantuar',icon:'👹',name:'Гигант',health:500,damage:100,cost:300,level:5,skins:['👹','👾','🎃']},
-                // Premium zombies (Level 10+)
-                {id:'yeti',icon:'🦬',name:'Йети',health:300,damage:40,cost:200,level:10,skins:['🦬','🐻','🦍']},
-                {id:'king',icon:'🤴',name:'Король',health:400,damage:50,cost:250,level:10,skins:['🤴','👸','🦸']},
-                {id:'dr',icon:'🧙',name:'Доктор',health:200,damage:60,cost:300,level:10,skins:['🧙','🧛','🧟‍♂️']}
+                // === ОСНОВНЫЕ ЗОМБИ ===
+                {id:'zombie',icon:'🧟',name:'Ходок',desc:'Обычный зомби. Ест растения и идёт к дому.',health:100,damage:20,moveSpeed:1,cost:50,level:1,type:'basic',skins:['🧟','💀','👻']},
+                {id:'conehead',icon:'🧢',name:'Шлемник',desc:'Носит конус, повышающий защиту. Среднее HP.',health:200,damage:20,moveSpeed:1,cost:75,level:1,type:'basic',skins:['🧢','🎩','👑']},
+                {id:'buckethead',icon:'🪣',name:'Ведроголов',desc:'Носит ведро, очень прочный. Высокое HP.',health:350,damage:20,moveSpeed:0.9,cost:100,level:1,type:'basic',skins:['🪣','🛒','📦']},
+                
+                // === БЫСТРЫЕ ЗОМБИ ===
+                {id:'football',icon:'🏈',name:'Спортсмен',desc:'Быстрый зомби. Атакует с высокой скоростью.',health:250,damage:25,moveSpeed:1.5,cost:125,level:3,type:'fast',skins:['🏈','⚽','🏀']},
+                {id:'dolphin',icon:'🐬',name:'Дельфин',desc:'Плывёт по воде (быстрее всех!). Атакует быстро.',health:120,damage:30,moveSpeed:1.8,cost:100,level:3,type:'fast',skins:['🐬','🦈','🐳']},
+                {id:'_imp',icon:'👿',name:'Бес',desc:'Маленький но быстрый. Атакует стремительно.',health:60,damage:40,moveSpeed:2,cost:50,level:3,type:'fast',skins:['👿','😈','👺']},
+                
+                // === СИЛЬНЫЕ ЗОМБИ ===
+                {id:'gargantuar',icon:'👹',name:'Гигант',desc:'Огромный зомби с большим уроном. Ест всё на своём пути.',health:600,damage:100,moveSpeed:0.5,cost:300,level:5,type:'tank',skins:['👹','👾','🎃']},
+                {id:'yeti',icon:'🦬',name:'Йети',desc:'Редкий ледяной зомби. Очень вынослив.',health:400,damage:40,moveSpeed:0.8,cost:200,level:10,type:'tank',skins:['🦬','🐻','🦍']},
+                {id:'king',icon:'🤴',name:'Король',desc:'Командный зомби. Усиливает других зомби.',health:500,damage:50,moveSpeed:0.7,cost:250,level:10,type:'leader',skins:['🤴','👸','🦸']},
+                
+                // === СПЕЦИАЛЬНЫЕ ЗОМБИ ===
+                {id:'digger',icon:'⛏️',name:'Копатель',desc:'Копает под землёй и появляется за растениями!',health:150,damage:35,moveSpeed:1.2,cost:125,level:5,type:'special',ability:'dig',skins:['⛏️','🔧','⚒️']},
+                {id:'bungee',icon:'🪝',name:'Крючник',desc:'Хватает растение и утаскивает его!',health:80,damage:50,moveSpeed:1,cost:150,level:5,type:'special',ability:'grab',skins:['🪝','🎣','🪤']},
+                {id:'dancing',icon:'💃',name:'Танцор',desc:'Призывает зомби-теней каждые 5 сек.',health:100,damage:20,moveSpeed:1,cost:100,level:3,type:'special',ability:'summon',skins:['💃','🕺','🎭']},
+                {id:'pogo',icon:'🦘',name:'Кенгуру',desc:'Прыгает через растения. Атакует с воздуха.',health:120,damage:30,moveSpeed:1.4,cost:125,level:5,type:'special',ability:'jump',skins:['🦘','🐰','🦢']},
+                {id:'newspaper',icon:'📰',name:'Газетчик',desc:'Читая газету, становится яростным!',health:150,damage:50,moveSpeed:1.3,cost:75,level:3,type:'special',ability:'rage',skins:['📰','📓','📚']},
+                {id:'dr',icon:'🧙',name:'Доктор',desc:'Оживляет других зомби. Лечит союзников.',health:200,damage:60,moveSpeed:0.8,cost:300,level:10,type:'support',heal:20,skins:['🧙','🧛','🧟‍♂️']},
+                {id:'catapult',icon:'🏹',name:'Катапульта',desc:'Бросает зомби через весь двор!',health:200,damage:40,moveSpeed:0.7,cost:175,level:5,type:'special',ability:'throw',skins:['🏹','🎯','🪃']}
             ]
         };
         
@@ -907,13 +928,16 @@
         
         let gameResources = { sun: 50, brain: 50 };
         let gameLoop = null;
+        let houseHP = { plant: 100, zombie: 100 }; // HP домов в процентах
         
         function startGame(data) {
             showScreen('gameScreen');
             const myPlayer = data.players.find(p => p.id === socket.id);
             gameState = { mySide: myPlayer.side, opponent: data.players.find(p => p.id !== socket.id), units: [] };
             gameResources = { sun: 50, brain: 50 };
+            houseHP = { plant: 100, zombie: 100 };
             updateResourceDisplay();
+            updateHouseHP();
             document.getElementById('mySide').textContent = myPlayer.side==='plant'?'🌻 Растения':'🧟 Зомби';
             document.getElementById('opponentName').textContent = gameState.opponent.username;
             initGameControls();
@@ -932,20 +956,40 @@
             }
         }
         
+        function updateHouseHP() {
+            // Обновляем отображение HP домов
+            const plantHP = document.getElementById('plantHouseHP');
+            const zombieHP = document.getElementById('zombieHouseHP');
+            if (plantHP) plantHP.textContent = '🏠 ' + Math.ceil(houseHP.plant) + '%';
+            if (zombieHP) zombieHP.textContent = '🏠 ' + Math.ceil(houseHP.zombie) + '%';
+            
+            // Проверка на проигрыш
+            if (houseHP.plant <= 0 || houseHP.zombie <= 0) {
+                if (gameLoop) clearInterval(gameLoop);
+                const winner = houseHP.plant > 0 ? 'plant' : 'zombie';
+                const winnerSide = gameState.mySide;
+                const isDraw = houseHP.plant <= 0 && houseHP.zombie <= 0;
+                
+                if (isDraw) {
+                    socket.emit('gameOver', { winner: 'draw' });
+                } else {
+                    socket.emit('gameOver', { winner: winnerSide === winner ? winnerSide : winner });
+                }
+                return;
+            }
+        }
+        
         function startGameLoop() {
             if (gameLoop) clearInterval(gameLoop);
             gameLoop = setInterval(() => {
                 if (!gameState || !gameState.units) return;
                 
-                // Растения производят солнце, зомби производят мозги (для обоих игроков!)
-                const hasPlant = gameState.units.some(u => u.side === 'plant');
-                const hasZombie = gameState.units.some(u => u.side === 'zombie');
-                
-                // Всегда добавляем ресурсы для текущего игрока
+                // УСКОРЕННАЯ генерация ресурсов - каждые 500мс вместо 1 сек!
+                // Растения производят солнце, зомби производят мозги
                 if (gameState.mySide === 'plant') {
-                    gameResources.sun += 1;
+                    gameResources.sun += 2; // +2 каждые полсекунды = +4 в секунду
                 } else {
-                    gameResources.brain += 1;
+                    gameResources.brain += 2;
                 }
                 updateResourceDisplay();
                 
@@ -953,17 +997,34 @@
                 gameState.units.forEach((unit, index) => {
                     if (unit.side === 'zombie') {
                         // Зомби двигаются влево (к растениям) - от 90% к 10%
+                        const speed = (unit.moveSpeed || 1) * 2;
                         let currentLeft = parseFloat(unit.element.style.left) || 50;
-                        currentLeft -= 2; // Увеличена скорость движения
+                        currentLeft -= speed;
                         if (currentLeft < 5) currentLeft = 5;
                         unit.element.style.left = currentLeft + '%';
+                        
+                        // === ДОСТИЖЕНИЕ ДОМА ===
+                        // Когда зомби достигает 5% (дома растений), наносится урон дому
+                        if (currentLeft <= 5) {
+                            // Атака дома растений!
+                            houseHP.plant -= 20; // 20% урона
+                            unit.element.classList.add('attack');
+                            
+                            // Удаляем зомби после атаки дома
+                            if (unit.element) {
+                                unit.element.remove();
+                            }
+                            gameState.units = gameState.units.filter(u => u !== unit);
+                            updateHouseHP();
+                            return;
+                        }
                         
                         // Проверка столкновения с растениями
                         gameState.units.forEach(target => {
                             if (target.side === 'plant' && target.lane === unit.lane) {
                                 const posDiff = Math.abs(parseFloat(unit.element.style.left || 50) - parseFloat(target.element.style.left || 50));
                                 if (posDiff < 10) {
-                                    // Атака!
+                                    // Атака растения!
                                     unit.element.classList.add('attack');
                                     target.health -= (unit.damage || 20) / 30;
                                     target.element.classList.add('damage');
@@ -982,33 +1043,55 @@
                     }
                 });
                 
-                // Растения атакуют (если на той же линии есть зомби слева)
+                // Растения атакуют (если на той же линии есть зомби)
                 gameState.units.forEach(unit => {
-                    if (unit.side === 'plant' && unit.damage) {
-                        const target = gameState.units.find(z => z.side === 'zombie' && z.lane === unit.lane);
-                        if (target) {
-                            const plantPos = parseFloat(unit.element.style.left) || 50;
-                            const zombiePos = parseFloat(target.element.style.left) || 50;
-                            // Растения атакуют если зомби справа от них (меньше на 50%)
-                            if (plantPos > zombiePos && plantPos - zombiePos < 50) {
-                                unit.element.classList.add('attack');
-                                target.health -= (unit.damage || 20) / 30;
-                                target.element.classList.add('damage');
-                                setTimeout(() => {
-                                    unit.element.classList.remove('attack');
-                                    target.element.classList.remove('damage');
-                                }, 200);
-                                
-                                if (target.health <= 0 && target.element) {
-                                    target.element.remove();
-                                    gameState.units = gameState.units.filter(u => u !== target);
+                    if (unit.side === 'plant') {
+                        // Если это солнцедобыватель - производит ресурсы
+                        if (unit.sunProduction && unit.sunSpeed) {
+                            unit.sunTimer = (unit.sunTimer || 0) + 0.5;
+                            if (unit.sunTimer >= unit.sunSpeed) {
+                                unit.sunTimer = 0;
+                                if (gameState.mySide === 'plant') {
+                                    gameResources.sun += unit.sunProduction;
+                                    // Визуальный эффект производства
+                                    if (unit.element) {
+                                        unit.element.style.transform = 'translateY(-50%) scale(1.2)';
+                                        setTimeout(() => {
+                                            if (unit.element) unit.element.style.transform = 'translateY(-50%) scale(1)';
+                                        }, 200);
+                                    }
+                                }
+                                updateResourceDisplay();
+                            }
+                        }
+                        
+                        // Если атакующее растение
+                        if (unit.damage && unit.type !== 'producer') {
+                            const target = gameState.units.find(z => z.side === 'zombie' && z.lane === unit.lane);
+                            if (target) {
+                                const plantPos = parseFloat(unit.element.style.left) || 50;
+                                const zombiePos = parseFloat(target.element.style.left) || 50;
+                                // Растения атакуют если зомби справа от них
+                                if (plantPos > zombiePos && plantPos - zombiePos < 50) {
+                                    unit.element.classList.add('attack');
+                                    target.health -= (unit.damage || 20) / 30;
+                                    target.element.classList.add('damage');
+                                    setTimeout(() => {
+                                        unit.element.classList.remove('attack');
+                                        target.element.classList.remove('damage');
+                                    }, 200);
+                                    
+                                    if (target.health <= 0 && target.element) {
+                                        target.element.remove();
+                                        gameState.units = gameState.units.filter(u => u !== target);
+                                    }
                                 }
                             }
                         }
                     }
                 });
                 
-            }, 500); // Уменьшен интервал для более плавной игры
+            }, 500); // Интервал 500мс для быстрой игры
         }
         
         function initGameControls() {
