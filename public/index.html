@@ -256,6 +256,7 @@
             <button class="btn btn-secondary profile-btn" onclick="showShop()">Магазин</button>
             <button class="btn btn-warning profile-btn" onclick="showLeaderboard()">Лидерборд</button>
             <button class="btn btn-secondary profile-btn" onclick="showMatchHistory()">История игр</button>
+            <button class="btn btn-secondary profile-btn" onclick="showHallOfFame()">Путь Славы</button>
             <button class="btn btn-secondary profile-btn" id="adminBtn" style="display:none" onclick="showAdmin()">Админ</button>
             <button class="btn btn-danger profile-btn" onclick="logout()">Выход</button>
         </div>
@@ -299,6 +300,14 @@
         <h2 class="leaderboard-title">📜 История матчей</h2>
         <div class="match-history-container">
             <div id="matchList"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="hallOfFameScreen" class="screen">
+        <h2 class="leaderboard-title">🏆 Путь Славы</h2>
+        <div class="match-history-container">
+            <div id="hallOfFameList"></div>
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
     </div>
@@ -428,7 +437,7 @@
         }
         
         function hideAllScreens() {
-            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen'].forEach(id => document.getElementById(id).style.display = 'none');
         }
         
         function showScreen(id) {
@@ -523,6 +532,32 @@
                     ).join('') : '<p style="text-align:center;color:#94a3b8">Нет матчей</p>';
                 }
             } catch(e) {}
+        }
+        
+        async function showHallOfFame() {
+            showScreen('hallOfFameScreen');
+            const rewards = {
+                2: { coins: 100, title: 'Новичок' },
+                3: { coins: 150, title: 'Опытный' },
+                5: { coins: 250, title: 'Боец' },
+                7: { coins: 400, title: 'Ветеран' },
+                10: { coins: 600, title: 'Мастер' },
+                15: { coins: 1000, title: 'Грандмастер' },
+                20: { coins: 1500, title: 'Легенда' },
+                25: { coins: 2000, title: 'Чемпион' },
+                30: { coins: 3000, title: 'Король PvZ' }
+            };
+            
+            const html = Object.entries(rewards).map(([level, reward]) => {
+                const reached = currentUser.level >= parseInt(level);
+                return `<div class="match-row" style="opacity:${reached ? 1 : 0.5}">
+                    <span style="font-weight:bold;font-size:1.2rem">${level}</span>
+                    <span>${reward.title}</span>
+                    <span style="color:#fbbf24">${reward.coins}💰</span>
+                    <span style="color:${reached ? '#4ade80' : '#ef4444'}">${reached ? '✓ Получено' : 'Заблокировано'}</span>
+                </div>`;
+            }).join('');
+            document.getElementById('hallOfFameList').innerHTML = html;
         }
         
         let currentSales = [];

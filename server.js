@@ -101,14 +101,37 @@ function getXPForLevel(level) {
     return level * 100 + level * level * 10;
 }
 
+const LEVEL_REWARDS = {
+    2: { coins: 100, title: 'Новичок' },
+    3: { coins: 150, title: 'Опытный' },
+    5: { coins: 250, title: 'Боец' },
+    7: { coins: 400, title: 'Ветеран' },
+    10: { coins: 600, title: 'Мастер' },
+    15: { coins: 1000, title: 'Грандмастер' },
+    20: { coins: 1500, title: 'Легенда' },
+    25: { coins: 2000, title: 'Чемпион' },
+    30: { coins: 3000, title: 'Король PvZ' }
+};
+
 function addXP(user, amount) {
+    const oldLevel = user.level;
     user.xp += amount;
     while (user.xp >= getXPForLevel(user.level)) {
         user.xp -= getXPForLevel(user.level);
         user.level++;
         user.coins += 50;
+        
+        // Проверяем награды за уровень
+        if (LEVEL_REWARDS[user.level]) {
+            user.coins += LEVEL_REWARDS[user.level].coins;
+        }
     }
+    return user.level > oldLevel;
 }
+
+app.get('/api/level-rewards', (req, res) => {
+    res.json({ success: true, rewards: LEVEL_REWARDS });
+});
 
 // ==================== API ROUTES ====================
 
