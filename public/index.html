@@ -257,6 +257,7 @@
             <button class="btn btn-warning profile-btn" onclick="showLeaderboard()">Лидерборд</button>
             <button class="btn btn-secondary profile-btn" onclick="showMatchHistory()">История игр</button>
             <button class="btn btn-secondary profile-btn" onclick="showHallOfFame()">Путь Славы</button>
+            <button class="btn btn-secondary profile-btn" onclick="showAchievements()">🏅 Достижения</button>
             <button class="btn btn-secondary profile-btn" id="adminBtn" style="display:none" onclick="showAdmin()">Админ</button>
             <button class="btn btn-danger profile-btn" onclick="logout()">Выход</button>
         </div>
@@ -316,6 +317,14 @@
         <h2 class="leaderboard-title">🏆 Путь Славы</h2>
         <div class="match-history-container">
             <div id="hallOfFameList"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="achievementsScreen" class="screen">
+        <h2 class="leaderboard-title" style="color:#fbbf24">🏅 Достижения</h2>
+        <div class="match-history-container">
+            <div id="achievementsList"></div>
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
     </div>
@@ -989,6 +998,42 @@
         
         function skipTutorial() {
             showProfile();
+        }
+        
+        // Достижения
+        const achievementsList = [
+            { id: 'first_win', name: 'Первая победа', desc: 'Выиграйте первый матч', icon: '🎉', reward: 50 },
+            { id: 'wins_10', name: 'Новичок бой', desc: '10 побед', icon: '⭐', reward: 100 },
+            { id: 'wins_50', name: 'Опытный боец', desc: '50 побед', icon: '🌟', reward: 250 },
+            { id: 'wins_100', name: 'Мастер арены', desc: '100 побед', icon: '🏆', reward: 500 },
+            { id: 'coins_1000', name: 'Тысячник', desc: 'Соберите 1000 монет', icon: '💰', reward: 100 },
+            { id: 'level_5', name: 'Растущий', desc: 'Достигните 5 уровня', icon: '📈', reward: 150 },
+            { id: 'level_10', name: 'Продвинутый', desc: 'Достигните 10 уровня', icon: '🚀', reward: 300 },
+            { id: 'streak_3', name: 'Серия побед', desc: '3 победы подряд', icon: '🔥', reward: 75 },
+            { id: 'streak_5', name: 'Непобедимый', desc: '5 побед подряд', icon: '⚡', reward: 150 },
+            { id: 'games_50', name: 'Ветеран', desc: 'Сыграйте 50 матчей', icon: '🎮', reward: 200 }
+        ];
+        
+        async function showAchievements() {
+            showScreen('achievementsScreen');
+            try {
+                const res = await fetch('/api/check-achievements', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                const userAchievements = data.userAchievements || [];
+                
+                document.getElementById('achievementsList').innerHTML = achievementsList.map(ach => {
+                    const unlocked = userAchievements.includes(ach.id);
+                    return `<div class="match-row" style="opacity:${unlocked ? 1 : 0.5}">
+                        <span style="font-size:2rem">${ach.icon}</span>
+                        <div style="flex:1;padding:0 15px">
+                            <div style="font-weight:bold">${ach.name}</div>
+                            <div style="font-size:0.8rem;color:#94a3b8">${ach.desc}</div>
+                        </div>
+                        <span style="color:#fbbf24">+${ach.reward}💰</span>
+                        <span style="color:${unlocked ? '#4ade80' : '#ef4444'}">${unlocked ? '✓' : '🔒'}</span>
+                    </div>`;
+                }).join('');
+            } catch(e) {}
         }
     </script>
 </body>

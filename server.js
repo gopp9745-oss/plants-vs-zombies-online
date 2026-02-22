@@ -135,6 +135,72 @@ function getXPForLevel(level) {
     return level * 100 + level * level * 10;
 }
 
+const ACHIEVEMENTS = [
+    { id: 'first_win', name: 'Первая победа', desc: 'Выиграйте первый матч', icon: '🎉', reward: 50 },
+    { id: 'wins_10', name: 'Новичок бой', desc: '10 побед', icon: '⭐', reward: 100 },
+    { id: 'wins_50', name: 'Опытный боец', desc: '50 побед', icon: '🌟', reward: 250 },
+    { id: 'wins_100', name: 'Мастер арены', desc: '100 побед', icon: '🏆', reward: 500 },
+    { id: 'coins_1000', name: 'Тысячник', desc: 'Соберите 1000 монет', icon: '💰', reward: 100 },
+    { id: 'level_5', name: 'Растущий', desc: 'Достигните 5 уровня', icon: '📈', reward: 150 },
+    { id: 'level_10', name: 'Продвинутый', desc: 'Достигните 10 уровня', icon: '🚀', reward: 300 },
+    { id: 'streak_3', name: 'Серия побед', desc: '3 победы подряд', icon: '🔥', reward: 75 },
+    { id: 'streak_5', name: 'Непобедимый', desc: '5 побед подряд', icon: '⚡', reward: 150 },
+    { id: 'games_50', name: 'Ветеран', desc: 'Сыграйте 50 матчей', icon: '🎮', reward: 200 }
+];
+
+function checkAchievements(user) {
+    const newAchievements = [];
+    const userAchievements = user.achievements || [];
+    
+    for (const ach of ACHIEVEMENTS) {
+        if (userAchievements.includes(ach.id)) continue;
+        
+        let unlocked = false;
+        switch (ach.id) {
+            case 'first_win': unlocked = user.wins >= 1; break;
+            case 'wins_10': unlocked = user.wins >= 10; break;
+            case 'wins_50': unlocked = user.wins >= 50; break;
+            case 'wins_100': unlocked = user.wins >= 100; break;
+            case 'coins_1000': unlocked = user.coins >= 1000; break;
+            case 'level_5': unlocked = user.level >= 5; break;
+            case 'level_10': unlocked = user.level >= 10; break;
+            case 'streak_3': unlocked = user.currentWinStreak >= 3; break;
+            case 'streak_5': unlocked = user.currentWinStreak >= 5; break;
+            case 'games_50': unlocked = (user.wins + user.losses) >= 50; break;
+        }
+        
+        if (unlocked) {
+            userAchievements.push(ach.id);
+            user.coins += ach.reward;
+            newAchievements.push(ach);
+        }
+    }
+    
+    user.achievements = userAchievements;
+    return newAchievements;
+}
+
+app.get('/api/achievements', (req, res) => {
+    res.json({ success: true, achievements: ACHIEVEMENTS });
+});
+
+app.post('/api/check-achievements', (req, res) => {
+    const { sessionId } = req.body;
+    const userId = sessions.get(sessionId);
+    if (!userId) return res.json({ success: false });
+    
+    let user = null;
+    for (let u of users.values()) {
+        if (u.id === userId) { user = u; break; }
+    }
+    if (!user) return res.json({ success: false });
+    
+    const newAchievements = checkAchievements(user);
+    saveUsers();
+    
+    res.json({ success: true, newAchievements, userAchievements: user.achievements || [] });
+});
+
 const LEVEL_REWARDS = {
     2: { coins: 100, title: 'Новичок' },
     3: { coins: 150, title: 'Опытный' },
