@@ -684,6 +684,7 @@ app.post('/api/admin/unban', async (req, res) => {
 // ==================== ИГРОВОЙ СЕРВЕР ====================
 
 const gameRooms = new Map();
+const WAIT_TIMEOUT = 60 * 1000; // 60 секунд
 
 io.on('connection', (socket) => {
     console.log('Игрок подключился:', socket.id);
@@ -834,7 +835,13 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         
         // Отправляем сообщение о поиске
-        socket.emit('waiting', { message: 'Ожидание противника (без бота)...', timeLeft: 0 });
+        socket.emit('waiting', { message: 'Ожидание противника...', timeLeft: WAIT_TIMEOUT / 1000 });
+        
+        // Запускаем таймер на 60 секунд для авто-бота
+        const room = gameRooms.get(roomId);
+        room.botTimer = setTimeout(() => {
+            startBotGame(roomId, difficulty);
+        }, WAIT_TIMEOUT);
     });
     
     function startBotGame(roomId, difficulty) {
@@ -1019,18 +1026,20 @@ async function endRound(roomId, result) {
         const loser = room.players.find(p => p.side !== result);
         
         if (winner && loser) {
-            // Даем награды только реальным игрокам
+            // Даем награды ТОЛЬКО в PvP и авто-боте (не в режиме "Играть с ботом")
+            const giveRewards = room.isBotGame && !room.players.find(p => p.user.isBot && p.side === winner.side);
+            
             if (!winner.user.isBot) {
                 await usersCollection.updateOne(
                     { _id: winner.user._id },
-                    { $inc: { wins: 1, totalGames: 1, coins: 50 }}
+                    { $inc: { wins: 1, totalGames: 1, coins: giveRewards ? 50 : 0 }}
                 );
-                await addXP(winner.user, 50);
+                if (giveRewards) await addXP(winner.user, 50);
             }
             if (!loser.user.isBot) {
                 await usersCollection.updateOne(
                     { _id: loser.user._id },
-                    { $inc: { losses: 1, totalGames: 1, coins: 10 }}
+                    { $inc: { losses: 1, totalGames: 1, coins: giveRewards ? 10 : 0 }}
                 );
             }
             
@@ -1052,19 +1061,22 @@ async function endRound(roomId, result) {
             });
         }
     } else {
+        // Даем награды только в PvP и авто-боте (не в режиме "Играть с ботом")
+        const giveRewards = room.isBotGame && !room.players.find(p => p.user.isBot);
+        
         for (const p of room.players) {
             if (!p.user.isBot) {
                 await usersCollection.updateOne(
                     { _id: p.user._id },
-                    { $inc: { coins: 20, totalGames: 1 }}
+                    { $inc: { coins: giveRewards ? 20 : 0, totalGames: 1 }}
                 );
-                addXP(p.user, 20);
+                if (giveRewards) addXP(p.user, 20);
             }
         }
         
         io.to(roomId).emit('gameEnd', { 
             winner: 'draw',
-            rewards: { winner: 20, loser: 20 },
+            rewards: { winner: giveRewards ? 20 : 0, loser: giveRewards ? 20 : 0 },
             isBotGame: room.isBotGame
         });
     }
