@@ -317,6 +317,26 @@
                 </form>
             </div>
             <div class="admin-section">
+                <h3>🔥 Акция на растение</h3>
+                <form class="admin-form" onsubmit="createSale(event)">
+                    <select id="salePlantId" required style="padding:8px;border-radius:6px;">
+                        <option value="">Растение</option>
+                        <option value="sunflower">🌻 Подсолнух</option>
+                        <option value="peashooter">🟢 Горох</option>
+                        <option value="wallnut">🥜 Стена</option>
+                        <option value="cherrybomb">🍒 Вишня</option>
+                        <option value="iceshroom">🧊 Лед</option>
+                    </select>
+                    <input type="number" id="saleDiscount" placeholder="Скидка %" required style="padding:8px;border-radius:6px;">
+                    <select id="saleDuration" required style="padding:8px;border-radius:6px;">
+                        <option value="3600000">1 час</option>
+                        <option value="7200000">2 часа</option>
+                        <option value="86400000">24 часа</option>
+                    </select>
+                    <button type="submit" class="btn btn-secondary">Создать</button>
+                </form>
+            </div>
+            <div class="admin-section">
                 <h3>👥 Игроки</h3>
                 <div class="admin-users-list" id="adminUsersList" style="font-size:0.8rem"></div>
             </div>
@@ -552,6 +572,21 @@
                     sessionId, code:document.getElementById('newPromoCode').value.trim(),
                     reward:document.getElementById('newPromoReward').value,
                     maxUses:document.getElementById('newPromoMaxUses').value
+                })});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) {}
+        }
+        
+        async function createSale(e) {
+            e.preventDefault();
+            try {
+                const res = await fetch('/api/admin/create-sale', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+                    sessionId,
+                    plantId: document.getElementById('salePlantId').value,
+                    discount: document.getElementById('saleDiscount').value,
+                    duration: document.getElementById('saleDuration').value
                 })});
                 const data = await res.json();
                 alert(data.message);
