@@ -684,7 +684,6 @@ app.post('/api/admin/unban', async (req, res) => {
 // ==================== ИГРОВОЙ СЕРВЕР ====================
 
 const gameRooms = new Map();
-const WAIT_TIMEOUT = 60 * 1000; // 60 секунд
 
 io.on('connection', (socket) => {
     console.log('Игрок подключился:', socket.id);
@@ -818,7 +817,7 @@ io.on('connection', (socket) => {
             }
         }
         
-        // Создаем комнату и запускаем таймер для бота
+        // Создаем комнату и ждем реального игрока (без авто-бота!)
         const roomId = uuidv4();
         const side = Math.random() > 0.5 ? 'plant' : 'zombie';
         
@@ -835,13 +834,7 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         
         // Отправляем сообщение о поиске
-        socket.emit('waiting', { message: 'Ожидание противника...', timeLeft: WAIT_TIMEOUT / 1000 });
-        
-        // Запускаем таймер на 60 секунд для бота
-        const room = gameRooms.get(roomId);
-        room.botTimer = setTimeout(() => {
-            startBotGame(roomId, difficulty);
-        }, WAIT_TIMEOUT);
+        socket.emit('waiting', { message: 'Ожидание противника (без бота)...', timeLeft: 0 });
     });
     
     function startBotGame(roomId, difficulty) {
