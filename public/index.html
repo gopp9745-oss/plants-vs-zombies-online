@@ -454,13 +454,14 @@
         
         function showProfile() {
             showScreen('profileScreen');
+            const level = currentUser.level || 1;
             document.getElementById('userAvatar').textContent = currentUser.username[0].toUpperCase();
             document.getElementById('profileUsername').textContent = currentUser.username;
-            document.getElementById('profileLevel').textContent = 'Уровень ' + currentUser.level;
+            document.getElementById('profileLevel').textContent = 'Уровень ' + level;
             document.getElementById('profileRole').textContent = currentUser.role==='admin'?'Админ':'Игрок';
-            document.getElementById('statCoins').textContent = currentUser.coins;
-            document.getElementById('statWins').textContent = currentUser.wins;
-            document.getElementById('statXP').textContent = currentUser.xp;
+            document.getElementById('statCoins').textContent = currentUser.coins || 0;
+            document.getElementById('statWins').textContent = currentUser.wins || 0;
+            document.getElementById('statXP').textContent = currentUser.xp || 0;
             document.getElementById('adminBtn').style.display = currentUser.role==='admin'?'block':'none';
         }
         
