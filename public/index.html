@@ -270,8 +270,8 @@
                 <button class="btn btn-primary" id="leaderTabWins" onclick="switchLeaderTab('wins')">По победам</button>
                 <button class="btn btn-secondary" id="leaderTabLevel" onclick="switchLeaderTab('level')">По уровню</button>
             </div>
-            <div class="leaderboard-row header">
-                <span class="rank">#</span><span class="username">Игрок</span><span>Уровень</span><span>Победы</span>
+            <div class="leaderboard-row header" id="leaderboardHeaderRow">
+                <span class="rank">#</span><span class="username">Игрок</span><span>Уровень/Победы</span>
             </div>
             <div id="leaderboardList"></div>
         </div>
@@ -605,10 +605,6 @@
                 if (data.success) {
                     const sortKey = sort === 'wins' ? 'wins' : 'xp';
                     const sorted = [...data.leaders].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
-                    
-                    const displayValue = sort === 'wins' 
-                        ? `${(p.level || 1)}/${p.wins || 0}` 
-                        : `${(p.level || 1)}/${p.xp || 0}`;
                     
                     document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
                         `<div class="leaderboard-row ${i<3?'top-3':''}">
