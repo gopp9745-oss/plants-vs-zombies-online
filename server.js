@@ -53,6 +53,28 @@ const bannedIPs = new Map(); // username -> reason
 const gameRooms = new Map();
 const sales = loadData(SALES_FILE, []);
 
+// Магазин - случайные растения каждые 5 минут
+let shopItems = [];
+const ALL_PLANTS = ['sunflower','peashooter','wallnut','cherrybomb','iceshroom','snowpea','chomper','repeater','squash','twinsunflower','melonpult','cattail'];
+
+function generateShopItems() {
+    // Выбираем 4-5 случайных растений
+    const shuffled = [...ALL_PLANTS].sort(() => Math.random() - 0.5);
+    shopItems = shuffled.slice(0, 4 + Math.floor(Math.random() * 2)).map(id => {
+        const prices = { sunflower:50, peashooter:50, wallnut:75, cherrybomb:150, iceshroom:75, snowpea:75, chomper:75, repeater:100, squash:100, twinsunflower:150, melonpult:200, cattail:150 };
+        return { id, price: prices[id] || 50 };
+    });
+    console.log('Магазин обновлён:', shopItems.map(p => p.id).join(', '));
+}
+
+// Обновляем магазин каждые 5 минут
+generateShopItems();
+setInterval(generateShopItems, 5 * 60 * 1000);
+
+app.get('/api/shop', (req, res) => {
+    res.json({ success: true, items: shopItems });
+});
+
 if (!users.has('admin')) {
     const adminId = uuidv4();
     users.set('admin', {

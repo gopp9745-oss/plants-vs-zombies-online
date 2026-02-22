@@ -412,18 +412,52 @@
         
         const units = {
             plant: [
-                {id:'peashooter',icon:'🟢',name:'Горох',health:100,damage:20,cost:50},
-                {id:'sunflower',icon:'🌻',name:'Солнце',health:80,cost:50},
-                {id:'wallnut',icon:'🥜',name:'Стена',health:200,cost:50},
-                {id:'cherrybomb',icon:'🍒',name:'Вишня',health:100,damage:1800,cost:150},
-                {id:'iceshroom',icon:'🧊',name:'Лед',health:80,cost:75}
+                // Basic plants (Level 1+)
+                {id:'peashooter',icon:'🟢',name:'Горох',health:100,damage:20,cost:50,level:1,skins:['🟢','🥒','🌿']},
+                {id:'sunflower',icon:'🌻',name:'Солнце',health:80,cost:50,level:1,skins:['🌻','🌼','🌺']},
+                {id:'wallnut',icon:'🥜',name:'Стена',health:200,cost:50,level:1,skins:['🥜','🥔','🌰']},
+                // Medium plants (Level 3+)
+                {id:'snowpea',icon:'❄️',name:'Мороз',health:100,damage:25,cost:75,level:3,skins:['❄️','🌨️','⛄']},
+                {id:'chomper',icon:'👄',name:'Хапун',health:150,damage:40,cost:75,level:3,skins:['👄','🦷','🐊']},
+                {id:'repeater',icon:'🔫',name:'Дубль',health:100,damage:40,cost:100,level:3,skins:['🔫','🏹','⚔️']},
+                // Advanced plants (Level 5+)
+                {id:'cherrybomb',icon:'🍒',name:'Вишня',health:100,damage:1800,cost:150,level:5,skins:['🍒','🍓','🍅']},
+                {id:'iceshroom',icon:'🧊',name:'Лед',health:80,cost:75,level:5,skins:['🧊','💎','🔷']},
+                {id:'squash',icon:'🎃',name:'Тыква',health:150,damage:100,cost:100,level:5,skins:['🎃','🥒','🍆']},
+                // Premium plants (Level 10+)
+                {id:'twinsunflower',icon:'🌞',name:'Двойня',health:120,cost:150,level:10,skins:['🌞','⭐','☀️']},
+                {id:'melonpult',icon:'🍉',name:'Арбуз',health:150,damage:80,cost:200,level:10,skins:['🍉','🍈','🍍']},
+                {id:'cattail',icon:'🐱',name:'Котоушка',health:100,damage:30,cost:150,level:10,skins:['🐱','🐯','🦁']}
             ],
             zombie: [
-                {id:'zombie',icon:'🧟',name:'Зомби',health:100,damage:20,cost:50},
-                {id:'conehead',icon:'🧢',name:'Конус',health:150,damage:20,cost:75},
-                {id:'buckethead',icon:'🪣',name:'Ведро',health:200,damage:20,cost:100}
+                // Basic zombies (Level 1+)
+                {id:'zombie',icon:'🧟',name:'Зомби',health:100,damage:20,cost:50,level:1,skins:['🧟','💀','👻']},
+                {id:'conehead',icon:'🧢',name:'Конус',health:150,damage:20,cost:75,level:1,skins:['🧢','🎩','👑']},
+                {id:'buckethead',icon:'🪣',name:'Ведро',health:200,damage:20,cost:100,level:1,skins:['🪣','🛒','📦']},
+                // Medium zombies (Level 3+)
+                {id:'football',icon:'🏈',name:'Спорт',health:250,damage:25,cost:125,level:3,skins:['🏈','⚽','🏀']},
+                {id:'dancing',icon:'💃',name:'Танцор',health:100,damage:20,cost:100,level:3,skins:['💃','🕺','🎭']},
+                {id:'dolphin',icon:'🐬',name:'Дельфин',health:120,damage:30,cost:100,level:3,skins:['🐬','🦈','🐳']},
+                // Advanced zombies (Level 5+)
+                {id:'digger',icon:'⛏️',name:'Копатель',health:150,damage:35,cost:125,level:5,skins:['⛏️','🔧','⚒️']},
+                {id:'bungee',icon:'🪝',name:'Крюк',health:80,damage:50,cost:150,level:5,skins:['🪝','🎣','🪤']},
+                {id:'gargantuar',icon:'👹',name:'Гигант',health:500,damage:100,cost:300,level:5,skins:['👹','👾','🎃']},
+                // Premium zombies (Level 10+)
+                {id:'yeti',icon:'🦬',name:'Йети',health:300,damage:40,cost:200,level:10,skins:['🦬','🐻','🦍']},
+                {id:'king',icon:'🤴',name:'Король',health:400,damage:50,cost:250,level:10,skins:['🤴','👸','🦸']},
+                {id:'dr',icon:'🧙',name:'Доктор',health:200,damage:60,cost:300,level:10,skins:['🧙','🧛','🧟‍♂️']}
             ]
         };
+        
+        let unlockedPlants = [];
+        let unlockedZombies = [];
+        let selectedSkin = { plant: 'default', zombie: 'default' };
+        
+        function updateUnlockedUnits() {
+            const userLevel = currentUser?.level || 1;
+            unlockedPlants = units.plant.filter(u => u.level <= userLevel);
+            unlockedZombies = units.zombie.filter(u => u.level <= userLevel);
+        }
         
         document.addEventListener('DOMContentLoaded', () => { checkSession(); initGameLanes(); });
         
@@ -560,49 +594,59 @@
             document.getElementById('hallOfFameList').innerHTML = html;
         }
         
+        let shopItemsList = [];
         let currentSales = [];
+        
+        const PLANT_ICONS = {
+            sunflower: '🌻', peashooter: '🟢', wallnut: '🥜', cherrybomb: '🍒', iceshroom: '🧊',
+            snowpea: '❄️', chomper: '👄', repeater: '🔫', squash: '🎃', twinsunflower: '🌞', melonpult: '🍉', cattail: '🐱'
+        };
+        const PLANT_NAMES = {
+            sunflower: 'Подсолнух', peashooter: 'Горох', wallnut: 'Стена', cherrybomb: 'Вишня', iceshroom: 'Лед',
+            snowpea: 'Мороз', chomper: 'Хапун', repeater: 'Дубль', squash: 'Тыква', twinsunflower: 'Двойня', melonpult: 'Арбуз', cattail: 'Котоушка'
+        };
         
         async function showShop() { 
             showScreen('shopScreen'); 
             document.getElementById('promoMessage').textContent = ''; 
-            await loadSales();
+            await loadShop();
         }
         
-        async function loadSales() {
+        async function loadShop() {
             try {
-                const res = await fetch('/api/sales');
-                const data = await res.json();
-                if (data.success) {
-                    currentSales = data.sales || [];
-                    renderShopItems();
-                }
-            } catch(e) {}
+                // Загружаем магазин и скидки
+                const [shopRes, salesRes] = await Promise.all([fetch('/api/shop'), fetch('/api/sales')]);
+                const shopData = await shopRes.json();
+                const salesData = await salesRes.json();
+                
+                if (shopData.success) shopItemsList = shopData.items || [];
+                if (salesData.success) currentSales = salesData.sales || [];
+                
+                renderShopItems();
+            } catch(e) { console.error(e); }
         }
         
         function renderShopItems() {
-            const items = [
-                {id:'sunflower',icon:'🌻',name:'Подсолнух',price:50},
-                {id:'peashooter',icon:'🟢',name:'Горохострел',price:50},
-                {id:'wallnut',icon:'🥜',name:'Стеноорех',price:75},
-                {id:'cherrybomb',icon:'🍒',name:'Вишня',price:150},
-                {id:'iceshroom',icon:'🧊',name:'Лед',price:75}
-            ];
+            const shopEl = document.querySelector('.shop-items');
+            if (!shopEl || !shopItemsList.length) return;
             
-            const shopItems = document.querySelector('.shop-items');
-            shopItems.innerHTML = items.map(item => {
+            shopEl.innerHTML = shopItemsList.map(item => {
                 const sale = currentSales.find(s => s.plantId === item.id);
+                const icon = PLANT_ICONS[item.id] || '🌱';
+                const name = PLANT_NAMES[item.id] || item.id;
+                
                 if (sale) {
                     const newPrice = Math.floor(item.price * (1 - sale.discount/100));
                     return `<div class="shop-item sale" style="position:relative">
                         <span class="sale-badge">-${sale.discount}%</span>
-                        <div class="shop-item-icon">${item.icon}</div>
-                        <div>${item.name}</div>
+                        <div class="shop-item-icon">${icon}</div>
+                        <div>${name}</div>
                         <div><span class="old-price">${item.price}💰</span> <span style="color:#fbbf24">${newPrice}💰</span></div>
                     </div>`;
                 }
                 return `<div class="shop-item">
-                    <div class="shop-item-icon">${item.icon}</div>
-                    <div>${item.name}</div>
+                    <div class="shop-item-icon">${icon}</div>
+                    <div>${name}</div>
                     <div style="color:#fbbf24">${item.price}💰</div>
                 </div>`;
             }).join('');
@@ -717,9 +761,10 @@
         }
         
         function initGameControls() {
-            const myUnits = units[gameState.mySide];
+            const userLevel = currentUser?.level || 1;
+            const myUnits = units[gameState.mySide].filter(u => u.level <= userLevel);
             document.getElementById('gameControls').innerHTML = myUnits.map(u =>
-                `<button class="unit-btn" onclick="selectUnit('${u.id}')" data-unit="${u.id}">${u.icon}<span class="cost">${u.cost}</span></button>`
+                `<button class="unit-btn" onclick="selectUnit('${u.id}')" data-unit="${u.id}" title="Уровень ${u.level}"> ${u.icon}<span class="cost">${u.cost}</span></button>`
             ).join('');
         }
         
