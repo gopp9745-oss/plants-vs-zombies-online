@@ -271,7 +271,7 @@
                 <button class="btn btn-secondary" id="leaderTabLevel" onclick="switchLeaderTab('level')">По уровню</button>
             </div>
             <div class="leaderboard-row header">
-                <span class="rank">#</span><span class="username">Игрок</span><span>${currentLeaderSort === 'wins' ? 'Ур.' : 'Уровень'}</span><span id="leaderSortLabel">${currentLeaderSort === 'wins' ? 'Победы' : 'Опыт'}</span>
+                <span class="rank">#</span><span class="username">Игрок</span><span>Уровень</span><span>Победы</span>
             </div>
             <div id="leaderboardList"></div>
         </div>
@@ -594,7 +594,14 @@
             currentLeaderSort = sort;
             document.getElementById('leaderTabWins').className = sort === 'wins' ? 'btn btn-primary' : 'btn btn-secondary';
             document.getElementById('leaderTabLevel').className = sort === 'level' ? 'btn btn-primary' : 'btn btn-secondary';
-            document.getElementById('leaderSortLabel').textContent = sort === 'wins' ? 'Победы' : 'Опыт';
+            
+            // Update header dynamically
+            const headerRow = document.querySelector('#leaderboardScreen .leaderboard-row.header');
+            if (sort === 'wins') {
+                headerRow.innerHTML = '<span class="rank">#</span><span class="username">Игрок</span><span>Уровень</span><span>Победы</span>';
+            } else {
+                headerRow.innerHTML = '<span class="rank">#</span><span class="username">Игрок</span><span>Уровень</span><span>Опыт</span>';
+            }
             
             try {
                 const res = await fetch('/api/leaderboard' + (sort === 'level' ? '-level' : ''));
