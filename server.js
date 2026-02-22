@@ -702,6 +702,74 @@ io.on('connection', (socket) => {
         }
     });
     
+    socket.on('findBotGame', async (data) => {
+        const { sessionId, difficulty = 'medium' } = data;
+        const session = await sessionsCollection.findOne({ sessionId });
+        
+        if (!session) {
+            socket.emit('error', { message: 'Сессия недействительна' });
+            return;
+        }
+        
+        currentUser = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+        if (!currentUser) return;
+        
+        // Создаем игру с ботом напрямую
+        const roomId = uuidv4();
+        const side = Math.random() > 0.5 ? 'plant' : 'zombie';
+        const bot = createBot(difficulty, side === 'plant' ? 'zombie' : 'plant');
+        
+        gameRooms.set(roomId, {
+            players: [
+                { id: socket.id, side, user: currentUser },
+                { id: bot.id, side: bot.side, user: bot }
+            ],
+            state: 'playing',
+            timer: null,
+            botTimer: null,
+            isBotGame: true,
+            difficulty: difficulty
+        });
+        
+        currentRoom = roomId;
+        socket.join(roomId);
+        
+        io.to(roomId).emit('gameStart', {
+            roomId,
+            players: [
+                { id: socket.id, side: side, username: currentUser.username, isBot: false },
+                { id: bot.id, side: bot.side, username: bot.username, isBot: true }
+            ],
+            state: 'playing',
+            isBotGame: true,
+            difficulty: difficulty
+        });
+        
+        // Запускаем игровой таймер
+        let roundTime = 180;
+        const room = gameRooms.get(roomId);
+        room.timer = setInterval(() => {
+            roundTime--;
+            io.to(roomId).emit('gameTimer', { time: roundTime });
+            
+            // Логика бота - каждые 5 секунд
+            if (roundTime % 5 === 0) {
+                const botPlayer = room.players.find(p => p.user.isBot);
+                if (botPlayer && Math.random() < BOT_DIFFICULTIES[botPlayer.user.difficulty].spawnRate) {
+                    const lane = Math.floor(Math.random() * 5);
+                    const unitId = botPlayer.side === 'plant' ? 'peashooter' : 'zombie';
+                    io.to(roomId).emit('botPlaceUnit', { lane: lane, unitId: unitId, side: botPlayer.side });
+                }
+            }
+            
+            if (roundTime <= 0) {
+                endRound(roomId, 'draw');
+            }
+        }, 1000);
+        
+        console.log(`Игра с ботом ${difficulty} началась: ${currentUser.username} vs ${bot.username}`);
+    });
+    
     socket.on('findGame', async (data) => {
         const { sessionId, difficulty = 'medium' } = data;
         const session = await sessionsCollection.findOne({ sessionId });
@@ -986,7 +1054,7 @@ async function endRound(roomId, result) {
             io.to(roomId).emit('gameEnd', { 
                 winner: winner.user.username, 
                 winnerSide: winner.side,
-                rewards: { winner: winner.user.isBot ? 0 : 50, loser: loser.user.isBot ? 0 : 10 },
+                rewards: { winner: 50, loser: 10 },
                 isBotGame: room.isBotGame
             });
         }

@@ -264,7 +264,8 @@
                     <option value="hard">Сложный 🤖</option>
                 </select>
             </div>
-            <button class="btn btn-primary profile-btn" onclick="findGame()">Играть</button>
+            <button class="btn btn-primary profile-btn" onclick="findGame()">Найти игру</button>
+            <button class="btn btn-secondary profile-btn" onclick="findBotGame()">Играть с ботом</button>
             <button class="btn btn-secondary profile-btn" onclick="showShop()">Магазин</button>
             <button class="btn btn-warning profile-btn" onclick="showLeaderboard()">Лидерборд</button>
             <button class="btn btn-secondary profile-btn" onclick="showMatchHistory()">История игр</button>
@@ -882,6 +883,14 @@
             document.getElementById('chatMessages').innerHTML = '';
             const difficulty = document.getElementById('difficultySelect').value;
             socket.emit('findGame', {sessionId, difficulty});
+        }
+        
+        function findBotGame() {
+            if (!socket) { socket = io(); initSocketListeners(); }
+            showScreen('waitingScreen');
+            document.getElementById('chatMessages').innerHTML = '';
+            const difficulty = document.getElementById('difficultySelect').value;
+            socket.emit('findBotGame', {sessionId, difficulty});
         }
         
         function initSocketListeners() {
