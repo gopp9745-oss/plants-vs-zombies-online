@@ -937,7 +937,11 @@
             gameLoop = setInterval(() => {
                 if (!gameState || !gameState.units) return;
                 
-                // Растения производят солнце, зомби производят мозги
+                // Растения производят солнце, зомби производят мозги (для обоих игроков!)
+                const hasPlant = gameState.units.some(u => u.side === 'plant');
+                const hasZombie = gameState.units.some(u => u.side === 'zombie');
+                
+                // Всегда добавляем ресурсы для текущего игрока
                 if (gameState.mySide === 'plant') {
                     gameResources.sun += 1;
                 } else {
@@ -945,31 +949,30 @@
                 }
                 updateResourceDisplay();
                 
-                // Движение зомби
+                // Движение зомби (двигаются ВСЕ зомби в игре!)
                 gameState.units.forEach((unit, index) => {
                     if (unit.side === 'zombie') {
-                        // Зомби двигаются влево (к растениям)
+                        // Зомби двигаются влево (к растениям) - от 90% к 10%
                         let currentLeft = parseFloat(unit.element.style.left) || 50;
-                        currentLeft -= 0.5; // Скорость движения
+                        currentLeft -= 2; // Увеличена скорость движения
                         if (currentLeft < 5) currentLeft = 5;
                         unit.element.style.left = currentLeft + '%';
                         
                         // Проверка столкновения с растениями
                         gameState.units.forEach(target => {
-                            if (target.side === 'plant') {
-                                const laneMatch = target.lane === unit.lane;
-                                const posMatch = Math.abs(parseFloat(unit.element.style.left || 50) - parseFloat(target.element.style.left || 50)) < 8;
-                                if (laneMatch && posMatch) {
+                            if (target.side === 'plant' && target.lane === unit.lane) {
+                                const posDiff = Math.abs(parseFloat(unit.element.style.left || 50) - parseFloat(target.element.style.left || 50));
+                                if (posDiff < 10) {
                                     // Атака!
                                     unit.element.classList.add('attack');
-                                    target.health -= unit.damage / 60;
+                                    target.health -= (unit.damage || 20) / 30;
                                     target.element.classList.add('damage');
                                     setTimeout(() => {
                                         unit.element.classList.remove('attack');
                                         target.element.classList.remove('damage');
-                                    }, 300);
+                                    }, 200);
                                     
-                                    if (target.health <= 0) {
+                                    if (target.health <= 0 && target.element) {
                                         target.element.remove();
                                         gameState.units = gameState.units.filter(u => u !== target);
                                     }
@@ -979,24 +982,24 @@
                     }
                 });
                 
-                // Растения атакуют
+                // Растения атакуют (если на той же линии есть зомби слева)
                 gameState.units.forEach(unit => {
                     if (unit.side === 'plant' && unit.damage) {
-                        // Ищем зомби на той же линии
                         const target = gameState.units.find(z => z.side === 'zombie' && z.lane === unit.lane);
                         if (target) {
                             const plantPos = parseFloat(unit.element.style.left) || 50;
                             const zombiePos = parseFloat(target.element.style.left) || 50;
-                            if (plantPos < zombiePos && zombiePos - plantPos < 40) {
+                            // Растения атакуют если зомби справа от них (меньше на 50%)
+                            if (plantPos > zombiePos && plantPos - zombiePos < 50) {
                                 unit.element.classList.add('attack');
-                                target.health -= unit.damage / 60;
+                                target.health -= (unit.damage || 20) / 30;
                                 target.element.classList.add('damage');
                                 setTimeout(() => {
                                     unit.element.classList.remove('attack');
                                     target.element.classList.remove('damage');
-                                }, 300);
+                                }, 200);
                                 
-                                if (target.health <= 0) {
+                                if (target.health <= 0 && target.element) {
                                     target.element.remove();
                                     gameState.units = gameState.units.filter(u => u !== target);
                                 }
@@ -1005,7 +1008,7 @@
                     }
                 });
                 
-            }, 1000);
+            }, 500); // Уменьшен интервал для более плавной игры
         }
         
         function initGameControls() {
