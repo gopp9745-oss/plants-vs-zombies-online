@@ -605,9 +605,9 @@
                     document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
                         `<div class="leaderboard-row ${i<3?'top-3':''}">
                             <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
-                            <span class="username">${p.username}</span>
-                            <span>${p.level}</span>
-                            <span>${sort === 'wins' ? p.wins : (p.xp || 0)}</span>
+                            <span class="username">${p.username || 'Unknown'}</span>
+                            <span>${p.level || 1}</span>
+                            <span>${sort === 'wins' ? (p.wins || 0) : (p.xp || 0)}</span>
                         </div>`
                     ).join('');
                 }
