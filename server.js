@@ -135,6 +135,99 @@ function getXPForLevel(level) {
     return level * 100 + level * level * 10;
 }
 
+const DAILY_QUESTS = [
+    { id: 'play_1_game', name: 'Первая игра', desc: 'Сыграйте 1 матч', reward: 30, type: 'games' },
+    { id: 'play_3_games', name: 'Боец', desc: 'Сыграйте 3 матча', reward: 75, type: 'games', target: 3 },
+    { id: 'win_1_game', name: 'Победа', desc: 'Выиграйте 1 матч', reward: 50, type: 'wins', target: 1 },
+    { id: 'win_2_games', name: 'На победу', desc: 'Выиграйте 2 матча', reward: 100, type: 'wins', target: 2 },
+    { id: 'earn_100_coins', name: 'Копилка', desc: 'Заработайте 100 монет', reward: 25, type: 'coins', target: 100 },
+    { id: 'earn_300_coins', name: 'Богач', desc: 'Заработайте 300 монет', reward: 75, type: 'coins', target: 300 },
+    { id: 'use_5_units', name: 'Командир', desc: 'Разместите 5 юнитов', reward: 40, type: 'units', target: 5 },
+    { id: 'chat_3_times', name: 'Болтун', desc: 'Напишите 3 сообщения в чат', reward: 20, type: 'chat', target: 3 }
+];
+
+function generateDailyQuests() {
+    const shuffled = [...DAILY_QUESTS].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 3).map(q => ({...q, progress: 0, completed: false}));
+}
+
+app.post('/api/daily-quests', (req, res) => {
+    const { sessionId } = req.body;
+    const userId = sessions.get(sessionId);
+    if (!userId) return res.json({ success: false });
+    
+    let user = null;
+    for (let u of users.values()) {
+        if (u.id === userId) { user = u; break; }
+    }
+    if (!user) return res.json({ success: false });
+    
+    // Проверяем, нужно ли обновить квесты (новый день)
+    const today = new Date().toDateString();
+    if (!user.dailyQuests || user.dailyQuestsDate !== today) {
+        user.dailyQuests = generateDailyQuests();
+        user.dailyQuestsDate = today;
+        user.dailyQuestsGames = 0;
+        user.dailyQuestsWins = 0;
+        user.dailyQuestsCoins = 0;
+        user.dailyQuestsUnits = 0;
+        user.dailyQuestsChat = 0;
+        saveUsers();
+    }
+    
+    res.json({ success: true, quests: user.dailyQuests, date: user.dailyQuestsDate });
+});
+
+app.post('/api/update-quest', (req, res) => {
+    const { sessionId, type, amount } = req.body;
+    const userId = sessions.get(sessionId);
+    if (!userId) return res.json({ success: false });
+    
+    let user = null;
+    for (let u of users.values()) {
+        if (u.id === userId) { user = u; break; }
+    }
+    if (!user || !user.dailyQuests) return res.json({ success: false });
+    
+    const today = new Date().toDateString();
+    if (user.dailyQuestsDate !== today) return res.json({ success: false });
+    
+    // Обновляем прогресс
+    if (type === 'games') user.dailyQuestsGames = (user.dailyQuestsGames || 0) + (amount || 1);
+    if (type === 'wins') user.dailyQuestsWins = (user.dailyQuestsWins || 0) + (amount || 1);
+    if (type === 'coins') user.dailyQuestsCoins = (user.dailyQuestsCoins || 0) + (amount || 1);
+    if (type === 'units') user.dailyQuestsUnits = (user.dailyQuestsUnits || 0) + (amount || 1);
+    if (type === 'chat') user.dailyQuestsChat = (user.dailyQuestsChat || 0) + (amount || 1);
+    
+    // Проверяем выполнение квестов
+    let newRewards = [];
+    user.dailyQuests.forEach(quest => {
+        if (quest.completed) return;
+        
+        let progress = 0;
+        switch(quest.type) {
+            case 'games': progress = user.dailyQuestsGames || 0; break;
+            case 'wins': progress = user.dailyQuestsWins || 0; break;
+            case 'coins': progress = user.dailyQuestsCoins || 0; break;
+            case 'units': progress = user.dailyQuestsUnits || 0; break;
+            case 'chat': progress = user.dailyQuestsChat || 0; break;
+        }
+        
+        const target = quest.target || 1;
+        if (progress >= target) {
+            quest.completed = true;
+            quest.progress = target;
+            user.coins += quest.reward;
+            newRewards.push(quest);
+        } else {
+            quest.progress = progress;
+        }
+    });
+    
+    saveUsers();
+    res.json({ success: true, quests: user.dailyQuests, newRewards });
+});
+
 const ACHIEVEMENTS = [
     { id: 'first_win', name: 'Первая победа', desc: 'Выиграйте первый матч', icon: '🎉', reward: 50 },
     { id: 'wins_10', name: 'Новичок бой', desc: '10 побед', icon: '⭐', reward: 100 },

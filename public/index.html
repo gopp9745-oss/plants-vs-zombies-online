@@ -258,6 +258,7 @@
             <button class="btn btn-secondary profile-btn" onclick="showMatchHistory()">История игр</button>
             <button class="btn btn-secondary profile-btn" onclick="showHallOfFame()">Путь Славы</button>
             <button class="btn btn-secondary profile-btn" onclick="showAchievements()">🏅 Достижения</button>
+            <button class="btn btn-secondary profile-btn" onclick="showQuests()">📋 Квесты</button>
             <button class="btn btn-secondary profile-btn" id="adminBtn" style="display:none" onclick="showAdmin()">Админ</button>
             <button class="btn btn-danger profile-btn" onclick="logout()">Выход</button>
         </div>
@@ -325,6 +326,14 @@
         <h2 class="leaderboard-title" style="color:#fbbf24">🏅 Достижения</h2>
         <div class="match-history-container">
             <div id="achievementsList"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="questsScreen" class="screen">
+        <h2 class="leaderboard-title" style="color:#22c55e">📋 Ежедневные квесты</h2>
+        <div class="match-history-container">
+            <div id="questsList"></div>
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
     </div>
@@ -516,7 +525,7 @@
         }
         
         function hideAllScreens() {
-            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen'].forEach(id => document.getElementById(id).style.display = 'none');
         }
         
         function showScreen(id) {
@@ -1036,6 +1045,48 @@
                         <span style="color:${unlocked ? '#4ade80' : '#ef4444'}">${unlocked ? '✓' : '🔒'}</span>
                     </div>`;
                 }).join('');
+            } catch(e) {}
+        }
+        
+        // Квесты
+        const questList = [
+            { id: 'play_1_game', name: 'Первая игра', desc: 'Сыграйте 1 матч', icon: '🎮', reward: 30 },
+            { id: 'play_3_games', name: 'Боец', desc: 'Сыграйте 3 матча', icon: '⚔️', reward: 75 },
+            { id: 'win_1_game', name: 'Победа', desc: 'Выиграйте 1 матч', icon: '🏆', reward: 50 },
+            { id: 'win_2_games', name: 'На победу', desc: 'Выиграйте 2 матча', icon: '⭐', reward: 100 },
+            { id: 'earn_100_coins', name: 'Копилка', desc: 'Заработайте 100 монет', icon: '💰', reward: 25 },
+            { id: 'earn_300_coins', name: 'Богач', desc: 'Заработайте 300 монет', icon: '💎', reward: 75 },
+            { id: 'use_5_units', name: 'Командир', desc: 'Разместите 5 юнитов', icon: '🌻', reward: 40 },
+            { id: 'chat_3_times', name: 'Болтун', desc: 'Напишите 3 сообщения', icon: '💬', reward: 20 }
+        ];
+        
+        async function showQuests() {
+            showScreen('questsScreen');
+            try {
+                const res = await fetch('/api/daily-quests', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                
+                if (data.success && data.quests) {
+                    document.getElementById('questsList').innerHTML = data.quests.map(quest => {
+                        const target = quest.target || 1;
+                        const progress = quest.progress || 0;
+                        const percent = Math.min(100, (progress / target) * 100);
+                        return `<div class="match-row" style="flex-direction:column;opacity:${quest.completed ? 1 : 0.8}">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+                                <span style="font-size:1.8rem">${quest.icon || '📋'}</span>
+                                <div style="flex:1">
+                                    <div style="font-weight:bold">${quest.name}</div>
+                                    <div style="font-size:0.75rem;color:#94a3b8">${quest.desc}</div>
+                                </div>
+                                <span style="color:#fbbf24">+${quest.reward}💰</span>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:12px;overflow:hidden">
+                                <div style="background:linear-gradient(90deg,#4ade80,#22c55e);height:100%;width:${percent}%;transition:width 0.3s"></div>
+                            </div>
+                            <div style="text-align:right;font-size:0.75rem;color:#94a3b8;margin-top:2px">${progress}/${target}</div>
+                        </div>`;
+                    }).join('');
+                }
             } catch(e) {}
         }
     </script>
