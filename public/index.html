@@ -143,6 +143,10 @@
         .match-loser { color: #ef4444; }
         
         .game-header { width: 100%; max-width: 800px; display: flex; justify-content: space-between; padding: 10px 20px; background: rgba(0,0,0,0.5); border-radius: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+        .resource-display { display: flex; gap: 20px; align-items: center; }
+        .resource { display: flex; align-items: center; gap: 5px; font-size: 1.2rem; }
+        .resource.sun { color: #fbbf24; }
+        .resource.brain { color: #ef4444; }
         .game-timer { font-size: 1.3rem; color: #fbbf24; animation: timerBlink 1s ease-in-out infinite; }
         @keyframes timerBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
         .game-arena { width: 100%; max-width: 800px; aspect-ratio: 16/9; background: linear-gradient(180deg, #1e3a5f, #0f172a); border-radius: 12px; border: 3px solid rgba(255,255,255,0.2); position: relative; overflow: hidden; }
@@ -220,7 +224,7 @@
     
     <div id="authScreen" class="screen">
         <div class="auth-box">
-            <h2 id="authTitle">Вход</h2>
+            <h2 id="authTitle">
             <div class="auth-tabs">
                 <button class="auth-tab active" onclick="showAuthTab('login')">Вход</button>
                 <button class="auth-tab" onclick="showAuthTab('register')">Регистрация</button>
@@ -422,6 +426,10 @@
     <div id="gameScreen" class="screen" style="padding:10px">
         <div class="game-header">
             <div><span>Вы: </span><span id="mySide">-</span></div>
+            <div class="resource-display">
+                <div class="resource sun" id="sunDisplay">🌻 50</div>
+                <div class="resource brain" id="brainDisplay">🧠 50</div>
+            </div>
             <div><span>Противник: </span><span id="opponentName">-</span></div>
             <div class="game-timer" id="gameTimer">3:00</div>
         </div>
@@ -878,13 +886,107 @@
             socket.on('error', (data) => { alert(data.message); backToProfile(); });
         }
         
+        let gameResources = { sun: 50, brain: 50 };
+        let gameLoop = null;
+        
         function startGame(data) {
             showScreen('gameScreen');
             const myPlayer = data.players.find(p => p.id === socket.id);
             gameState = { mySide: myPlayer.side, opponent: data.players.find(p => p.id !== socket.id), units: [] };
+            gameResources = { sun: 50, brain: 50 };
+            updateResourceDisplay();
             document.getElementById('mySide').textContent = myPlayer.side==='plant'?'🌻 Растения':'🧟 Зомби';
             document.getElementById('opponentName').textContent = gameState.opponent.username;
             initGameControls();
+            startGameLoop();
+        }
+        
+        function updateResourceDisplay() {
+            const sunDisplay = document.getElementById('sunDisplay');
+            const brainDisplay = document.getElementById('brainDisplay');
+            if (gameState.mySide === 'plant') {
+                sunDisplay.textContent = '🌻 ' + gameResources.sun;
+                brainDisplay.style.display = 'none';
+            } else {
+                brainDisplay.textContent = '🧠 ' + gameResources.brain;
+                sunDisplay.style.display = 'none';
+            }
+        }
+        
+        function startGameLoop() {
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(() => {
+                if (!gameState || !gameState.units) return;
+                
+                // Растения производят солнце, зомби производят мозги
+                if (gameState.mySide === 'plant') {
+                    gameResources.sun += 1;
+                } else {
+                    gameResources.brain += 1;
+                }
+                updateResourceDisplay();
+                
+                // Движение зомби
+                gameState.units.forEach((unit, index) => {
+                    if (unit.side === 'zombie') {
+                        // Зомби двигаются влево (к растениям)
+                        let currentLeft = parseFloat(unit.element.style.left) || 50;
+                        currentLeft -= 0.5; // Скорость движения
+                        if (currentLeft < 5) currentLeft = 5;
+                        unit.element.style.left = currentLeft + '%';
+                        
+                        // Проверка столкновения с растениями
+                        gameState.units.forEach(target => {
+                            if (target.side === 'plant') {
+                                const laneMatch = target.lane === unit.lane;
+                                const posMatch = Math.abs(parseFloat(unit.element.style.left || 50) - parseFloat(target.element.style.left || 50)) < 8;
+                                if (laneMatch && posMatch) {
+                                    // Атака!
+                                    unit.element.classList.add('attack');
+                                    target.health -= unit.damage / 60;
+                                    target.element.classList.add('damage');
+                                    setTimeout(() => {
+                                        unit.element.classList.remove('attack');
+                                        target.element.classList.remove('damage');
+                                    }, 300);
+                                    
+                                    if (target.health <= 0) {
+                                        target.element.remove();
+                                        gameState.units = gameState.units.filter(u => u !== target);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                // Растения атакуют
+                gameState.units.forEach(unit => {
+                    if (unit.side === 'plant' && unit.damage) {
+                        // Ищем зомби на той же линии
+                        const target = gameState.units.find(z => z.side === 'zombie' && z.lane === unit.lane);
+                        if (target) {
+                            const plantPos = parseFloat(unit.element.style.left) || 50;
+                            const zombiePos = parseFloat(target.element.style.left) || 50;
+                            if (plantPos < zombiePos && zombiePos - plantPos < 40) {
+                                unit.element.classList.add('attack');
+                                target.health -= unit.damage / 60;
+                                target.element.classList.add('damage');
+                                setTimeout(() => {
+                                    unit.element.classList.remove('attack');
+                                    target.element.classList.remove('damage');
+                                }, 300);
+                                
+                                if (target.health <= 0) {
+                                    target.element.remove();
+                                    gameState.units = gameState.units.filter(u => u !== target);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+            }, 1000);
         }
         
         function initGameControls() {
@@ -904,25 +1006,41 @@
             const laneIndex = parseInt(lane.dataset.lane);
             const unitData = units[gameState.mySide].find(u => u.id === selectedUnit);
             if (!unitData) return;
-            if (currentUser.coins < unitData.cost) { alert('Нет монет!'); return; }
-            placeUnit(laneIndex, unitData, gameState.mySide);
-            socket.emit(gameState.mySide==='plant'?'plantPlaced':'zombiePlaced', {lane:laneIndex,unitId:selectedUnit});
-            currentUser.coins -= unitData.cost;
+            
+            // Используем солнце или мозги в зависимости от стороны
+            const resource = gameState.mySide === 'plant' ? gameResources.sun : gameResources.brain;
+            if (resource < unitData.cost) { alert('Недостаточно ресурсов!'); return; }
+            
+            // Размещаем юнит на правильной позиции
+            const pos = gameState.mySide === 'plant' ? '90%' : '10%';
+            placeUnit(laneIndex, unitData, gameState.mySide, pos);
+            socket.emit(gameState.mySide==='plant'?'plantPlaced':'zombiePlaced', {lane:laneIndex,unitId:selectedUnit,pos});
+            
+            // Списываем ресурсы
+            if (gameState.mySide === 'plant') {
+                gameResources.sun -= unitData.cost;
+            } else {
+                gameResources.brain -= unitData.cost;
+            }
+            updateResourceDisplay();
         });
         
-        function placeUnit(laneIndex, unitData, side) {
+        function placeUnit(laneIndex, unitData, side, position = '50%') {
             const lane = document.querySelector(`.game-lane[data-lane="${laneIndex}"]`);
             const unit = document.createElement('div');
             unit.className = `game-unit ${side}`;
             unit.innerHTML = unitData.icon;
-            unit.style.top = '50%'; unit.style.transform = 'translateY(-50%)';
+            unit.style.top = '50%';
+            unit.style.left = position;
+            unit.style.transform = 'translateY(-50%)';
             lane.appendChild(unit);
             gameState.units.push({element:unit,...unitData,lane:laneIndex,side,health:unitData.health});
         }
         
         function placeOpponentUnit(data) {
             const unitData = units[gameState.mySide==='plant'?'zombie':'plant'].find(u => u.id === data.unitId);
-            placeUnit(data.lane, unitData, gameState.mySide==='plant'?'zombie':'plant');
+            const pos = gameState.mySide==='plant' ? '10%' : '90%';
+            placeUnit(data.lane, unitData, gameState.mySide==='plant'?'zombie':'plant', pos);
         }
         
         function updateGameTimer(s) { const m=Math.floor(s/60),sec=s%60; document.getElementById('gameTimer').textContent = `${m}:${sec.toString().padStart(2,'0')}`; }
