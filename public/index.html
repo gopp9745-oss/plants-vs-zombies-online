@@ -597,14 +597,7 @@
             
             // Update header dynamically
             const headerRow = document.querySelector('#leaderboardScreen .leaderboard-row.header');
-            if (sort === 'wins') {
-                headerRow.innerHTML = '<span class="rank">#</span><span class="username">Игрок</span><span>Уровень</span><span>Победы</span>';
-            } else {
-                headerRow.innerHTML = '<span class="rank">#</span><span class="username">Игрок</span><span>Уровень/Опыт</span>';
-            }
-            
-            // Also update data rows to match column count
-            const listContainer = document.getElementById('leaderboardList');
+            headerRow.innerHTML = '<span class="rank">#</span><span class="username">Игрок</span><span>Уровень/' + (sort === 'wins' ? 'Победы' : 'Опыт') + '</span>';
             
             try {
                 const res = await fetch('/api/leaderboard' + (sort === 'level' ? '-level' : ''));
@@ -613,24 +606,17 @@
                     const sortKey = sort === 'wins' ? 'wins' : 'xp';
                     const sorted = [...data.leaders].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
                     
-                    if (sort === 'wins') {
-                        document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
-                            `<div class="leaderboard-row ${i<3?'top-3':''}">
-                                <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
-                                <span class="username">${p.username || 'Unknown'}</span>
-                                <span>${p.level || 1}</span>
-                                <span>${p.wins || 0}</span>
-                            </div>`
-                        ).join('');
-                    } else {
-                        document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
-                            `<div class="leaderboard-row ${i<3?'top-3':''}">
-                                <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
-                                <span class="username">${p.username || 'Unknown'}</span>
-                                <span>${(p.level || 1)}/${p.xp || 0}</span>
-                            </div>`
-                        ).join('');
-                    }
+                    const displayValue = sort === 'wins' 
+                        ? `${(p.level || 1)}/${p.wins || 0}` 
+                        : `${(p.level || 1)}/${p.xp || 0}`;
+                    
+                    document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
+                        `<div class="leaderboard-row ${i<3?'top-3':''}">
+                            <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
+                            <span class="username">${p.username || 'Unknown'}</span>
+                            <span>${sort === 'wins' ? (p.level || 1) + '/' + (p.wins || 0) : (p.level || 1) + '/' + (p.xp || 0)}</span>
+                        </div>`
+                    ).join('');
                 }
             } catch(e) {}
         }
