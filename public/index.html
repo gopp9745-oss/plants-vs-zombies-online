@@ -555,8 +555,12 @@
                 if (data.success) {
                     sessionId = data.sessionId; localStorage.setItem('sessionId', sessionId);
                     currentUser = data.user;
-                    // Показываем обучение после регистрации
-                    setTimeout(() => startTutorial(), 1000);
+                    // Показываем обучение после регистрации (новым игрокам)
+                    if (type === 'register') {
+                        setTimeout(() => startTutorial(), 1000);
+                    } else {
+                        setTimeout(() => showProfile(), 1000);
+                    }
                 }
             } catch(e) { document.getElementById('authMessage').textContent = 'Ошибка'; document.getElementById('authMessage').style.display = 'block'; }
         }
