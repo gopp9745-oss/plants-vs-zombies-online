@@ -271,7 +271,7 @@
                 <button class="btn btn-secondary" id="leaderTabLevel" onclick="switchLeaderTab('level')">По уровню</button>
             </div>
             <div class="leaderboard-row header">
-                <span class="rank">#</span><span class="username">Игрок</span><span>Ур.</span><span id="leaderSortLabel">Победы</span>
+                <span class="rank">#</span><span class="username">Игрок</span><span>${currentLeaderSort === 'wins' ? 'Ур.' : 'Уровень'}</span><span id="leaderSortLabel">${currentLeaderSort === 'wins' ? 'Победы' : 'Опыт'}</span>
             </div>
             <div id="leaderboardList"></div>
         </div>
