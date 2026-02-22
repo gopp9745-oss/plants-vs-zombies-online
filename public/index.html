@@ -256,6 +256,14 @@
             </div>
         </div>
         <div class="profile-menu">
+            <div style="margin-bottom:15px">
+                <label style="margin-right:10px">Сложность:</label>
+                <select id="difficultySelect" style="padding:8px;border-radius:6px;background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.3)">
+                    <option value="easy">Легкий 🤖</option>
+                    <option value="medium" selected>Средний 🤖</option>
+                    <option value="hard">Сложный 🤖</option>
+                </select>
+            </div>
             <button class="btn btn-primary profile-btn" onclick="findGame()">Играть</button>
             <button class="btn btn-secondary profile-btn" onclick="showShop()">Магазин</button>
             <button class="btn btn-warning profile-btn" onclick="showLeaderboard()">Лидерборд</button>
@@ -872,7 +880,8 @@
             if (!socket) { socket = io(); initSocketListeners(); }
             showScreen('waitingScreen');
             document.getElementById('chatMessages').innerHTML = '';
-            socket.emit('findGame', {sessionId});
+            const difficulty = document.getElementById('difficultySelect').value;
+            socket.emit('findGame', {sessionId, difficulty});
         }
         
         function initSocketListeners() {
@@ -881,6 +890,7 @@
             socket.on('gameTimer', (data) => updateGameTimer(data.time));
             socket.on('opponentPlanted', (data) => placeOpponentUnit(data));
             socket.on('opponentZombie', (data) => placeOpponentUnit(data));
+            socket.on('botPlaceUnit', (data) => placeOpponentUnit(data));
             socket.on('gameEnd', (data) => endGame(data));
             socket.on('chatMessage', (data) => addChatMessage(data));
             socket.on('error', (data) => { alert(data.message); backToProfile(); });
@@ -1038,9 +1048,11 @@
         }
         
         function placeOpponentUnit(data) {
-            const unitData = units[gameState.mySide==='plant'?'zombie':'plant'].find(u => u.id === data.unitId);
-            const pos = gameState.mySide==='plant' ? '10%' : '90%';
-            placeUnit(data.lane, unitData, gameState.mySide==='plant'?'zombie':'plant', pos);
+            const side = data.side || (gameState.mySide === 'plant' ? 'zombie' : 'plant');
+            const unitData = units[side].find(u => u.id === data.unitId);
+            // Растения справа (90%), зомби слева (10%)
+            const pos = side === 'plant' ? '90%' : '10%';
+            placeUnit(data.lane, unitData, side, pos);
         }
         
         function updateGameTimer(s) { const m=Math.floor(s/60),sec=s%60; document.getElementById('gameTimer').textContent = `${m}:${sec.toString().padStart(2,'0')}`; }

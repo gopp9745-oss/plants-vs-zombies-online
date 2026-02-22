@@ -36,13 +36,11 @@ async function connectDB() {
         salesCollection = db.collection('sales');
         sessionsCollection = db.collection('sessions');
         
-        // Создаем индексы
         await usersCollection.createIndex({ username: 1 }, { unique: true });
         await sessionsCollection.createIndex({ sessionId: 1 });
         
         console.log('✓ Подключено к MongoDB');
         
-        // Создаем админа если нет
         const adminExists = await usersCollection.findOne({ username: 'admin' });
         if (!adminExists) {
             await usersCollection.insertOne({
@@ -74,6 +72,27 @@ async function connectDB() {
         console.error('Ошибка подключения к MongoDB:', e.message);
         process.exit(1);
     }
+}
+
+// ==================== БОТЫ ====================
+const BOT_NAMES = ['ЗомбиКиллер', 'Садовник2000', 'МозгОхотник', 'Растениевод', 'ЗеленаяАрмия', 'Огородник', 'БотМастер', 'ИИСадовод', 'ЭкоБоец', 'ЗеленыйВоиН'];
+const BOT_DIFFICULTIES = {
+    easy: { name: 'Легкий', spawnRate: 0.3, aggression: 0.3 },
+    medium: { name: 'Средний', spawnRate: 0.5, aggression: 0.5 },
+    hard: { name: 'Сложный', spawnRate: 0.8, aggression: 0.8 }
+};
+
+function createBot(difficulty = 'medium', side) {
+    return {
+        id: 'bot_' + uuidv4().substring(0, 8),
+        username: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + Math.floor(Math.random() * 100),
+        side: side,
+        isBot: true,
+        difficulty: difficulty,
+        level: Math.floor(Math.random() * 10) + 1,
+        coins: 100,
+        _id: 'bot_' + Date.now()
+    };
 }
 
 // ==================== МАГАЗИН ====================
@@ -335,7 +354,7 @@ app.post('/api/register', async (req, res) => {
         return res.json({ success: false, message: 'Пользователь уже существует' });
     }
     
-    const result = await usersCollection.insertOne({
+    await usersCollection.insertOne({
         username,
         usernameLower: username.toLowerCase(),
         password: bcrypt.hashSync(password, 10),
@@ -665,6 +684,7 @@ app.post('/api/admin/unban', async (req, res) => {
 // ==================== ИГРОВОЙ СЕРВЕР ====================
 
 const gameRooms = new Map();
+const WAIT_TIMEOUT = 60 * 1000; // 60 секунд
 
 io.on('connection', (socket) => {
     console.log('Игрок подключился:', socket.id);
@@ -673,7 +693,7 @@ io.on('connection', (socket) => {
     let currentUser = null;
     
     socket.on('sendMessage', (data) => {
-        if (currentRoom && currentUser) {
+        if (currentRoom && currentUser && !currentUser.isBot) {
             io.to(currentRoom).emit('chatMessage', {
                 username: currentUser.username,
                 message: data.message.substring(0, 100),
@@ -683,7 +703,7 @@ io.on('connection', (socket) => {
     });
     
     socket.on('findGame', async (data) => {
-        const { sessionId } = data;
+        const { sessionId, difficulty = 'medium' } = data;
         const session = await sessionsCollection.findOne({ sessionId });
         
         if (!session) {
@@ -694,8 +714,9 @@ io.on('connection', (socket) => {
         currentUser = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
         if (!currentUser) return;
         
+        // Ищем игру с реальным игроком
         for (let [roomId, room] of gameRooms) {
-            if (room.players.length === 1 && room.state === 'waiting') {
+            if (room.players.length === 1 && room.state === 'waiting' && !room.isBotGame) {
                 const side = room.players[0].side === 'plant' ? 'zombie' : 'plant';
                 room.players.push({ id: socket.id, side, user: currentUser });
                 currentRoom = roomId;
@@ -703,9 +724,15 @@ io.on('connection', (socket) => {
                 
                 room.state = 'playing';
                 
+                // Очищаем таймер ожидания бота
+                if (room.botTimer) {
+                    clearTimeout(room.botTimer);
+                    room.botTimer = null;
+                }
+                
                 io.to(roomId).emit('gameStart', {
                     roomId,
-                    players: room.players.map(p => ({ id: p.id, side: p.side, username: p.user.username })),
+                    players: room.players.map(p => ({ id: p.id, side: p.side, username: p.user.username, isBot: p.user.isBot || false })),
                     state: room.state
                 });
                 
@@ -723,25 +750,88 @@ io.on('connection', (socket) => {
             }
         }
         
+        // Создаем комнату и запускаем таймер для бота
         const roomId = uuidv4();
         const side = Math.random() > 0.5 ? 'plant' : 'zombie';
         
         gameRooms.set(roomId, {
             players: [{ id: socket.id, side, user: currentUser }],
             state: 'waiting',
-            timer: null
+            timer: null,
+            botTimer: null,
+            isBotGame: false,
+            difficulty: difficulty
         });
         
         currentRoom = roomId;
         socket.join(roomId);
-        socket.emit('waiting', { message: 'Ожидание противника...' });
+        
+        // Отправляем сообщение о поиске
+        socket.emit('waiting', { message: 'Ожидание противника...', timeLeft: WAIT_TIMEOUT / 1000 });
+        
+        // Запускаем таймер на 60 секунд для бота
+        const room = gameRooms.get(roomId);
+        room.botTimer = setTimeout(() => {
+            startBotGame(roomId, difficulty);
+        }, WAIT_TIMEOUT);
     });
+    
+    function startBotGame(roomId, difficulty) {
+        const room = gameRooms.get(roomId);
+        if (!room || room.state !== 'waiting') return;
+        
+        room.isBotGame = true;
+        
+        // Определяем сторону бота (противоположная игроку)
+        const playerSide = room.players[0].side;
+        const botSide = playerSide === 'plant' ? 'zombie' : 'plant';
+        const bot = createBot(difficulty, botSide);
+        
+        room.players.push({ id: bot.id, side: botSide, user: bot });
+        room.state = 'playing';
+        
+        io.to(roomId).emit('gameStart', {
+            roomId,
+            players: room.players.map(p => ({ id: p.id, side: p.side, username: p.user.username, isBot: p.user.isBot || false })),
+            state: room.state,
+            isBotGame: true,
+            difficulty: difficulty
+        });
+        
+        // Запускаем игровой таймер
+        let roundTime = 180;
+        room.timer = setInterval(() => {
+            roundTime--;
+            io.to(roomId).emit('gameTimer', { time: roundTime });
+            
+            // Логика бота
+            if (roundTime % 5 === 0) {
+                const botPlayer = room.players.find(p => p.user.isBot);
+                if (botPlayer && Math.random() < BOT_DIFFICULTIES[botPlayer.user.difficulty].spawnRate) {
+                    const lane = Math.floor(Math.random() * 5);
+                    const unitId = botSide === 'plant' ? 'peashooter' : 'zombie';
+                    io.to(roomId).emit('botPlaceUnit', { lane: lane, unitId: unitId, side: botSide });
+                }
+            }
+            
+            if (roundTime <= 0) {
+                endRound(roomId, 'draw');
+            }
+        }, 1000);
+        
+        console.log(`Бот ${difficulty} присоединился к комнате ${roomId}`);
+    }
     
     socket.on('leaveQueue', async () => {
         if (currentRoom) {
             const room = gameRooms.get(currentRoom);
             if (room) {
                 if (room.state === 'waiting') {
+                    // Очищаем таймер бота
+                    if (room.botTimer) {
+                        clearTimeout(room.botTimer);
+                        room.botTimer = null;
+                    }
                     room.players = room.players.filter(p => p.id !== socket.id);
                     if (room.players.length === 0) {
                         gameRooms.delete(currentRoom);
@@ -751,28 +841,34 @@ io.on('connection', (socket) => {
                     const winner = room.players.find(p => p.id !== socket.id);
                     
                     if (loser && winner) {
-                        await usersCollection.updateOne(
-                            { _id: winner.user._id },
-                            { $inc: { wins: 1, totalGames: 1 }, $set: { currentWinStreak: winner.user.currentWinStreak + 1 }}
-                        );
-                        await usersCollection.updateOne(
-                            { _id: loser.user._id },
-                            { $inc: { losses: 1, totalGames: 1 }, $set: { currentWinStreak: 0 }}
-                        );
+                        // Даем награды только реальному игроку
+                        if (!loser.user.isBot) {
+                            await usersCollection.updateOne(
+                                { _id: loser.user._id },
+                                { $inc: { losses: 1, totalGames: 1, coins: 10 }}
+                            );
+                        }
+                        if (!winner.user.isBot) {
+                            await usersCollection.updateOne(
+                                { _id: winner.user._id },
+                                { $inc: { wins: 1, totalGames: 1, coins: 50 }, $set: { currentWinStreak: winner.user.currentWinStreak + 1 }}
+                            );
+                            await addXP(winner.user, 50);
+                        }
                         
-                        await matchesCollection.insertOne({
-                            winner: winner.user.username,
-                            loser: loser.user.username,
-                            winnerSide: winner.side,
-                            timestamp: new Date()
-                        });
-                        
-                        await addXP(winner.user, 50);
-                        addXP(loser.user, 20); // не ждем
+                        if (!loser.user.isBot && !winner.user.isBot) {
+                            await matchesCollection.insertOne({
+                                winner: winner.user.username,
+                                loser: loser.user.username,
+                                winnerSide: winner.side,
+                                timestamp: new Date()
+                            });
+                        }
                         
                         io.to(currentRoom).emit('gameEnd', { 
                             winner: winner.user.username, 
-                            winnerSide: winner.side 
+                            winnerSide: winner.side,
+                            isBotGame: room.isBotGame
                         });
                     }
                     
@@ -792,14 +888,6 @@ io.on('connection', (socket) => {
         if (currentRoom) socket.to(currentRoom).emit('opponentZombie', data);
     });
     
-    socket.on('attack', (data) => {
-        if (currentRoom) socket.to(currentRoom).emit('opponentAttack', data);
-    });
-    
-    socket.on('unitDied', (data) => {
-        if (currentRoom) socket.to(currentRoom).emit('opponentUnitDied', data);
-    });
-    
     socket.on('gameOver', (data) => {
         if (currentRoom) {
             const room = gameRooms.get(currentRoom);
@@ -815,6 +903,10 @@ io.on('connection', (socket) => {
             const room = gameRooms.get(currentRoom);
             if (room) {
                 if (room.state === 'waiting') {
+                    if (room.botTimer) {
+                        clearTimeout(room.botTimer);
+                        room.botTimer = null;
+                    }
                     room.players = room.players.filter(p => p.id !== socket.id);
                     if (room.players.length === 0) {
                         gameRooms.delete(currentRoom);
@@ -824,25 +916,26 @@ io.on('connection', (socket) => {
                     const winner = room.players.find(p => p.id !== socket.id);
                     
                     if (loser && winner) {
-                        await usersCollection.updateOne(
-                            { _id: winner.user._id },
-                            { $inc: { wins: 1, totalGames: 1 }}
-                        );
-                        await usersCollection.updateOne(
-                            { _id: loser.user._id },
-                            { $inc: { losses: 1, totalGames: 1 }}
-                        );
-                        
-                        await matchesCollection.insertOne({
-                            winner: winner.user.username,
-                            loser: loser.user.username,
-                            winnerSide: winner.side,
-                            timestamp: new Date()
-                        });
+                        // Даем награды только реальному игроку
+                        if (!loser.user.isBot) {
+                            if (!winner.user.isBot) {
+                                await usersCollection.updateOne(
+                                    { _id: winner.user._id },
+                                    { $inc: { wins: 1, totalGames: 1 }}
+                                );
+                                await matchesCollection.insertOne({
+                                    winner: winner.user.username,
+                                    loser: loser.user.username,
+                                    winnerSide: winner.side,
+                                    timestamp: new Date()
+                                });
+                            }
+                        }
                         
                         io.to(currentRoom).emit('gameEnd', { 
                             winner: winner.user.username, 
-                            winnerSide: winner.side 
+                            winnerSide: winner.side,
+                            isBotGame: room.isBotGame
                         });
                     }
                     
@@ -865,43 +958,53 @@ async function endRound(roomId, result) {
         const loser = room.players.find(p => p.side !== result);
         
         if (winner && loser) {
-            await usersCollection.updateOne(
-                { _id: winner.user._id },
-                { $inc: { wins: 1, totalGames: 1, coins: 50 }}
-            );
-            await usersCollection.updateOne(
-                { _id: loser.user._id },
-                { $inc: { losses: 1, totalGames: 1, coins: 10 }}
-            );
+            // Даем награды только реальным игрокам
+            if (!winner.user.isBot) {
+                await usersCollection.updateOne(
+                    { _id: winner.user._id },
+                    { $inc: { wins: 1, totalGames: 1, coins: 50 }}
+                );
+                await addXP(winner.user, 50);
+            }
+            if (!loser.user.isBot) {
+                await usersCollection.updateOne(
+                    { _id: loser.user._id },
+                    { $inc: { losses: 1, totalGames: 1, coins: 10 }}
+                );
+            }
             
-            await matchesCollection.insertOne({
-                winner: winner.user.username,
-                loser: loser.user.username,
-                winnerSide: winner.side,
-                timestamp: new Date()
-            });
-            
-            await addXP(winner.user, 50);
-            addXP(loser.user, 20);
+            // Записываем матч только если игра не с ботом
+            if (!room.isBotGame || (winner.user.isBot === false && loser.user.isBot === false)) {
+                await matchesCollection.insertOne({
+                    winner: winner.user.username,
+                    loser: loser.user.username,
+                    winnerSide: winner.side,
+                    timestamp: new Date()
+                });
+            }
             
             io.to(roomId).emit('gameEnd', { 
                 winner: winner.user.username, 
                 winnerSide: winner.side,
-                rewards: { winner: 50, loser: 10 }
+                rewards: { winner: winner.user.isBot ? 0 : 50, loser: loser.user.isBot ? 0 : 10 },
+                isBotGame: room.isBotGame
             });
         }
     } else {
         for (const p of room.players) {
-            await usersCollection.updateOne(
-                { _id: p.user._id },
-                { $inc: { coins: 20, totalGames: 1 }}
-            );
-            addXP(p.user, 20);
+            if (!p.user.isBot) {
+                await usersCollection.updateOne(
+                    { _id: p.user._id },
+                    { $inc: { coins: 20, totalGames: 1 }}
+                );
+                addXP(p.user, 20);
+            }
         }
         
         io.to(roomId).emit('gameEnd', { 
             winner: 'draw',
-            rewards: { winner: 20, loser: 20 }
+            rewards: { winner: 20, loser: 20 },
+            isBotGame: room.isBotGame
         });
     }
     
@@ -916,6 +1019,7 @@ connectDB().then(() => {
         console.log(`Сервер запущен на порту ${PORT}`);
         console.log('Админ: логин - admin, пароль - admin123');
         console.log('База данных: MongoDB Atlas');
+        console.log('Бот-система: включена (60 сек таймаут)');
     });
 }).catch(err => {
     console.error('Не удалось запустить сервер:', err);
