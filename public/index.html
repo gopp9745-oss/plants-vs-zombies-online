@@ -610,6 +610,14 @@
             sunflower: 'Подсолнух', peashooter: 'Горох', wallnut: 'Стена', cherrybomb: 'Вишня', iceshroom: 'Лед',
             snowpea: 'Мороз', chomper: 'Хапун', repeater: 'Дубль', squash: 'Тыква', twinsunflower: 'Двойня', melonpult: 'Арбуз', cattail: 'Котоушка'
         };
+        const ZOMBIE_ICONS = {
+            zombie: '🧟', conehead: '🧢', buckethead: '🪣', football: '🏈', dancing: '💃', dolphin: '🐬',
+            digger: '⛏️', bungee: '🪝', gargantuar: '👹', yeti: '🦬', king: '🤴', dr: '🧙'
+        };
+        const ZOMBIE_NAMES = {
+            zombie: 'Зомби', conehead: 'Конус', buckethead: 'Ведро', football: 'Спорт', dancing: 'Танцор', dolphin: 'Дельфин',
+            digger: 'Копатель', bungee: 'Крюк', gargantuar: 'Гигант', yeti: 'Йети', king: 'Король', dr: 'Доктор'
+        };
         
         async function showShop() { 
             showScreen('shopScreen'); 
@@ -643,26 +651,47 @@
             const shopEl = document.getElementById('shopItemsContainer');
             if (!shopEl || !shopItemsList.length) return;
             
-            shopEl.innerHTML = shopItemsList.map(item => {
-                const sale = currentSales.find(s => s.plantId === item.id);
-                const icon = PLANT_ICONS[item.id] || '🌱';
-                const name = PLANT_NAMES[item.id] || item.id;
-                
-                if (sale) {
-                    const newPrice = Math.floor(item.price * (1 - sale.discount/100));
-                    return `<div class="shop-item sale" style="position:relative">
-                        <span class="sale-badge">-${sale.discount}%</span>
-                        <div class="shop-item-icon">${icon}</div>
-                        <div>${name}</div>
-                        <div><span class="old-price">${item.price}💰</span> <span style="color:#fbbf24">${newPrice}💰</span></div>
-                    </div>`;
-                }
-                return `<div class="shop-item">
+            const plants = shopItemsList.filter(i => i.type === 'plant');
+            const zombies = shopItemsList.filter(i => i.type === 'zombie');
+            
+            let html = '';
+            
+            if (plants.length) {
+                html += '<div style="margin-bottom:20px"><h4 style="color:#4ade80;margin-bottom:15px;text-align:center">🌻 Растения</h4>';
+                html += '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px">';
+                html += plants.map(item => renderShopItem(item)).join('');
+                html += '</div></div>';
+            }
+            
+            if (zombies.length) {
+                html += '<div><h4 style="color:#ef4444;margin-bottom:15px;text-align:center">🧟 Зомби</h4>';
+                html += '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px">';
+                html += zombies.map(item => renderShopItem(item)).join('');
+                html += '</div></div>';
+            }
+            
+            shopEl.innerHTML = html;
+        }
+        
+        function renderShopItem(item) {
+            const sale = currentSales.find(s => s.plantId === item.id);
+            const icon = item.type === 'plant' ? (PLANT_ICONS[item.id] || '🌱') : (ZOMBIE_ICONS[item.id] || '🧟');
+            const name = item.type === 'plant' ? (PLANT_NAMES[item.id] || item.id) : (ZOMBIE_NAMES[item.id] || item.id);
+            
+            if (sale) {
+                const newPrice = Math.floor(item.price * (1 - sale.discount/100));
+                return `<div class="shop-item sale" style="position:relative">
+                    <span class="sale-badge">-${sale.discount}%</span>
                     <div class="shop-item-icon">${icon}</div>
                     <div>${name}</div>
-                    <div style="color:#fbbf24">${item.price}💰</div>
+                    <div><span class="old-price">${item.price}💰</span> <span style="color:#fbbf24">${newPrice}💰</span></div>
                 </div>`;
-            }).join('');
+            }
+            return `<div class="shop-item">
+                <div class="shop-item-icon">${icon}</div>
+                <div>${name}</div>
+                <div style="color:#fbbf24">${item.price}💰</div>
+            </div>`;
         }
         
         function startShopTimer() {

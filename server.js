@@ -53,18 +53,26 @@ const bannedIPs = new Map(); // username -> reason
 const gameRooms = new Map();
 const sales = loadData(SALES_FILE, []);
 
-// Магазин - случайные растения каждые 5 минут
+// Магазин - случайные растения и зомби каждые 5 минут
 let shopItems = [];
 const ALL_PLANTS = ['sunflower','peashooter','wallnut','cherrybomb','iceshroom','snowpea','chomper','repeater','squash','twinsunflower','melonpult','cattail'];
+const ALL_ZOMBIES = ['zombie','conehead','buckethead','football','dancing','dolphin','digger','bungee','gargantuar','yeti','king','dr'];
+const PLANT_PRICES = { sunflower:50, peashooter:50, wallnut:75, cherrybomb:150, iceshroom:75, snowpea:75, chomper:75, repeater:100, squash:100, twinsunflower:150, melonpult:200, cattail:150 };
+const ZOMBIE_PRICES = { zombie:50, conehead:75, buckethead:100, football:125, dancing:100, dolphin:100, digger:125, bungee:150, gargantuar:300, yeti:200, king:250, dr:300 };
 
 function generateShopItems() {
-    // Выбираем 4-5 случайных растений
-    const shuffled = [...ALL_PLANTS].sort(() => Math.random() - 0.5);
-    shopItems = shuffled.slice(0, 4 + Math.floor(Math.random() * 2)).map(id => {
-        const prices = { sunflower:50, peashooter:50, wallnut:75, cherrybomb:150, iceshroom:75, snowpea:75, chomper:75, repeater:100, squash:100, twinsunflower:150, melonpult:200, cattail:150 };
-        return { id, price: prices[id] || 50 };
-    });
-    console.log('Магазин обновлён:', shopItems.map(p => p.id).join(', '));
+    // Выбираем 3-4 случайных растений
+    const shuffledPlants = [...ALL_PLANTS].sort(() => Math.random() - 0.5);
+    const plants = shuffledPlants.slice(0, 3 + Math.floor(Math.random() * 2)).map(id => ({
+        id, type: 'plant', price: PLANT_PRICES[id] || 50
+    }));
+    // Выбираем 2-3 случайных зомби
+    const shuffledZombies = [...ALL_ZOMBIES].sort(() => Math.random() - 0.5);
+    const zombies = shuffledZombies.slice(0, 2 + Math.floor(Math.random() * 2)).map(id => ({
+        id, type: 'zombie', price: ZOMBIE_PRICES[id] || 50
+    }));
+    shopItems = [...plants, ...zombies];
+    console.log('Магазин обновлён:', shopItems.map(p => `${p.type}:${p.id}`).join(', '));
 }
 
 // Обновляем магазин каждые 5 минут
