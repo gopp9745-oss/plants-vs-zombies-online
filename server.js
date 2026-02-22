@@ -68,11 +68,15 @@ function generateShopItems() {
 }
 
 // Обновляем магазин каждые 5 минут
+const SHOP_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 минут
+let lastShopUpdate = Date.now();
+
 generateShopItems();
-setInterval(generateShopItems, 5 * 60 * 1000);
+setInterval(generateShopItems, SHOP_UPDATE_INTERVAL);
 
 app.get('/api/shop', (req, res) => {
-    res.json({ success: true, items: shopItems });
+    const nextUpdate = Math.max(0, SHOP_UPDATE_INTERVAL - (Date.now() - lastShopUpdate));
+    res.json({ success: true, items: shopItems, nextUpdate: nextUpdate });
 });
 
 if (!users.has('admin')) {

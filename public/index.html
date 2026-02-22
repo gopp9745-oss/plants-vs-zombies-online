@@ -276,21 +276,25 @@
     <div id="shopScreen" class="screen">
         <h2 style="font-size:1.8rem;margin-bottom:20px">🏪 Магазин</h2>
         <div class="shop-container">
-            <div class="promo-section">
-                <h3>🎁 Промокод</h3>
-                <div class="promo-input-group">
-                    <input type="text" id="promoCode" placeholder="Код">
-                    <button class="btn btn-warning" onclick="activatePromo()">Активировать</button>
-                </div>
-                <p id="promoMessage" style="margin-top:10px;color:#94a3b8"></p>
+            <div class="shop-tabs" style="display:flex;gap:10px;margin-bottom:20px">
+                <button class="btn btn-primary" id="shopTabPlants" onclick="switchShopTab('plants')">Растения</button>
+                <button class="btn btn-secondary" id="shopTabPromo" onclick="switchShopTab('promo')">Промокоды</button>
             </div>
-            <div style="margin-bottom:15px"><button class="btn btn-warning" onclick="getDailyReward()" style="width:100%">🎁 Ежедневная награда</button></div>
-            <h3 style="margin-bottom:15px">Растения</h3>
-            <div class="shop-items">
-                <div class="shop-item"><div class="shop-item-icon">🌻</div><div>Подсолнух</div><div style="color:#fbbf24">50💰</div></div>
-                <div class="shop-item"><div class="shop-item-icon">🟢</div><div>Горохострел</div><div style="color:#fbbf24">50💰</div></div>
-                <div class="shop-item"><div class="shop-item-icon">🥜</div><div>Стеноорех</div><div style="color:#fbbf24">75💰</div></div>
-                <div class="shop-item"><div class="shop-item-icon">🍒</div><div>Вишня</div><div style="color:#fbbf24">150💰</div></div>
+            <div id="shopTimer" style="text-align:center;margin-bottom:15px;color:#f59e0b;font-size:0.9rem"></div>
+            <div id="shopPlantsTab">
+                <div style="margin-bottom:15px"><button class="btn btn-warning" onclick="getDailyReward()" style="width:100%">🎁 Ежедневная награда</button></div>
+                <h3 style="margin-bottom:15px">Доступные растения</h3>
+                <div class="shop-items" id="shopItemsContainer"></div>
+            </div>
+            <div id="shopPromoTab" style="display:none">
+                <div class="promo-section">
+                    <h3>🎁 Активировать промокод</h3>
+                    <div class="promo-input-group">
+                        <input type="text" id="promoCode" placeholder="Введите код">
+                        <button class="btn btn-warning" onclick="activatePromo()">Активировать</button>
+                    </div>
+                    <p id="promoMessage" style="margin-top:10px;color:#94a3b8"></p>
+                </div>
             </div>
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
@@ -596,6 +600,7 @@
         
         let shopItemsList = [];
         let currentSales = [];
+        let shopTimer = null;
         
         const PLANT_ICONS = {
             sunflower: '🌻', peashooter: '🟢', wallnut: '🥜', cherrybomb: '🍒', iceshroom: '🧊',
@@ -610,6 +615,7 @@
             showScreen('shopScreen'); 
             document.getElementById('promoMessage').textContent = ''; 
             await loadShop();
+            startShopTimer();
         }
         
         async function loadShop() {
@@ -626,8 +632,15 @@
             } catch(e) { console.error(e); }
         }
         
+        function switchShopTab(tab) {
+            document.getElementById('shopTabPlants').className = tab === 'plants' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('shopTabPromo').className = tab === 'promo' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('shopPlantsTab').style.display = tab === 'plants' ? 'block' : 'none';
+            document.getElementById('shopPromoTab').style.display = tab === 'promo' ? 'block' : 'none';
+        }
+        
         function renderShopItems() {
-            const shopEl = document.querySelector('.shop-items');
+            const shopEl = document.getElementById('shopItemsContainer');
             if (!shopEl || !shopItemsList.length) return;
             
             shopEl.innerHTML = shopItemsList.map(item => {
@@ -650,6 +663,19 @@
                     <div style="color:#fbbf24">${item.price}💰</div>
                 </div>`;
             }).join('');
+        }
+        
+        function startShopTimer() {
+            if (shopTimer) clearInterval(shopTimer);
+            shopTimer = setInterval(async () => {
+                const res = await fetch('/api/shop');
+                const data = await res.json();
+                if (data.success && data.nextUpdate) {
+                    const mins = Math.floor(data.nextUpdate / 60000);
+                    const secs = Math.floor((data.nextUpdate % 60000) / 1000);
+                    document.getElementById('shopTimer').textContent = `Обновление через: ${mins}:${secs.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
         }
         
         async function activatePromo() {
