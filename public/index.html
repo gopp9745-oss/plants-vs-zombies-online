@@ -109,6 +109,11 @@
         .shop-item-icon { font-size: 2.5rem; margin-bottom: 10px; animation: iconBounce 2s ease-in-out infinite; }
         @keyframes iconBounce { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
         
+        .shop-item.sale { border: 2px solid #ef4444; animation: salePulse 1.5s infinite; }
+        @keyframes salePulse { 0%,100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); } 50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); } }
+        .sale-badge { position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; }
+        .old-price { text-decoration: line-through; color: #666; font-size: 0.8rem; }
+        
         .admin-container { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; max-width: 800px; width: 100%; backdrop-filter: blur(10px); }
         .admin-title { font-size: 1.8rem; text-align: center; margin-bottom: 20px; color: #ef4444; animation: adminPulse 2s ease-in-out infinite; }
         @keyframes adminPulse { 0%,100% { text-shadow: 0 0 20px rgba(239, 68, 68, 0.5); } 50% { text-shadow: 0 0 40px rgba(239, 68, 68, 0.8); } }
@@ -519,7 +524,53 @@
             } catch(e) {}
         }
         
-        async function showShop() { showScreen('shopScreen'); document.getElementById('promoMessage').textContent = ''; }
+        let currentSales = [];
+        
+        async function showShop() { 
+            showScreen('shopScreen'); 
+            document.getElementById('promoMessage').textContent = ''; 
+            await loadSales();
+        }
+        
+        async function loadSales() {
+            try {
+                const res = await fetch('/api/sales');
+                const data = await res.json();
+                if (data.success) {
+                    currentSales = data.sales || [];
+                    renderShopItems();
+                }
+            } catch(e) {}
+        }
+        
+        function renderShopItems() {
+            const items = [
+                {id:'sunflower',icon:'🌻',name:'Подсолнух',price:50},
+                {id:'peashooter',icon:'🟢',name:'Горохострел',price:50},
+                {id:'wallnut',icon:'🥜',name:'Стеноорех',price:75},
+                {id:'cherrybomb',icon:'🍒',name:'Вишня',price:150},
+                {id:'iceshroom',icon:'🧊',name:'Лед',price:75}
+            ];
+            
+            const shopItems = document.querySelector('.shop-items');
+            shopItems.innerHTML = items.map(item => {
+                const sale = currentSales.find(s => s.plantId === item.id);
+                if (sale) {
+                    const newPrice = Math.floor(item.price * (1 - sale.discount/100));
+                    return `<div class="shop-item sale" style="position:relative">
+                        <span class="sale-badge">-${sale.discount}%</span>
+                        <div class="shop-item-icon">${item.icon}</div>
+                        <div>${item.name}</div>
+                        <div><span class="old-price">${item.price}💰</span> <span style="color:#fbbf24">${newPrice}💰</span></div>
+                    </div>`;
+                }
+                return `<div class="shop-item">
+                    <div class="shop-item-icon">${item.icon}</div>
+                    <div>${item.name}</div>
+                    <div style="color:#fbbf24">${item.price}💰</div>
+                </div>`;
+            }).join('');
+        }
         
         async function activatePromo() {
             const code = document.getElementById('promoCode').value.trim();
