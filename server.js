@@ -629,6 +629,7 @@ io.on('connection', (socket) => {
                 const side = room.players[0].side === 'plant' ? 'zombie' : 'plant';
                 room.players.push({ id: socket.id, side, user: currentUser });
                 currentRoom = roomId;
+                socket.join(roomId);
                 
                 room.state = 'playing';
                 
