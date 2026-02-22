@@ -265,8 +265,12 @@
     <div id="leaderboardScreen" class="screen">
         <h2 class="leaderboard-title">🏆 Топ игроки</h2>
         <div class="leaderboard-container">
+            <div class="shop-tabs" style="display:flex;gap:10px;margin-bottom:20px">
+                <button class="btn btn-primary" id="leaderTabWins" onclick="switchLeaderTab('wins')">По победам</button>
+                <button class="btn btn-secondary" id="leaderTabLevel" onclick="switchLeaderTab('level')">По уровню</button>
+            </div>
             <div class="leaderboard-row header">
-                <span class="rank">#</span><span class="username">Игрок</span><span>Ур.</span><span>Победы</span>
+                <span class="rank">#</span><span class="username">Игрок</span><span>Ур.</span><span id="leaderSortLabel">Победы</span>
             </div>
             <div id="leaderboardList"></div>
         </div>
@@ -570,18 +574,31 @@
             sessionId = null; localStorage.removeItem('sessionId'); currentUser = null; showMainMenu();
         }
         
+        let currentLeaderSort = 'wins';
+        
         async function showLeaderboard() {
             showScreen('leaderboardScreen');
+            switchLeaderTab('wins');
+        }
+        
+        async function switchLeaderTab(sort) {
+            currentLeaderSort = sort;
+            document.getElementById('leaderTabWins').className = sort === 'wins' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('leaderTabLevel').className = sort === 'level' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('leaderSortLabel').textContent = sort === 'wins' ? 'Победы' : 'Опыт';
+            
             try {
-                const res = await fetch('/api/leaderboard');
+                const res = await fetch('/api/leaderboard' + (sort === 'level' ? '-level' : ''));
                 const data = await res.json();
                 if (data.success) {
-                    document.getElementById('leaderboardList').innerHTML = data.leaders.map((p,i) =>
+                    const sortKey = sort === 'wins' ? 'wins' : 'xp';
+                    const sorted = [...data.leaders].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+                    document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
                         `<div class="leaderboard-row ${i<3?'top-3':''}">
                             <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
                             <span class="username">${p.username}</span>
                             <span>${p.level}</span>
-                            <span>${p.wins}</span>
+                            <span>${sort === 'wins' ? p.wins : (p.xp || 0)}</span>
                         </div>`
                     ).join('');
                 }

@@ -290,7 +290,24 @@ app.get('/api/leaderboard', (req, res) => {
             username: u.username,
             wins: u.wins,
             coins: u.coins,
-            level: u.level
+            level: u.level,
+            xp: u.xp
+        }));
+    
+    res.json({ success: true, leaders });
+});
+
+app.get('/api/leaderboard-level', (req, res) => {
+    const leaders = Array.from(users.values())
+        .filter(u => u.role !== 'banned')
+        .sort((a, b) => b.xp - a.xp)
+        .slice(0, 10)
+        .map(u => ({
+            username: u.username,
+            wins: u.wins,
+            coins: u.coins,
+            level: u.level,
+            xp: u.xp
         }));
     
     res.json({ success: true, leaders });
