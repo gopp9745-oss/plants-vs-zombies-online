@@ -603,6 +603,9 @@
                 headerRow.innerHTML = '<span class="rank">#</span><span class="username">Игрок</span><span>Уровень/Опыт</span>';
             }
             
+            // Also update data rows to match column count
+            const listContainer = document.getElementById('leaderboardList');
+            
             try {
                 const res = await fetch('/api/leaderboard' + (sort === 'level' ? '-level' : ''));
                 const data = await res.json();
