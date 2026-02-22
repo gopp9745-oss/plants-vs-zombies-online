@@ -332,6 +332,7 @@
     
     <div id="questsScreen" class="screen">
         <h2 class="leaderboard-title" style="color:#22c55e">📋 Ежедневные квесты</h2>
+        <div id="questTimer" style="text-align:center;margin-bottom:15px;color:#f59e0b;font-size:0.9rem"></div>
         <div class="match-history-container">
             <div id="questsList"></div>
         </div>
@@ -1060,8 +1061,11 @@
             { id: 'chat_3_times', name: 'Болтун', desc: 'Напишите 3 сообщения', icon: '💬', reward: 20 }
         ];
         
+        let questTimer = null;
+        
         async function showQuests() {
             showScreen('questsScreen');
+            startQuestTimer();
             try {
                 const res = await fetch('/api/daily-quests', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
                 const data = await res.json();
@@ -1088,6 +1092,21 @@
                     }).join('');
                 }
             } catch(e) {}
+        }
+        
+        function startQuestTimer() {
+            if (questTimer) clearInterval(questTimer);
+            questTimer = setInterval(() => {
+                const now = new Date();
+                const tomorrow = new Date(now);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(0, 0, 0, 0);
+                const diff = tomorrow - now;
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((diff % (1000 * 60)) / 1000);
+                document.getElementById('questTimer').textContent = 'Новые квесты через: ' + hours + 'ч ' + mins + 'м ' + secs + 'с';
+            }, 1000);
         }
     </script>
 </body>
