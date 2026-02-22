@@ -23,6 +23,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const PROMOS_FILE = path.join(DATA_DIR, 'promos.json');
 const MATCHES_FILE = path.join(DATA_DIR, 'matches.json');
+const SALES_FILE = path.join(DATA_DIR, 'sales.json');
 
 function loadData(filePath, defaultValue) {
     try {
@@ -50,6 +51,7 @@ const promoCodes = new Map(loadData(PROMOS_FILE, []).map(p => [p.code, p]));
 const matches = loadData(MATCHES_FILE, []);
 const bannedIPs = new Map(); // username -> reason
 const gameRooms = new Map();
+const sales = loadData(SALES_FILE, []);
 
 if (!users.has('admin')) {
     const adminId = uuidv4();
@@ -442,6 +444,46 @@ app.post('/api/admin/stats', (req, res) => {
     };
     
     res.json({ success: true, stats });
+});
+
+// API для скидок
+app.get('/api/sales', (req, res) => {
+    res.json({ success: true, sales: sales });
+});
+
+app.post('/api/admin/create-sale', (req, res) => {
+    const { sessionId, plantId, discount, duration } = req.body;
+    const userId = sessions.get(sessionId);
+    
+    if (!userId) {
+        return res.json({ success: false, message: 'Сессия недействительна' });
+    }
+    
+    let isAdmin = false;
+    for (let user of users.values()) {
+        if (user.id === userId && user.role === 'admin') {
+            isAdmin = true;
+            break;
+        }
+    }
+    
+    if (!isAdmin) {
+        return res.json({ success: false, message: 'Доступ запрещен' });
+    }
+    
+    const sale = {
+        id: uuidv4(),
+        plantId,
+        discount: parseInt(discount),
+        duration: parseInt(duration),
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + parseInt(duration))
+    };
+    
+    sales.push(sale);
+    saveData(SALES_FILE, sales);
+    
+    res.json({ success: true, message: 'Акция создана!' });
 });
 
 app.post('/api/admin/edit-coins', (req, res) => {
