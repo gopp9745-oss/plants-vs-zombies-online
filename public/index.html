@@ -195,6 +195,31 @@
         .pulse-effect { position: absolute; width: 50px; height: 50px; border-radius: 50%; animation: pulseRing 0.5s forwards; pointer-events: none; }
         @keyframes pulseRing { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; border: 3px solid #4ade80; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; border: 3px solid #4ade80; } }
         
+        /* Дополнительные эффекты */
+        .projectile { position: absolute; width: 12px; height: 12px; border-radius: 50%; animation: shootAcross 0.8s linear forwards; z-index: 20; pointer-events: none; }
+        .projectile.pea { background: #4ade80; box-shadow: 0 0 10px #4ade80; }
+        .projectile.frozen { background: #60a5fa; box-shadow: 0 0 10px #60a5fa; }
+        .projectile.melon { background: #fb923c; box-shadow: 0 0 15px #fb923c; width: 18px; height: 18px; }
+        @keyframes shootAcross { from { transform: translateX(0); } to { transform: translateX(300px); } }
+        
+        .critical-hit { animation: criticalPulse 0.3s ease-out; }
+        @keyframes criticalPulse { 0% { transform: translateY(-50%) scale(1); } 50% { transform: translateY(-50%) scale(1.5); filter: brightness(3); } 100% { transform: translateY(-50%) scale(1); } }
+        
+        .house-damaged { animation: houseShake 0.5s ease-out; }
+        @keyframes houseShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        
+        .rage-bar { position: absolute; top: -30px; left: 0; right: 0; height: 5px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+        .rage-bar-fill { height: 100%; background: linear-gradient(90deg, #fbbf24, #ef4444); transition: width 0.3s; }
+        
+        .lane-bonus { position: absolute; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.5), transparent); animation: laneGlow 2s infinite; }
+        @keyframes laneGlow { 0%,100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+        
+        .quick-reaction { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3rem; animation: reactionPop 0.5s forwards; z-index: 100; pointer-events: none; }
+        @keyframes reactionPop { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0; } 50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
+        
+        .night-mode .game-arena { background: linear-gradient(180deg, #0c1929 0%, #162447 100%); }
+        .night-mode .game-lane { background: rgba(30, 60, 90, 0.3); }
+        
         .game-controls { width: 100%; max-width: 800px; margin-top: 15px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
         .unit-btn { width: 60px; height: 60px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 1.5rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); animation: btnAppear 0.5s ease-out backwards; }
         .unit-btn:nth-child(1) { animation-delay: 0.1s; }
