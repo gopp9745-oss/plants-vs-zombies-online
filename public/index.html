@@ -311,6 +311,7 @@
             <button class="btn btn-secondary profile-btn" onclick="showAchievements()">🏅 Достижения</button>
             <button class="btn btn-secondary profile-btn" onclick="showQuests()">📋 Квесты</button>
             <button class="btn btn-secondary profile-btn" onclick="showFriends()">👥 Друзья</button>
+            <button class="btn btn-secondary profile-btn" onclick="showInventory()">🎒 Инвентарь</button>
             <button class="btn btn-secondary profile-btn" id="adminBtn" style="display:none" onclick="showAdmin()">Админ</button>
             <button class="btn btn-danger profile-btn" onclick="logout()">Выход</button>
         </div>
@@ -404,6 +405,19 @@
             </div>
             <h3 style="margin-bottom:15px">Ваши друзья</h3>
             <div id="friendsList"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="inventoryScreen" class="screen">
+        <h2 class="leaderboard-title" style="color:#4ade80">🎒 Инвентарь</h2>
+        <div style="margin-bottom:15px;display:flex;gap:15px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="showInventory('plants')">🌻 Растения</button>
+            <button class="btn btn-secondary" onclick="showInventory('zombies')">🧟 Зомби</button>
+        </div>
+        <div id="inventoryStats" style="margin-bottom:20px;padding:15px;background:rgba(255,255,255,0.1);border-radius:10px;text-align:center;max-width:400px"></div>
+        <div class="shop-container" style="max-width:900px">
+            <div id="inventoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:15px"></div>
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
     </div>
@@ -637,7 +651,7 @@
         }
         
         function hideAllScreens() {
-            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen','friendsScreen','profileViewScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen','friendsScreen','profileViewScreen','inventoryScreen'].forEach(id => document.getElementById(id).style.display = 'none');
         }
         
         async function viewPlayerProfile(username) {
@@ -1508,6 +1522,135 @@
                 document.getElementById('addFriendMessage').textContent = 'Ошибка';
                 document.getElementById('addFriendMessage').style.color = '#ef4444';
             }
+        }
+        
+        // === ИНВЕНТАРЬ ===
+        let currentInventoryTab = 'plants';
+        
+        async function showInventory(tab) {
+            showScreen('inventoryScreen');
+            if (tab) currentInventoryTab = tab;
+            
+            updateUnlockedUnits();
+            renderInventory();
+        }
+        
+        function renderInventory() {
+            const grid = document.getElementById('inventoryGrid');
+            const stats = document.getElementById('inventoryStats');
+            const list = currentInventoryTab === 'plants' ? units.plant : units.zombie;
+            const unlocked = currentInventoryTab === 'plants' ? unlockedPlants : unlockedZombies;
+            const unlockedIds = unlocked.map(u => u.id);
+            
+            // Статистика
+            const totalUnits = list.length;
+            const unlockedCount = unlockedIds.length;
+            const nextUnit = list.find(u => u.level > (currentUser?.level || 1));
+            
+            stats.innerHTML = `
+                <div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:10px">
+                    <div><span style="color:#4ade80;font-weight:bold">${unlockedCount}</span>/${totalUnits} разблокировано</div>
+                    <div>Уровень: <span style="color:#fbbf24;font-weight:bold">${currentUser?.level || 1}</span></div>
+                    ${nextUnit ? `<div>Следующий: <span style="color:#6366f1">${nextUnit.name}</span> (ур.${nextUnit.level})</div>` : '<div>Все доступны! ✅</div>'}
+                </div>
+            `;
+            
+            grid.innerHTML = list.map(unit => {
+                const isUnlocked = unlockedIds.includes(unit.id);
+                const unitType = unit.type || 'attacker';
+                const typeNames = {
+                    'attacker': '⚔️ Атака',
+                    'producer': '☀️ Солнце',
+                    'defender': '🛡️ Защита',
+                    'explosive': '💥 Взрыв',
+                    'special': '✨ Особый',
+                    'hybrid': '🔄 Гибрид',
+                    'basic': '🧟 Основной',
+                    'fast': '⚡ Быстрый',
+                    'tank': '💪 Танк',
+                    'leader': '👑 Лидер',
+                    'support': '💖 Поддержка'
+                };
+                
+                // Статистика юнита
+                const statsText = [];
+                if (unit.health) statsText.push(`❤️ HP: ${unit.health}`);
+                if (unit.damage) statsText.push(`⚔️ Урон: ${unit.damage}`);
+                if (unit.attackSpeed) statsText.push(`⏱️ Скорость: ${unit.attackSpeed}с`);
+                if (unit.sunProduction) statsText.push(`☀️ Производство: ${unit.sunProduction}`);
+                if (unit.moveSpeed) statsText.push(`🏃 Скорость: ${unit.moveSpeed}`);
+                
+                return `
+                    <div class="shop-item" style="opacity:${isUnlocked ? 1 : 0.5};cursor:pointer" onclick="showUnitInfo('${unit.id}', '${currentInventoryTab}')">
+                        <div class="shop-item-icon">${unit.icon}</div>
+                        <div style="font-weight:bold">${unit.name}</div>
+                        <div style="font-size:0.8rem;color:#94a3b8">${typeNames[unitType] || '⚔️ Атака'}</div>
+                        <div style="font-size:0.7rem;color:#fbbf24">${unit.level > (currentUser?.level || 1) ? '🔒 Уровень ' + unit.level : '✅ Доступно'}</div>
+                        <div style="font-size:0.65rem;color:#94a3b8;margin-top:5px">${statsText.slice(0,3).join(' | ')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function showUnitInfo(unitId, tab) {
+            const list = tab === 'plants' ? units.plant : units.zombie;
+            const unit = list.find(u => u.id === unitId);
+            if (!unit) return;
+            
+            const isUnlocked = (currentUser?.level || 1) >= unit.level;
+            
+            const typeNames = {
+                'attacker': '⚔️ Атакующий',
+                'producer': '☀️ Солнцедобыватель',
+                'defender': '🛡️ Защитник',
+                'explosive': '💥 Взрывчатка',
+                'special': '✨ Особый',
+                'hybrid': '🔄 Гибрид',
+                'basic': '🧟 Основной',
+                'fast': '⚡ Быстрый',
+                'tank': '💪 Танк',
+                'leader': '👑 Лидер',
+                'support': '💖 Поддержка'
+            };
+            
+            // Полная статистика
+            let fullStats = '';
+            if (unit.health) fullStats += `<div>❤️ <strong>Здоровье:</strong> ${unit.health}</div>`;
+            if (unit.damage) fullStats += `<div>⚔️ <strong>Урон:</strong> ${unit.damage}</div>`;
+            if (unit.attackSpeed !== undefined) fullStats += `<div>⏱️ <strong>Атака:</strong> ${unit.attackSpeed === 0 ? 'Мгновенно' : unit.attackSpeed + ' сек'}</div>`;
+            if (unit.sunProduction) fullStats += `<div>☀️ <strong>Производство:</strong> ${unit.sunProduction}/10 сек</div>`;
+            if (unit.moveSpeed) fullStats += `<div>🏃 <strong>Скорость:</strong> ${unit.moveSpeed}</div>`;
+            if (unit.slow) fullStats += `<div>❄️ <strong>Замедление:</strong> ${Math.round((1-unit.slow)*100)}%</div>`;
+            if (unit.freeze) fullStats += `<div>🧊 <strong>Заморозка:</strong> ${unit.freeze} сек</div>`;
+            if (unit.heal) fullStats += `<div>💖 <strong>Лечение:</strong> ${unit.heal}</div>`;
+            if (unit.ability) fullStats += `<div>🎯 <strong>Способность:</strong> ${unit.ability}</div>`;
+            
+            // Доступные скины
+            let skinsHtml = '';
+            if (unit.skins && unit.skins.length > 1) {
+                skinsHtml = `<div style="margin-top:15px"><strong>🎨 Скины:</strong><div style="display:flex;gap:8px;margin-top:5px;flex-wrap:wrap">`;
+                skinsHtml += unit.skins.map((skin, i) => 
+                    `<div style="font-size:1.5rem;padding:5px;background:rgba(255,255,255,0.1);border-radius:5px;cursor:pointer;${i===0?'border:2px solid #4ade80':''}" onclick="selectSkin('${unit.id}', '${skin}', ${i})">${skin}</div>`
+                ).join('');
+                skinsHtml += `</div></div>`;
+            }
+            
+            alert(`${unit.icon} <strong>${unit.name}</strong>
+
+📝 ${unit.desc}
+
+🏷️ <strong>Тип:</strong> ${typeNames[unit.type] || 'Обычный'}
+📊 <strong>Уровень:</strong> ${unit.level}
+💰 <strong>Цена:</strong> ${unit.cost}
+
+${fullStats}
+
+${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуется уровень ' + unit.level}${skinsHtml}`);
+        }
+        
+        function selectSkin(unitId, skin, index) {
+            // Здесь можно сохранить выбор скина
+            alert(`Скин ${skin} выбран! (Скоро будет доступно)`);
         }
     </script>
 </body>
