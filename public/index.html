@@ -238,7 +238,18 @@
         .night-mode .game-lane { background: rgba(30, 60, 90, 0.3); }
         
         .game-controls { width: 100%; max-width: 800px; margin-top: 15px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-        .unit-btn { width: 60px; height: 60px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 1.5rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); animation: btnAppear 0.5s ease-out backwards; }
+        .unit-btn { width: 60px; height: 60px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 1.5rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); animation: btnAppear 0.5s ease-out backwards; position: relative; }
+        .unit-btn.cooldown::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); border-radius: 6px; animation: cooldownAnim 2s linear forwards; }
+        @keyframes cooldownAnim { from { height: 100%; } to { height: 0%; } }
+        .unit-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+        .unit-btn.disabled:hover { transform: none; box-shadow: none; }
+        .quick-chat { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 5px; flex-wrap: wrap; max-width: 200px; }
+        .quick-chat-btn { padding: 5px 10px; font-size: 0.7rem; border-radius: 15px; background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; }
+        .quick-chat-btn:hover { background: rgba(255,255,255,0.4); }
+        .game-tips { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; animation: tipFade 5s forwards; }
+        @keyframes tipFade { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+        .combo-text { position: fixed; top: 30%; left: 50%; transform: translateX(-50%); font-size: 2rem; font-weight: bold; color: #fbbf24; animation: comboPop 1s forwards; pointer-events: none; }
+        @keyframes comboPop { 0% { transform: translateX(-50%) scale(0); opacity: 0; } 20% { transform: translateX(-50%) scale(1.5); opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 0; } }
         .unit-btn:nth-child(1) { animation-delay: 0.1s; }
         .unit-btn:nth-child(2) { animation-delay: 0.2s; }
         .unit-btn:nth-child(3) { animation-delay: 0.3s; }
