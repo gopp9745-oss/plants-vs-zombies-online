@@ -591,6 +591,45 @@
             <button class="btn btn-secondary" style="margin-top:10px" onclick="backToProfile()">Назад</button>
         </div>
     </div>
+    
+    <!-- Модальное окно выбора сложности и стороны для игры с ботом -->
+    <div id="botGameModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:2000;align-items:center;justify-content:center;">
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:30px;border-radius:15px;max-width:400px;width:90%;text-align:center;border:2px solid rgba(255,255,255,0.1);box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+            <h2 style="color:#4ade80;margin-bottom:20px;font-size:1.8rem">🎮 Игра с ботом</h2>
+            
+            <div style="margin-bottom:20px;text-align:left">
+                <label style="display:block;margin-bottom:8px;color:#94a3b8">Сложность:</label>
+                <select id="botDifficultySelect" style="width:100%;padding:12px;border-radius:8px;background:rgba(255,255,255,0.1);color:white;border:2px solid rgba(255,255,255,0.2);font-size:1rem">
+                    <option value="easy">🤖 Легкий</option>
+                    <option value="medium" selected>🤖 Средний</option>
+                    <option value="hard">🤖 Сложный</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom:25px;text-align:left">
+                <label style="display:block;margin-bottom:8px;color:#94a3b8">Выберите сторону:</label>
+                <div style="display:flex;gap:15px">
+                    <label style="flex:1;padding:15px;background:rgba(74,222,128,0.1);border-radius:10px;cursor:pointer;border:2px solid transparent;transition:all 0.3s" id="sidePlantLabel">
+                        <input type="radio" name="botSide" value="plant" style="display:none" onchange="document.getElementById('sidePlantLabel').style.borderColor=this.checked?'#4ade80':'transparent'">
+                        <div style="font-size:2.5rem">🌻</div>
+                        <div style="font-weight:bold;color:#4ade80">Растения</div>
+                        <div style="font-size:0.8rem;color:#94a3b8">Защищайте сад!</div>
+                    </label>
+                    <label style="flex:1;padding:15px;background:rgba(239,68,68,0.1);border-radius:10px;cursor:pointer;border:2px solid transparent;transition:all 0.3s" id="sideZombieLabel">
+                        <input type="radio" name="botSide" value="zombie" style="display:none" onchange="document.getElementById('sideZombieLabel').style.borderColor=this.checked?'#ef4444':'transparent'">
+                        <div style="font-size:2.5rem">🧟</div>
+                        <div style="font-weight:bold;color:#ef4444">Зомби</div>
+                        <div style="font-size:0.8rem;color:#94a3b8">Атакуйте!</div>
+                    </label>
+                </div>
+            </div>
+            
+            <div style="display:flex;gap:10px">
+                <button class="btn btn-secondary" style="flex:1" onclick="closeBotGameModal()">Отмена</button>
+                <button class="btn btn-primary" style="flex:1" onclick="startBotGame()">Играть!</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -1175,11 +1214,30 @@
         }
         
         function findBotGame() {
+            // Показать модальное окно выбора сложности и стороны
+            document.getElementById('botGameModal').style.display = 'flex';
+        }
+        
+        function closeBotGameModal() {
+            document.getElementById('botGameModal').style.display = 'none';
+        }
+        
+        function startBotGame() {
+            const difficulty = document.getElementById('botDifficultySelect').value;
+            const sideRadios = document.getElementsByName('botSide');
+            let selectedSide = 'plant';
+            for (const radio of sideRadios) {
+                if (radio.checked) {
+                    selectedSide = radio.value;
+                    break;
+                }
+            }
+            
             if (!socket) { socket = io(); initSocketListeners(); }
+            closeBotGameModal();
             showScreen('waitingScreen');
             document.getElementById('chatMessages').innerHTML = '';
-            const difficulty = document.getElementById('difficultySelect').value;
-            socket.emit('findBotGame', {sessionId, difficulty});
+            socket.emit('findBotGame', {sessionId, difficulty, side: selectedSide});
         }
         
         function initSocketListeners() {

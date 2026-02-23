@@ -1009,7 +1009,7 @@ io.on('connection', (socket) => {
     });
     
     socket.on('findBotGame', async (data) => {
-        const { sessionId, difficulty = 'medium' } = data;
+        const { sessionId, difficulty = 'medium', side: requestedSide } = data;
         const session = await sessionsCollection.findOne({ sessionId });
         
         if (!session) {
@@ -1022,7 +1022,8 @@ io.on('connection', (socket) => {
         
         // Создаем игру с ботом напрямую
         const roomId = uuidv4();
-        const side = Math.random() > 0.5 ? 'plant' : 'zombie';
+        // Используем выбранную сторону или случайную
+        const side = requestedSide || (Math.random() > 0.5 ? 'plant' : 'zombie');
         const bot = createBot(difficulty, side === 'plant' ? 'zombie' : 'plant');
         
         gameRooms.set(roomId, {
