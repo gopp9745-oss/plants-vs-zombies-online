@@ -11,7 +11,20 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Cache control middleware - disable caching
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+});
+
+app.use(express.static(path.join(__dirname, 'public'), {
+    maxAge: 0,
+    etag: false,
+    lastModified: true
+}));
 
 // ==================== MONGODB ПОДКЛЮЧЕНИЕ ====================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://grimteam:kolop908@cluster0.iifadf8.mongodb.net/?retryWrites=true&w=majority';
