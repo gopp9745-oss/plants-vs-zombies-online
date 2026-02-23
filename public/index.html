@@ -1353,16 +1353,33 @@
             if (!selectedUnit || !gameState) return;
             const lane = e.target.closest('.game-lane');
             if (!lane) return;
+            
+            // Получаем позицию клика относительно gameArena
+            const arena = document.getElementById('gameArena');
+            const rect = arena.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickPercent = (clickX / rect.width) * 100;
+            
             const laneIndex = parseInt(lane.dataset.lane);
             const unitData = units[gameState.mySide].find(u => u.id === selectedUnit);
             if (!unitData) return;
+            
+            // Проверка позиции: растения - только слева (0-50%), зомби - только справа (50-100%)
+            if (gameState.mySide === 'plant' && clickPercent > 50) {
+                alert('Растения можно ставить только на левой половине!');
+                return;
+            }
+            if (gameState.mySide === 'zombie' && clickPercent < 50) {
+                alert('Зомби можно ставить только на правой половине!');
+                return;
+            }
             
             // Используем солнце или мозги в зависимости от стороны
             const resource = gameState.mySide === 'plant' ? gameResources.sun : gameResources.brain;
             if (resource < unitData.cost) { alert('Недостаточно ресурсов!'); return; }
             
-            // Размещаем юнит на правильной позиции
-            const pos = gameState.mySide === 'plant' ? '90%' : '10%';
+            // Размещаем юнит на позиции клика
+            const pos = clickPercent + '%';
             placeUnit(laneIndex, unitData, gameState.mySide, pos);
             socket.emit(gameState.mySide==='plant'?'plantPlaced':'zombiePlaced', {lane:laneIndex,unitId:selectedUnit,pos});
             
