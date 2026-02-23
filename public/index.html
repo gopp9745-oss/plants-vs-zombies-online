@@ -1440,8 +1440,42 @@
             document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
         }
         
-        function cancelQueue() { if (socket) socket.emit('leaveQueue'); backToProfile(); }
-        function leaveGame() { if (socket) socket.emit('leaveQueue'); backToProfile(); }
+        function cancelQueue() { 
+            // Очищаем игровое поле
+            if (gameState && gameState.units) {
+                gameState.units.forEach(unit => {
+                    if (unit.element) unit.element.remove();
+                });
+            }
+            gameState = null;
+            selectedUnit = null;
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = null;
+            
+            // Очищаем визуальные элементы на поле
+            document.querySelectorAll('.game-unit').forEach(el => el.remove());
+            
+            if (socket) socket.emit('leaveQueue'); 
+            backToProfile(); 
+        }
+        function leaveGame() { 
+            // Очищаем игровое поле
+            if (gameState && gameState.units) {
+                gameState.units.forEach(unit => {
+                    if (unit.element) unit.element.remove();
+                });
+            }
+            gameState = null;
+            selectedUnit = null;
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = null;
+            
+            // Очищаем визуальные элементы на поле
+            document.querySelectorAll('.game-unit').forEach(el => el.remove());
+            
+            if (socket) socket.emit('leaveQueue'); 
+            backToProfile(); 
+        }
         
         function endGame(data) {
             showScreen('gameEndScreen');
