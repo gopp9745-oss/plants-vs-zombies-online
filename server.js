@@ -1064,7 +1064,9 @@ io.on('connection', (socket) => {
                 if (botPlayer && Math.random() < BOT_DIFFICULTIES[botPlayer.user.difficulty].spawnRate) {
                     const lane = Math.floor(Math.random() * 5);
                     const unitId = botPlayer.side === 'plant' ? 'peashooter' : 'zombie';
-                    io.to(roomId).emit('botPlaceUnit', { lane: lane, unitId: unitId, side: botPlayer.side });
+                    // Растения всегда слева (15%), зомби всегда справа (95%)
+                    const pos = botPlayer.side === 'plant' ? '15%' : '95%';
+                    io.to(roomId).emit('botPlaceUnit', { lane: lane, unitId: unitId, side: botPlayer.side, pos: pos });
                 }
             }
             
@@ -1184,7 +1186,9 @@ io.on('connection', (socket) => {
                 if (botPlayer && Math.random() < BOT_DIFFICULTIES[botPlayer.user.difficulty].spawnRate) {
                     const lane = Math.floor(Math.random() * 5);
                     const unitId = botSide === 'plant' ? 'peashooter' : 'zombie';
-                    io.to(roomId).emit('botPlaceUnit', { lane: lane, unitId: unitId, side: botSide });
+                    // Растения всегда слева (15%), зомби всегда справа (95%)
+                    const pos = botSide === 'plant' ? '15%' : '95%';
+                    io.to(roomId).emit('botPlaceUnit', { lane: lane, unitId: unitId, side: botSide, pos: pos });
                 }
             }
             

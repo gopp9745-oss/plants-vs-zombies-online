@@ -1419,8 +1419,9 @@
         function placeOpponentUnit(data) {
             const side = data.side || (gameState.mySide === 'plant' ? 'zombie' : 'plant');
             const unitData = units[side].find(u => u.id === data.unitId);
-            // Растения справа (85%), зомби у края справа (95%)
-            const pos = side === 'plant' ? '85%' : '95%';
+            // Используем позицию от сервера, или позицию по умолчанию
+            // Растения всегда слева (15%), зомби всегда справа (95%)
+            const pos = data.pos || (side === 'plant' ? '15%' : '95%');
             placeUnit(data.lane, unitData, side, pos);
         }
         
