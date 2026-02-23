@@ -158,7 +158,7 @@
         .game-lane:last-child { border-bottom: none; }
         .house { position: absolute; font-size: 2.5rem; z-index: 5; transition: all 0.3s; }
         .house.plant-house { left: 10px; color: #4ade80; }
-        .house.zombie-house { right: 10px; color: #ef4444; }
+        .house.zombie-house { right: 10px; color: #ef4444; font-size: 2.5rem; display: flex !important; }
         .spawn-zone { font-size: 1.5rem; opacity: 0.5; }
         .spawn-zone.plant-spawn { right: 50px; color: #4ade80; animation: spawnPulse 2s infinite; }
         .spawn-zone.zombie-spawn { left: 50px; color: #ef4444; animation: spawnPulse 2s infinite; }
@@ -511,6 +511,7 @@
             </div>
             <div><span>Противник: </span><span id="opponentName">-</span></div>
             <div style="color:#4ade80;font-weight:bold" id="plantHouseHP">🏠 ДОМ: 100%</div>
+            <div style="color:#ef4444;font-weight:bold" id="zombieHouseHP">🏚️ ДОМ: 100%</div>
             <div class="game-timer" id="gameTimer">3:00</div>
         </div>
         <div class="game-arena" id="gameArena">
@@ -1270,46 +1271,44 @@
                     }
                 });
                 
-                // Растения атакуют (если на той же линии есть зомби)
+                // Растения атакуют вправо (к дому зомби), зомби атакуют влево (к дому растений)
                 gameState.units.forEach(unit => {
-                    if (unit.side === 'plant') {
-                        // Если это солнцедобыватель - производит ресурсы
-                        if (unit.sunProduction && unit.sunSpeed) {
-                            unit.sunTimer = (unit.sunTimer || 0) + 0.5;
-                            if (unit.sunTimer >= unit.sunSpeed) {
-                                unit.sunTimer = 0;
-                                if (gameState.mySide === 'plant') {
-                                    gameResources.sun += unit.sunProduction;
-                                    // Визуальный эффект производства
-                                    if (unit.element) {
-                                        unit.element.style.transform = 'translateY(-50%) scale(1.2)';
-                                        setTimeout(() => {
-                                            if (unit.element) unit.element.style.transform = 'translateY(-50%) scale(1)';
-                                        }, 200);
-                                    }
+                    // Солнцедобыватели - производят ресурсы
+                    if (unit.sunProduction && unit.sunSpeed) {
+                        unit.sunTimer = (unit.sunTimer || 0) + 0.5;
+                        if (unit.sunTimer >= unit.sunSpeed) {
+                            unit.sunTimer = 0;
+                            if (unit.side === 'plant' && gameState.mySide === 'plant') {
+                                gameResources.sun += unit.sunProduction;
+                                // Визуальный эффект производства
+                                if (unit.element) {
+                                    unit.element.style.transform = 'translateY(-50%) scale(1.2)';
+                                    setTimeout(() => {
+                                        if (unit.element) unit.element.style.transform = 'translateY(-50%) scale(1)';
+                                    }, 200);
                                 }
-                                updateResourceDisplay();
                             }
+                            updateResourceDisplay();
                         }
+                    }
+                    
+                    // Атакующие растения - стреляют вправо
+                    if (unit.side === 'plant' && unit.damage && unit.type !== 'producer') {
+                        unit.attackTimer = (unit.attackTimer || 0) + 0.5;
+                        const attackInterval = unit.attackSpeed || 1.5;
                         
-                        // Если атакующее растение - проверяем по таймеру атаки
-                        if (unit.damage && unit.type !== 'producer') {
-                            // Инициализируем таймер атаки если нет
-                            unit.attackTimer = (unit.attackTimer || 0) + 0.5;
+                        if (unit.attackTimer >= attackInterval) {
+                            unit.attackTimer = 0;
                             
-                            // Атакуем по интервалу (attackSpeed - чем меньше, тем быстрее)
-                            const attackInterval = unit.attackSpeed || 1.5;
+                            // Ищем зомби на той же линии, которые находятся СПРАВА от растения
+                            const targets = gameState.units.filter(z => z.side === 'zombie' && z.lane === unit.lane);
                             
-                            if (unit.attackTimer >= attackInterval) {
-                                unit.attackTimer = 0;
+                            if (targets.length > 0) {
+                                const plantPos = parseFloat(unit.element.style.left) || 15;
+                                // Находим ближайшего зомби справа от растения
+                                const target = targets.find(z => parseFloat(z.element.style.left || 50) > plantPos);
                                 
-                                // Ищем зомби на той же линии
-                                const targets = gameState.units.filter(z => z.side === 'zombie' && z.lane === unit.lane);
-                                
-                                if (targets.length > 0) {
-                                    // Атакуем первого зомби на линии (ближайшего к растению)
-                                    const target = targets[0];
-                                    
+                                if (target) {
                                     unit.element.classList.add('attack');
                                     target.health -= (unit.damage || 20);
                                     target.element.classList.add('damage');
