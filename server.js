@@ -119,17 +119,39 @@ const ALL_ZOMBIES = ['zombie','conehead','buckethead','football','dancing','dolp
 const PLANT_PRICES = { sunflower:50, peashooter:50, wallnut:75, cherrybomb:150, iceshroom:75, snowpea:75, chomper:75, repeater:100, squash:100, twinsunflower:150, melonpult:200, cattail:150 };
 const ZOMBIE_PRICES = { zombie:50, conehead:75, buckethead:100, football:125, dancing:100, dolphin:100, digger:125, bungee:150, gargantuar:300, yeti:200, king:250, dr:300 };
 
-function generateShopItems() {
-    const shuffledPlants = [...ALL_PLANTS].sort(() => Math.random() - 0.5);
-    const plants = shuffledPlants.slice(0, 3 + Math.floor(Math.random() * 2)).map(id => ({
+// Уровни юнитов для разблокировки
+const UNIT_LEVELS = {
+    // Растения
+    sunflower: 1, peashooter: 1, wallnut: 1, potatomine: 1, puffshroom: 1, scaredyshroom: 1,
+    cherrybomb: 3, snowpea: 3, chomper: 3, repeater: 3, iceshroom: 5, squash: 5, magnetshroom: 5,
+    tallnut: 5, twinsunflower: 10, melonpult: 10, cattail: 10, moonglow: 15, hypnoshroom: 15,
+    // Зомби
+    zombie: 1, conehead: 1, buckethead: 1,
+    football: 3, dancing: 3, dolphin: 3, newspaper: 3,
+    digger: 5, bungee: 5, pogo: 5, catapult: 5,
+    gargantuar: 5, yeti: 10, king: 10, dr: 10
+};
+
+// Стоимость улучшения юнита (за каждый уровень)
+function getUpgradePrice(basePrice, level) {
+    return Math.floor(basePrice * (1 + level * 0.5));
+}
+
+function generateShopItems(userLevel = 1) {
+    // Фильтруем юниты по уровню игрока
+    const availablePlants = ALL_PLANTS.filter(id => (UNIT_LEVELS[id] || 1) <= userLevel);
+    const availableZombies = ALL_ZOMBIES.filter(id => (UNIT_LEVELS[id] || 1) <= userLevel);
+    
+    const shuffledPlants = [...availablePlants].sort(() => Math.random() - 0.5);
+    const plants = shuffledPlants.slice(0, Math.min(4, availablePlants.length)).map(id => ({
         id, type: 'plant', price: PLANT_PRICES[id] || 50
     }));
-    const shuffledZombies = [...ALL_ZOMBIES].sort(() => Math.random() - 0.5);
-    const zombies = shuffledZombies.slice(0, 2 + Math.floor(Math.random() * 2)).map(id => ({
+    const shuffledZombies = [...availableZombies].sort(() => Math.random() - 0.5);
+    const zombies = shuffledZombies.slice(0, Math.min(3, availableZombies.length)).map(id => ({
         id, type: 'zombie', price: ZOMBIE_PRICES[id] || 50
     }));
     shopItems = [...plants, ...zombies];
-    console.log('Магазин обновлён:', shopItems.map(p => `${p.type}:${p.id}`).join(', '));
+    console.log('Магазин обновлён для уровня ' + userLevel + ':', shopItems.map(p => `${p.type}:${p.id}`).join(', '));
 }
 
 const SHOP_UPDATE_INTERVAL = 5 * 60 * 1000;
@@ -140,7 +162,133 @@ setInterval(generateShopItems, SHOP_UPDATE_INTERVAL);
 
 app.get('/api/shop', (req, res) => {
     const nextUpdate = Math.max(0, SHOP_UPDATE_INTERVAL - (Date.now() - lastShopUpdate));
-    res.json({ success: true, items: shopItems, nextUpdate: nextUpdate });
+    res.json({ success: true, items: shopItems, nextUpdate: nextUpdate, unitLevels: UNIT_LEVELS });
+});
+
+// ==================== ИНВЕНТАРЬ ПОЛЬЗОВАТЕЛЯ ====================
+
+// Получить инвентарь пользователя
+app.post('/api/inventory', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    // Инвентарь: купленные юниты с уровнями прокачки
+    const inventory = user.inventory || {};
+    
+    res.json({ 
+        success: true, 
+        inventory: inventory,
+        userLevel: user.level
+    });
+});
+
+// Купить юнита
+app.post('/api/buy-unit', async (req, res) => {
+    const { sessionId, unitId, unitType } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    // Проверяем уровень для разблокировки
+    const requiredLevel = UNIT_LEVELS[unitId] || 1;
+    if (user.level < requiredLevel) {
+        return res.json({ success: false, message: `Нужен уровень ${requiredLevel} для этого юнита!` });
+    }
+    
+    // Получаем цену
+    const prices = unitType === 'plant' ? PLANT_PRICES : ZOMBIE_PRICES;
+    const price = prices[unitId] || 50;
+    
+    if (user.coins < price) {
+        return res.json({ success: false, message: 'Недостаточно монет!' });
+    }
+    
+    // Инициализируем инвентарь если нет
+    const inventory = user.inventory || {};
+    
+    // Проверяем, не куплен ли уже
+    if (inventory[unitId]) {
+        return res.json({ success: false, message: 'Этот юнит уже куплен!' });
+    }
+    
+    // Покупаем юнита
+    inventory[unitId] = {
+        level: 1,
+        type: unitType,
+        purchased: new Date()
+    };
+    
+    await usersCollection.updateOne(
+        { _id: user._id },
+        { 
+            $inc: { coins: -price },
+            $set: { inventory: inventory }
+        }
+    );
+    
+    res.json({ 
+        success: true, 
+        message: `${unitId} куплен за ${price} монет!`,
+        inventory: inventory,
+        coins: user.coins - price
+    });
+});
+
+// Улучшить юнита
+app.post('/api/upgrade-unit', async (req, res) => {
+    const { sessionId, unitId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const inventory = user.inventory || {};
+    
+    if (!inventory[unitId]) {
+        return res.json({ success: false, message: 'У вас нет этого юнита!' });
+    }
+    
+    const currentLevel = inventory[unitId].level || 1;
+    const maxLevel = 10;
+    
+    if (currentLevel >= maxLevel) {
+        return res.json({ success: false, message: 'Максимальный уровень достигнут!' });
+    }
+    
+    // Базовая цена
+    const prices = inventory[unitId].type === 'plant' ? PLANT_PRICES : ZOMBIE_PRICES;
+    const basePrice = prices[unitId] || 50;
+    const upgradePrice = getUpgradePrice(basePrice, currentLevel);
+    
+    if (user.coins < upgradePrice) {
+        return res.json({ success: false, message: `Недостаточно монет! Нужно ${upgradePrice}` });
+    }
+    
+    // Улучшаем юнита
+    inventory[unitId].level = currentLevel + 1;
+    
+    await usersCollection.updateOne(
+        { _id: user._id },
+        { 
+            $inc: { coins: -upgradePrice },
+            $set: { inventory: inventory }
+        }
+    );
+    
+    res.json({ 
+        success: true, 
+        message: `${unitId} улучшен до уровня ${currentLevel + 1}!`,
+        inventory: inventory,
+        coins: user.coins - upgradePrice,
+        newLevel: currentLevel + 1
+    });
 });
 
 // ==================== КВЕСТЫ ====================

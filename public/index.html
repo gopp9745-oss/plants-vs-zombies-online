@@ -848,9 +848,23 @@
             digger: 'Копатель', bungee: 'Крюк', gargantuar: 'Гигант', yeti: 'Йети', king: 'Король', dr: 'Доктор'
         };
         
+        // Цены для магазина
+        const PLANT_PRICES = { sunflower:50, peashooter:50, wallnut:75, cherrybomb:150, iceshroom:75, snowpea:75, chomper:75, repeater:100, squash:100, twinsunflower:150, melonpult:200, cattail:150 };
+        const ZOMBIE_PRICES = { zombie:50, conehead:75, buckethead:100, football:125, dancing:100, dolphin:100, digger:125, bungee:150, gargantuar:300, yeti:200, king:250, dr:300 };
+        
+        // Уровни для разблокировки
+        let UNIT_LEVELS = {
+            sunflower:1, peashooter:1, wallnut:1, potatomine:1, puffshroom:1, scaredyshroom:1,
+            cherrybomb:3, snowpea:3, chomper:3, repeater:3, iceshroom:5, squash:5, magnetshroom:5,
+            tallnut:5, twinsunflower:10, melonpult:10, cattail:10, moonglow:15, hypnoshroom:15,
+            zombie:1, conehead:1, buckethead:1, football:3, dancing:3, dolphin:3, newspaper:3,
+            digger:5, bungee:5, pogo:5, catapult:5, gargantuar:5, yeti:10, king:10, dr:10
+        };
+        
         async function showShop() { 
             showScreen('shopScreen'); 
             document.getElementById('promoMessage').textContent = ''; 
+            await loadInventory(); // Загружаем инвентарь
             await loadShop();
             startShopTimer();
         }
@@ -874,6 +888,18 @@
             document.getElementById('shopTabPromo').className = tab === 'promo' ? 'btn btn-primary' : 'btn btn-secondary';
             document.getElementById('shopPlantsTab').style.display = tab === 'plants' ? 'block' : 'none';
             document.getElementById('shopPromoTab').style.display = tab === 'promo' ? 'block' : 'none';
+        }
+        
+        let userInventory = {};
+        
+        async function loadInventory() {
+            try {
+                const res = await fetch('/api/inventory', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    userInventory = data.inventory || {};
+                }
+            } catch(e) {}
         }
         
         function renderShopItems() {
@@ -907,20 +933,102 @@
             const icon = item.type === 'plant' ? (PLANT_ICONS[item.id] || '🌱') : (ZOMBIE_ICONS[item.id] || '🧟');
             const name = item.type === 'plant' ? (PLANT_NAMES[item.id] || item.id) : (ZOMBIE_NAMES[item.id] || item.id);
             
-            if (sale) {
-                const newPrice = Math.floor(item.price * (1 - sale.discount/100));
+            // Проверяем, куплен ли юнит
+            const owned = userInventory[item.id];
+            const isOwned = !!owned;
+            const unitLevel = owned ? owned.level : 1;
+            
+            // Проверяем, заблокирован ли по уровню
+            const requiredLevel = UNIT_LEVELS ? (UNIT_LEVELS[item.id] || 1) : 1;
+            const userLevel = currentUser?.level || 1;
+            const isLocked = userLevel < requiredLevel;
+            
+            let priceHtml = '';
+            let btnHtml = '';
+            
+            if (isLocked) {
+                priceHtml = `<span style="color:#ef4444">🔒 Уровень ${requiredLevel}</span>`;
+                btnHtml = `<button class="btn btn-danger" style="padding:5px 10px;font-size:0.7rem;margin-top:5px" disabled>Заблокировано</button>`;
+            } else if (isOwned) {
+                const maxLevel = 10;
+                if (unitLevel < maxLevel) {
+                    const prices = item.type === 'plant' ? PLANT_PRICES : ZOMBIE_PRICES;
+                    const basePrice = prices[item.id] || 50;
+                    const upgradePrice = Math.floor(basePrice * (1 + unitLevel * 0.5));
+                    priceHtml = `<span style="color:#4ade80">Уровень ${unitLevel}/${maxLevel}</span>`;
+                    btnHtml = `<button class="btn btn-warning" style="padding:5px 10px;font-size:0.7rem;margin-top:5px" onclick="upgradeUnit('${item.id}', '${item.type}')">Прокачать (${upgradePrice}💰)</button>`;
+                } else {
+                    priceHtml = `<span style="color:#fbbf24">⭐ Макс. уровень!</span>`;
+                    btnHtml = `<button class="btn btn-primary" style="padding:5px 10px;font-size:0.7rem;margin-top:5px" disabled>Максимум</button>`;
+                }
+            } else {
+                const finalPrice = sale ? Math.floor(item.price * (1 - sale.discount/100)) : item.price;
+                priceHtml = sale ? `<span class="old-price">${item.price}💰</span> <span style="color:#fbbf24">${finalPrice}💰</span>` : `<span style="color:#fbbf24">${item.price}💰</span>`;
+                btnHtml = `<button class="btn btn-primary" style="padding:5px 10px;font-size:0.7rem;margin-top:5px" onclick="buyUnit('${item.id}', '${item.type}', ${finalPrice || item.price})">Купить</button>`;
+            }
+            
+            if (sale && !isLocked) {
                 return `<div class="shop-item sale" style="position:relative">
                     <span class="sale-badge">-${sale.discount}%</span>
                     <div class="shop-item-icon">${icon}</div>
                     <div>${name}</div>
-                    <div><span class="old-price">${item.price}💰</span> <span style="color:#fbbf24">${newPrice}💰</span></div>
+                    <div>${priceHtml}</div>
+                    ${btnHtml}
                 </div>`;
             }
-            return `<div class="shop-item">
+            return `<div class="shop-item" style="opacity:${isLocked ? 0.5 : 1}">
                 <div class="shop-item-icon">${icon}</div>
                 <div>${name}</div>
-                <div style="color:#fbbf24">${item.price}💰</div>
+                <div>${priceHtml}</div>
+                ${btnHtml}
             </div>`;
+        }
+        
+        async function buyUnit(unitId, type, price) {
+            if (!confirm(`Купить ${unitId} за ${price} монет?`)) return;
+            
+            try {
+                const res = await fetch('/api/buy-unit', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, unitId, unitType: type})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) {
+                    currentUser.coins = data.coins;
+                    userInventory = data.inventory;
+                    document.getElementById('statCoins').textContent = currentUser.coins;
+                    await loadShop(); // Перезагружаем магазин
+                }
+            } catch(e) {
+                alert('Ошибка покупки');
+            }
+        }
+        
+        async function upgradeUnit(unitId, type) {
+            const owned = userInventory[unitId];
+            if (!owned) {
+                alert('У вас нет этого юнита!');
+                return;
+            }
+            
+            const currentLevel = owned.level || 1;
+            const prices = type === 'plant' ? PLANT_PRICES : ZOMBIE_PRICES;
+            const basePrice = prices[unitId] || 50;
+            const upgradePrice = Math.floor(basePrice * (1 + currentLevel * 0.5));
+            
+            if (!confirm(`Прокачать ${unitId} до уровня ${currentLevel + 1} за ${upgradePrice} монет?`)) return;
+            
+            try {
+                const res = await fetch('/api/upgrade-unit', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, unitId})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) {
+                    currentUser.coins = data.coins;
+                    userInventory = data.inventory;
+                    document.getElementById('statCoins').textContent = currentUser.coins;
+                    await loadShop();
+                }
+            } catch(e) {
+                alert('Ошибка прокачки');
+            }
         }
         
         function startShopTimer() {
