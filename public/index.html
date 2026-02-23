@@ -516,6 +516,7 @@
         </div>
         <div class="game-arena" id="gameArena">
             <div class="house plant-house" id="plantHouse" style="left:10px">🏠</div>
+            <div style="position:absolute;left:50%;top:0;bottom:0;width:4px;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.6),transparent);z-index:10;border-left:2px dashed rgba(255,255,255,0.5)"></div>
             <div class="game-lanes" id="gameLanes"></div>
             <div class="game-chat" id="gameChat">
                 <div id="chatMessages"></div>
@@ -1418,8 +1419,8 @@
         function placeOpponentUnit(data) {
             const side = data.side || (gameState.mySide === 'plant' ? 'zombie' : 'plant');
             const unitData = units[side].find(u => u.id === data.unitId);
-            // Растения справа (90%), зомби слева (10%)
-            const pos = side === 'plant' ? '90%' : '10%';
+            // Растения справа (85%), зомби у края справа (95%)
+            const pos = side === 'plant' ? '85%' : '95%';
             placeUnit(data.lane, unitData, side, pos);
         }
         
