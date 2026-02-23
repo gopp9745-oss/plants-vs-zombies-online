@@ -176,6 +176,37 @@
         .game-unit.zombie { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 0 15px #ef4444; }
         .game-unit.attack { animation: attack 0.3s ease-in-out; }
         @keyframes attack { 0%,100% { transform: translateY(-50%) scale(1); } 50% { transform: translateY(-50%) scale(1.2); } }
+        
+        /* Дополнительные визуальные улучшения */
+        .unit-glow { box-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+        .unit-level-badge { position: absolute; top: -10px; right: -10px; width: 18px; height: 18px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 50%; font-size: 0.6rem; font-weight: bold; display: flex; align-items: center; justify-content: center; color: #1a1a2e; }
+        
+        .star-particle { position: absolute; pointer-events: none; animation: starFly 1s forwards; }
+        @keyframes starFly { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(0) translateY(-50px); opacity: 0; } }
+        
+        .victory-fireworks { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2000; }
+        .firework { position: absolute; animation: firework 1.5s ease-out forwards; }
+        @keyframes firework { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+        
+        .rainbow-border { animation: rainbowBorder 3s linear infinite; }
+        @keyframes rainbowBorder { 0% { border-color: #ef4444; } 25% { border-color: #fbbf24; } 50% { border-color: #4ade80; } 75% { border-color: #60a5fa; } 100% { border-color: #ef4444; } }
+        
+        .pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
+        @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 10px rgba(74, 222, 128, 0.5); } 50% { box-shadow: 0 0 30px rgba(74, 222, 128, 0.8), 0 0 50px rgba(74, 222, 128, 0.4); } }
+        
+        .gradient-text { background: linear-gradient(90deg, #4ade80, #60a5fa, #a78bfa, #f472b6); background-size: 300% 100%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientMove 3s linear infinite; }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+        
+        .floating-icon { position: absolute; animation: floatIcon 3s ease-in-out infinite; pointer-events: none; }
+        @keyframes floatIcon { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(10deg); } }
+        
+        .screen-shake { animation: screenShake 0.5s ease-out; }
+        @keyframes screenShake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+        
+        .gold-rush { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, rgba(251, 191, 36, 0.3), transparent); animation: goldRush 0.5s forwards; pointer-events: none; z-index: 1500; }
+        @keyframes goldRush { from { opacity: 0; } to { opacity: 1; } }
+        
+        .unit-special { border: 3px solid #fbbf24; box-shadow: 0 0 20px rgba(251, 191, 36, 0.5); }
         .game-unit.damage { animation: damage 0.3s ease-in-out; }
         @keyframes damage { 0%,100% { filter: brightness(1); } 50% { filter: brightness(2); } }
         @keyframes damageText { 0% { opacity:1; transform:translateX(-50%) translateY(0); } 100% { opacity:0; transform:translateX(-50%) translateY(-30px); } }
