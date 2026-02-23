@@ -1336,8 +1336,8 @@ async function endRound(roomId, result) {
         const loser = room.players.find(p => p.side !== result);
         
         if (winner && loser) {
-            // Даем награды ТОЛЬКО в PvP и авто-боте (не в режиме "Играть с ботом")
-            const giveRewards = room.isBotGame && !room.players.find(p => p.user.isBot && p.side === winner.side);
+            // Даем награды ТОЛЬКО в PvP (не в режиме игры с ботом!)
+            const giveRewards = !room.isBotGame;
             
             if (!winner.user.isBot) {
                 await usersCollection.updateOne(

@@ -1522,10 +1522,26 @@
             showScreen('gameEndScreen');
             const title = document.getElementById('gameResultTitle');
             const rewards = document.getElementById('gameRewards');
-            if (data.winner==='draw') { title.textContent='Ничья!'; title.className='game-result draw'; rewards.textContent='+20 монет'; }
-            else if (data.winnerSide===gameState.mySide) { title.textContent='Победа!'; title.className='game-result win'; rewards.textContent='+50 монет'; currentUser.wins++; }
-            else { title.textContent='Поражение'; title.className='game-result lose'; rewards.textContent='+10 монет'; currentUser.losses++; }
-            currentUser.coins += data.winnerSide===gameState.mySide?data.rewards.winner:data.rewards.loser;
+            const isBotGame = data.isBotGame === true;
+            
+            if (data.winner==='draw') { 
+                title.textContent='Ничья!'; 
+                title.className='game-result draw'; 
+                rewards.textContent = isBotGame ? 'Без наград (игра с ботом)' : '+20 монет'; 
+            }
+            else if (data.winnerSide===gameState.mySide) { 
+                title.textContent='Победа!'; 
+                title.className='game-result win'; 
+                rewards.textContent = isBotGame ? 'Без наград (игра с ботом)' : '+50 монет';
+                if (!isBotGame) currentUser.wins++; 
+            }
+            else { 
+                title.textContent='Поражение'; 
+                title.className='game-result lose'; 
+                rewards.textContent = isBotGame ? 'Без наград (игра с ботом)' : '+10 монет';
+                if (!isBotGame) currentUser.losses++; 
+            }
+            currentUser.coins += isBotGame ? 0 : (data.winnerSide===gameState.mySide ? data.rewards.winner : data.rewards.loser);
             checkSession();
         }
         
