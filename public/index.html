@@ -507,6 +507,22 @@
         <p class="rewards" id="gameRewards">+50 монет</p>
         <button class="btn btn-primary" onclick="backToProfile()">В меню</button>
     </div>
+    
+    <div id="profileViewScreen" class="screen">
+        <div class="profile-view">
+            <div class="profile-avatar" id="profileViewAvatar">?</div>
+            <h2 id="profileViewUsername" style="margin-bottom:10px">Игрок</h2>
+            <p id="profileViewLevel" style="color:#fbbf24;margin-bottom:20px">Уровень 1</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px">
+                <div class="stat"><div class="stat-value" id="profileViewWins">0</div><div class="stat-label">Побед</div></div>
+                <div class="stat"><div class="stat-value" id="profileViewXP">0</div><div class="stat-label">Опыта</div></div>
+                <div class="stat"><div class="stat-value" id="profileViewGames">0</div><div class="stat-label">Игр</div></div>
+                <div class="stat"><div class="stat-value" id="profileViewStreak">0</div><div class="stat-label">Серия</div></div>
+            </div>
+            <button class="btn btn-primary" id="profileViewAddFriendBtn" onclick="addFriendByName()">Добавить в друзья</button>
+            <button class="btn btn-secondary" style="margin-top:10px" onclick="backToProfile()">Назад</button>
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -608,7 +624,39 @@
         }
         
         function hideAllScreens() {
-            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen','friendsScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen','friendsScreen','profileViewScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+        }
+        
+        async function viewPlayerProfile(username) {
+            try {
+                const res = await fetch('/api/profile/' + username);
+                const data = await res.json();
+                if (data.success && data.profile) {
+                    document.getElementById('profileViewAvatar').textContent = username[0].toUpperCase();
+                    document.getElementById('profileViewUsername').textContent = data.profile.username;
+                    document.getElementById('profileViewLevel').textContent = 'Уровень ' + (data.profile.level || 1);
+                    document.getElementById('profileViewWins').textContent = data.profile.wins || 0;
+                    document.getElementById('profileViewXP').textContent = data.profile.xp || 0;
+                    document.getElementById('profileViewGames').textContent = data.profile.totalGames || 0;
+                    document.getElementById('profileViewStreak').textContent = data.profile.longestWinStreak || 0;
+                    document.getElementById('profileViewAddFriendBtn').onclick = function() { addFriendByName(username); };
+                    showScreen('profileViewScreen');
+                } else {
+                    alert('Игрок не найден');
+                }
+            } catch(e) {
+                alert('Ошибка загрузки профиля');
+            }
+        }
+        
+        async function addFriendByName(username) {
+            try {
+                const res = await fetch('/api/friends/add', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, friendUsername: username})});
+                const data = await res.json();
+                alert(data.message);
+            } catch(e) {
+                alert('Ошибка');
+            }
         }
         
         function showScreen(id) {
@@ -699,7 +747,7 @@
                     const sorted = [...data.leaders].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
                     
                     document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
-                        `<div class="leaderboard-row ${i<3?'top-3':''}">
+                        `<div class="leaderboard-row ${i<3?'top-3':''}" onclick="viewPlayerProfile('${p.username}')" style="cursor:pointer">
                             <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
                             <span class="username">${p.username || 'Unknown'}</span>
                             <span>${sort === 'wins' ? (p.level || 1) + '/' + (p.wins || 0) : (p.level || 1) + '/' + (p.xp || 0)}</span>
