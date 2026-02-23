@@ -514,8 +514,8 @@
             <div class="game-timer" id="gameTimer">3:00</div>
         </div>
         <div class="game-arena" id="gameArena">
-            <div class="house plant-house" id="plantHouse">🏠</div>
-            <div class="spawn-zone zombie-spawn" id="zombieSpawn">💀</div>
+            <div class="house plant-house" id="plantHouse" style="left:10px">🏠</div>
+            <div class="house zombie-house" id="zombieHouse" style="right:10px">🏚️</div>
             <div class="game-lanes" id="gameLanes"></div>
             <div class="game-chat" id="gameChat">
                 <div id="chatMessages"></div>
@@ -1379,11 +1379,22 @@
         
         function placeUnit(laneIndex, unitData, side, position = '50%') {
             const lane = document.querySelector(`.game-lane[data-lane="${laneIndex}"]`);
+            
+            // Растения спавнятся у своего дома (слева = 10%), зомби у своего (справа = 90%)
+            // Но при размещении игроком, растения ставят слева, зомби справа
+            let spawnPos;
+            if (position === '50%') {
+                // Размещение игроком - plants на 15%, zombies на 85%
+                spawnPos = side === 'plant' ? '15%' : '85%';
+            } else {
+                spawnPos = position;
+            }
+            
             const unit = document.createElement('div');
             unit.className = `game-unit ${side}`;
             unit.innerHTML = unitData.icon;
             unit.style.top = '50%';
-            unit.style.left = position;
+            unit.style.left = spawnPos;
             unit.style.transform = 'translateY(-50%)';
             lane.appendChild(unit);
             gameState.units.push({element:unit,...unitData,lane:laneIndex,side,health:unitData.health});
