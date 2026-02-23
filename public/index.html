@@ -180,6 +180,23 @@
         @keyframes damage { 0%,100% { filter: brightness(1); } 50% { filter: brightness(2); } }
         @keyframes damageText { 0% { opacity:1; transform:translateX(-50%) translateY(0); } 100% { opacity:0; transform:translateX(-50%) translateY(-30px); } }
         
+        /* Индикатор здоровья */
+        .health-bar { position: absolute; bottom: -8px; left: 0; right: 0; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden; }
+        .health-bar-fill { height: 100%; background: linear-gradient(90deg,#ef4444,#22c55e); transition: width 0.3s; }
+        
+        /* Эффект свечения при выборе стороны */
+        .side-option { transition: all 0.3s ease; }
+        .side-option:hover { transform: scale(1.05); }
+        .side-option.selected { transform: scale(1.1); box-shadow: 0 0 30px rgba(74,222,128,0.5); }
+        
+        /* Анимация появления модального окна */
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        #botGameModal > div { animation: modalIn 0.3s ease-out; }
+        
+        /* Звуковые эффекты кнопок */
+        .btn-click { animation: btnClick 0.1s ease-out; }
+        @keyframes btnClick { 0% { transform: scale(1); } 50% { transform: scale(0.95); } 100% { transform: scale(1); } }
+        
         /* Новые эффекты */
         .resource-popup { position: absolute; font-size: 1.2rem; font-weight: bold; animation: resourceFloat 1s forwards; pointer-events: none; z-index: 50; }
         @keyframes resourceFloat { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.5); } }
