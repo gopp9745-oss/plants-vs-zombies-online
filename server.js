@@ -52,6 +52,10 @@ async function connectDB() {
         await usersCollection.createIndex({ username: 1 }, { unique: true });
         await sessionsCollection.createIndex({ sessionId: 1 });
         
+        // Friends collection
+        const friendsCollection = db.collection('friends');
+        await friendsCollection.createIndex({ userId: 1 });
+        
         console.log('✓ Подключено к MongoDB');
         
         const adminExists = await usersCollection.findOne({ username: 'admin' });
@@ -692,6 +696,147 @@ app.post('/api/admin/unban', async (req, res) => {
     );
     
     res.json({ success: true, message: `Игрок ${username} разблокирован!` });
+});
+
+// ==================== ДРУЗЬЯ API ====================
+
+// Получить список друзей
+app.post('/api/friends', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const friendsCollection = db.collection('friends');
+    const friendships = await friendsCollection.find({
+        $or: [
+            { userId: user._id.toString() },
+            { friendId: user._id.toString() }
+        ]
+    }).toArray();
+    
+    const friendIds = friendships.map(f => f.userId === user._id.toString() ? f.friendId : f.userId);
+    const friends = await usersCollection.find({
+        _id: { $in: friendIds.map(id => new ObjectId(id)) }
+    }).project({ username: 1, level: 1, wins: 1 }).toArray();
+    
+    res.json({ success: true, friends });
+});
+
+// Добавить в друзья
+app.post('/api/friends/add', async (req, res) => {
+    const { sessionId, friendUsername } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const friend = await usersCollection.findOne({ username: friendUsername.toLowerCase() });
+    if (!friend) return res.json({ success: false, message: 'Игрок не найден' });
+    if (friend._id.toString() === user._id.toString()) return res.json({ success: false, message: 'Нельзя добавить себя' });
+    
+    const friendsCollection = db.collection('friends');
+    const existing = await friendsCollection.findOne({
+        userId: user._id.toString(),
+        friendId: friend._id.toString()
+    });
+    if (existing) return res.json({ success: false, message: 'Уже в друзьях' });
+    
+    await friendsCollection.insertOne({
+        userId: user._id.toString(),
+        friendId: friend._id.toString(),
+        createdAt: new Date()
+    });
+    
+    res.json({ success: true, message: `${friend.username} добавлен в друзья!` });
+});
+
+// Удалить из друзей
+app.post('/api/friends/remove', async (req, res) => {
+    const { sessionId, friendId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const friendsCollection = db.collection('friends');
+    await friendsCollection.deleteOne({
+        $or: [
+            { userId: user._id.toString(), friendId: friendId },
+            { userId: friendId, friendId: user._id.toString() }
+        ]
+    });
+    
+    res.json({ success: true, message: 'Друг удалён' });
+});
+
+// Пригласить друга на игру
+app.post('/api/friends/invite', async (req, res) => {
+    const { sessionId, friendId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    // Создаем приглашение
+    const inviteCode = uuidv4().substring(0, 8).toUpperCase();
+    const inviteCollection = db.collection('friendInvites');
+    await inviteCollection.insertOne({
+        from: user._id.toString(),
+        to: friendId,
+        code: inviteCode,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 минут
+    });
+    
+    res.json({ success: true, code: inviteCode });
+});
+
+// Принять приглашение и начать игру с другом
+app.post('/api/friends/join', async (req, res) => {
+    const { sessionId, friendId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const friend = await usersCollection.findOne({ _id: new ObjectId(friendId) });
+    if (!friend) return res.json({ success: false, message: 'Друг не найден' });
+    
+    // Проверяем, что они друзья
+    const friendsCollection = db.collection('friends');
+    const areFriends = await friendsCollection.findOne({
+        $or: [
+            { userId: user._id.toString(), friendId: friend._id.toString() },
+            { userId: friend._id.toString(), friendId: user._id.toString() }
+        ]
+    });
+    
+    if (!areFriends) return res.json({ success: false, message: 'Вы не друзья' });
+    
+    // Создаем комнату для дружеского боя
+    const roomId = uuidv4();
+    const side = Math.random() > 0.5 ? 'plant' : 'zombie';
+    
+    gameRooms.set(roomId, {
+        players: [
+            { id: socket.id, side: side, user: user },
+            { id: 'friend_' + friend._id.toString(), side: side === 'plant' ? 'zombie' : 'plant', user: friend }
+        ],
+        state: 'playing',
+        timer: null,
+        botTimer: null,
+        isFriendGame: true,
+        isBotGame: false
+    });
+    
+    res.json({ success: true, roomId });
 });
 
 // ==================== ИГРОВОЙ СЕРВЕР ====================
