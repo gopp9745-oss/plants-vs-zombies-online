@@ -379,6 +379,23 @@
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
     </div>
     
+    <div id="friendsScreen" class="screen">
+        <h2 class="leaderboard-title">👥 Друзья</h2>
+        <div class="match-history-container">
+            <div style="margin-bottom:20px">
+                <h3 style="margin-bottom:10px">Добавить друга</h3>
+                <div class="promo-input-group">
+                    <input type="text" id="addFriendInput" placeholder="Введите ник друга">
+                    <button class="btn btn-primary" onclick="addFriend()">Добавить</button>
+                </div>
+                <p id="addFriendMessage" style="margin-top:10px;color:#94a3b8"></p>
+            </div>
+            <h3 style="margin-bottom:15px">Ваши друзья</h3>
+            <div id="friendsList"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
     <div id="tutorialScreen" class="screen">
         <h2 class="leaderboard-title" style="color:#4ade80">📚 Обучение</h2>
         <div class="match-history-container" style="max-width:700px;text-align:left">
@@ -591,7 +608,7 @@
         }
         
         function hideAllScreens() {
-            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen','friendsScreen'].forEach(id => document.getElementById(id).style.display = 'none');
         }
         
         function showScreen(id) {
@@ -1359,6 +1376,57 @@
                 const secs = Math.floor((diff % (1000 * 60)) / 1000);
                 document.getElementById('questTimer').textContent = 'Новые квесты через: ' + hours + 'ч ' + mins + 'м ' + secs + 'с';
             }, 1000);
+        }
+        
+        // === ДРУЗЬЯ ===
+        async function showFriends() {
+            showScreen('friendsScreen');
+            document.getElementById('addFriendMessage').textContent = '';
+            try {
+                const res = await fetch('/api/friends', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                
+                if (data.success && data.friends) {
+                    if (data.friends.length === 0) {
+                        document.getElementById('friendsList').innerHTML = '<p style="text-align:center;color:#94a3b8">У вас пока нет друзей</p>';
+                    } else {
+                        document.getElementById('friendsList').innerHTML = data.friends.map(friend =>
+                            `<div class="match-row">
+                                <span style="font-weight:bold">${friend.username}</span>
+                                <span>Уровень ${friend.level || 1}</span>
+                                <span>${friend.wins || 0} побед</span>
+                            </div>`
+                        ).join('');
+                    }
+                }
+            } catch(e) {
+                document.getElementById('friendsList').innerHTML = '<p style="text-align:center;color:#ef4444">Ошибка загрузки друзей</p>';
+            }
+        }
+        
+        async function addFriend() {
+            const username = document.getElementById('addFriendInput').value.trim();
+            if (!username) {
+                document.getElementById('addFriendMessage').textContent = 'Введите ник друга';
+                document.getElementById('addFriendMessage').style.color = '#ef4444';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/friends/add', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, friendUsername: username})});
+                const data = await res.json();
+                
+                document.getElementById('addFriendMessage').textContent = data.message;
+                document.getElementById('addFriendMessage').style.color = data.success ? '#4ade80' : '#ef4444';
+                
+                if (data.success) {
+                    document.getElementById('addFriendInput').value = '';
+                    showFriends();
+                }
+            } catch(e) {
+                document.getElementById('addFriendMessage').textContent = 'Ошибка';
+                document.getElementById('addFriendMessage').style.color = '#ef4444';
+            }
         }
     </script>
 </body>
