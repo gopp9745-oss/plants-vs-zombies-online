@@ -356,6 +356,171 @@
         .rewards { font-size: 1.5rem; color: #fbbf24; margin-bottom: 25px; animation: rewardBounce 1s ease-out; }
         @keyframes rewardBounce { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
         
+        /* === НОВЫЕ ВИЗУАЛЬНЫЕ ЭФФЕКТЫ === */
+        
+        /* Эффект свечения для кнопок */
+        .btn-glow { position: relative; overflow: hidden; }
+        .btn-glow::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%); transform: scale(0); transition: transform 0.5s; }
+        .btn-glow:active::after { transform: scale(1); }
+        
+        /* Анимация мерцания для специальных предложений */
+        .flash-sale { animation: flashSale 0.5s ease-in-out infinite alternate; }
+        @keyframes flashSale { from { box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); } to { box-shadow: 0 0 30px rgba(239, 68, 68, 1); } }
+        
+        /* Эффект блеска для редких предметов */
+        .rare-glow { animation: rareGlow 2s ease-in-out infinite; border: 2px solid #a78bfa !important; }
+        @keyframes rareGlow { 0%,100% { box-shadow: 0 0 10px rgba(167, 139, 250, 0.5); } 50% { box-shadow: 0 0 25px rgba(167, 139, 250, 1), 0 0 50px rgba(167, 139, 250, 0.5); } }
+        
+        /* Эффект волны для поля боя */
+        .battle-wave { position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; z-index: 5; }
+        .battle-wave::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.1), transparent); animation: waveMove 3s ease-in-out infinite; }
+        .battle-wave::after { content: ''; position: absolute; top: 0; right: -100%; width: 50%; height: 100%; background: linear-gradient(270deg, transparent, rgba(239, 68, 68, 0.1), transparent); animation: waveMove 3s ease-in-out infinite reverse; }
+        @keyframes waveMove { 0%,100% { left: -50%; } 50% { left: 100%; } }
+        
+        /* Частицы при размещении юнита */
+        .spawn-particles { position: absolute; pointer-events: none; }
+        .spawn-particle { position: absolute; width: 8px; height: 8px; border-radius: 50%; animation: particleFly 0.8s ease-out forwards; }
+        @keyframes particleFly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
+        
+        /* Эффект следа за снарядом */
+        .projectile-trail { position: absolute; height: 4px; border-radius: 2px; animation: trailFade 0.5s forwards; pointer-events: none; }
+        @keyframes trailFade { from { opacity: 0.8; } to { opacity: 0; transform: scaleX(0.5); } }
+        
+        /* Визуальный эффект здоровья */
+        .health-pulse { animation: healthPulse 0.5s ease-out; }
+        @keyframes healthPulse { 0% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        
+        .health-low { animation: healthLow 0.5s ease-in-out infinite; }
+        @keyframes healthLow { 0%,100% { box-shadow: 0 0 5px #ef4444; } 50% { box-shadow: 0 0 15px #ef4444; } }
+        
+        /* Эффект щита */
+        .shield-effect { position: absolute; width: 70px; height: 70px; border-radius: 50%; border: 3px solid #60a5fa; animation: shieldRotate 2s linear infinite; pointer-events: none; }
+        @keyframes shieldRotate { from { transform: translateY(-50%) rotate(0deg); } to { transform: translateY(-50%) rotate(360deg); } }
+        
+        /* Эффект заморозки */
+        .frozen-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(96, 165, 250, 0.3); border-radius: 50%; animation: freezePulse 0.5s ease-in-out infinite; pointer-events: none; }
+        @keyframes freezePulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.6; } }
+        
+        /* Эффект огня */
+        .fire-effect { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 20px; background: linear-gradient(to top, #ef4444, #f59e0b, transparent); border-radius: 50% 50% 0 0; animation: fireFlicker 0.3s ease-in-out infinite alternate; pointer-events: none; }
+        @keyframes fireFlicker { from { transform: translateX(-50%) scaleY(1); } to { transform: translateX(-50%) scaleY(1.2); } }
+        
+        /* Эффект звезд */
+        .star-burst { position: absolute; pointer-events: none; }
+        .star-burst::before, .star-burst::after { content: '✨'; position: absolute; animation: starBurst 0.5s ease-out forwards; }
+        .star-burst::after { animation-delay: 0.1s; }
+        @keyframes starBurst { 0% { transform: scale(0) rotate(0deg); opacity: 1; } 100% { transform: scale(2) rotate(180deg); opacity: 0; } }
+        
+        /* Анимация появления с блеском */
+        .sparkle-appear { animation: sparkleAppear 0.8s ease-out; }
+        @keyframes sparkleAppear { 0% { opacity: 0; transform: scale(0); filter: blur(10px); } 50% { opacity: 1; transform: scale(1.2); filter: blur(0); } 100% { opacity: 1; transform: scale(1); } }
+        
+        /* Плавающая анимация */
+        .float-animation { animation: floatAnim 3s ease-in-out infinite; }
+        @keyframes floatAnim { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        
+        /* Пульсирующая рамка */
+        .pulse-border { position: relative; }
+        .pulse-border::before { content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px; border-radius: inherit; border: 2px solid transparent; background: linear-gradient(45deg, #4ade80, #60a5fa, #a78bfa, #f472b6) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: borderPulse 2s linear infinite; }
+        @keyframes borderPulse { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        
+        /* Эффект градиентной подсветки */
+        .gradient-glow { position: relative; }
+        .gradient-glow::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: inherit; background: linear-gradient(135deg, rgba(74, 222, 128, 0.3), rgba(96, 165, 250, 0.3)); animation: gradientGlowPulse 2s ease-in-out infinite; pointer-events: none; }
+        @keyframes gradientGlowPulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.6; } }
+        
+        /* Эффект частиц при клике */
+        .click-burst { position: fixed; pointer-events: none; z-index: 9999; }
+        .click-particle { position: absolute; width: 10px; height: 10px; border-radius: 50%; animation: clickBurst 0.6s ease-out forwards; }
+        @keyframes clickBurst { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+        
+        /* Эффект свечения при получении награды */
+        .reward-glow { animation: rewardGlow 1s ease-out; }
+        @keyframes rewardGlow { 0% { box-shadow: 0 0 0 rgba(251, 191, 36, 0); } 50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.8); } 100% { box-shadow: 0 0 10px rgba(251, 191, 36, 0.3); } }
+        
+        /* Анимация текста урона */
+        .damage-number { position: absolute; font-size: 1.2rem; font-weight: bold; animation: damageFloat 1s ease-out forwards; pointer-events: none; z-index: 100; text-shadow: 2px 2px 0 #000; }
+        .damage-number.critical { font-size: 1.8rem; color: #fbbf24; }
+        .damage-number.heal { color: #4ade80; }
+        @keyframes damageFloat { 0% { opacity: 1; transform: translateY(0) scale(1); } 50% { opacity: 1; transform: translateY(-30px) scale(1.2); } 100% { opacity: 0; transform: translateY(-60px) scale(0.8); } }
+        
+        /* Эффект тумана */
+        .fog-effect { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, transparent 50%, rgba(15, 23, 42, 0.8) 100%); pointer-events: none; z-index: 8; }
+        
+        /* Ночная атмосфера */
+        .night-atmosphere { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at bottom, rgba(15, 23, 42, 0.9) 0%, rgba(26, 26, 46, 0.95) 100%); pointer-events: none; z-index: 7; }
+        
+        /* Эффект звездного неба */
+        .starfield { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 6; }
+        .star { position: absolute; width: 2px; height: 2px; background: white; border-radius: 50%; animation: twinkle 2s ease-in-out infinite; }
+        @keyframes twinkle { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+        
+        /* Эффект лунного света */
+        .moonlight { position: absolute; top: -50px; right: 10%; width: 80px; height: 80px; background: radial-gradient(circle, rgba(255, 255, 200, 0.3) 0%, transparent 70%); border-radius: 50%; animation: moonGlow 4s ease-in-out infinite; pointer-events: none; z-index: 5; }
+        @keyframes moonGlow { 0%,100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 0.8; } }
+        
+        /* Эффект дождя */
+        .rain-effect { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 9; overflow: hidden; }
+        .rain-drop { position: absolute; width: 2px; height: 15px; background: linear-gradient(to bottom, transparent, rgba(173, 216, 230, 0.6)); animation: rainFall 0.8s linear infinite; }
+        @keyframes rainFall { from { transform: translateY(-20px); } to { transform: translateY(420px); } }
+        
+        /* Эффект снега */
+        .snow-effect { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 9; }
+        .snowflake { position: absolute; color: white; font-size: 1rem; animation: snowFall 3s linear infinite; opacity: 0.8; }
+        @keyframes snowFall { from { transform: translateY(-20px) rotate(0deg); } to { transform: translateY(420px) rotate(360deg); } }
+        
+        /* Эффект молнии */
+        .lightning-effect { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.3); animation: lightningFlash 0.2s ease-out; pointer-events: none; z-index: 15; }
+        @keyframes lightningFlash { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+        
+        /* Эффект дыма */
+        .smoke-effect { position: absolute; width: 30px; height: 30px; background: radial-gradient(circle, rgba(100, 100, 100, 0.6) 0%, transparent 70%); border-radius: 50%; animation: smokeRise 1s ease-out forwards; pointer-events: none; }
+        @keyframes smokeRise { 0% { transform: scale(0.5) translateY(0); opacity: 0.8; } 100% { transform: scale(2) translateY(-50px); opacity: 0; } }
+        
+        /* Пульсация ресурсов */
+        .resource-pulse { animation: resourcePulse 0.5s ease-out; }
+        @keyframes resourcePulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+        
+        /* Блеск при клике на юнита */
+        .unit-selected-glow { animation: selectedGlow 1s ease-in-out infinite; }
+        @keyframes selectedGlow { 0%,100% { box-shadow: 0 0 15px rgba(74, 222, 128, 0.5); } 50% { box-shadow: 0 0 30px rgba(74, 222, 128, 1), 0 0 50px rgba(74, 222, 128, 0.5); } }
+        
+        /* Анимация уровня */
+        .level-up-effect { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle, rgba(251, 191, 36, 0.3) 0%, transparent 70%); animation: levelUpBg 1s ease-out forwards; pointer-events: none; z-index: 2000; }
+        @keyframes levelUpBg { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+        
+        .level-up-text { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3rem; color: #fbbf24; text-shadow: 0 0 30px #fbbf24; animation: levelUpText 1.5s ease-out forwards; z-index: 2001; pointer-events: none; }
+        @keyframes levelUpText { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0; } 30% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; } 70% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; } }
+        
+        /* Эффект прогресса */
+        .progress-rainbow { background: linear-gradient(90deg, #ef4444, #f59e0b, #fbbf24, #4ade80, #60a5fa, #a78bfa, #f472b6); background-size: 200% 100%; animation: progressRainbow 2s linear infinite; }
+        @keyframes progressRainbow { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        
+        /* Эффект конфетти при победе */
+        .confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1500; overflow: hidden; }
+        .confetti-piece { position: absolute; width: 10px; height: 10px; top: -20px; animation: confettiFall 3s ease-out forwards; }
+        @keyframes confettiFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+        
+        /* Мини-анимация для иконок в меню */
+        .menu-icon { display: inline-block; transition: transform 0.3s; }
+        .menu-icon:hover { transform: scale(1.2) rotate(10deg); }
+        
+        /* Эффект свечения для профиля */
+        .profile-glow { box-shadow: 0 0 30px rgba(74, 222, 128, 0.5); animation: profileGlow 2s ease-in-out infinite; }
+        @keyframes profileGlow { 0%,100% { box-shadow: 0 0 20px rgba(74, 222, 128, 0.3); } 50% { box-shadow: 0 0 40px rgba(74, 222, 128, 0.6); } }
+        
+        /* Анимация ожидания */
+        .waiting-pulse { animation: waitPulse 1.5s ease-in-out infinite; }
+        @keyframes waitPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        
+        /* Эффект зловещего свечения для зомби */
+        .zombie-menace { animation: zombieMenace 1s ease-in-out infinite; }
+        @keyframes zombieMenace { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.2) hue-rotate(-10deg); } }
+        
+        /* Эффект силы для растений */
+        .plant-power { animation: plantPower 1s ease-in-out infinite; }
+        @keyframes plantPower { 0%,100% { filter: brightness(1) saturate(1); } 50% { filter: brightness(1.2) saturate(1.3); } }
+        
         .profile-view { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; text-align: center; }
         .profile-avatar { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(90deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 20px; }
         
