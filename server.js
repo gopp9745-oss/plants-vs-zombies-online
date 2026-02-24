@@ -857,7 +857,7 @@ function endRound(roomId, result) {
 }
 
 // API для создания/сброса админа
-app.post('/api/admin/create-admin', async (req, res) => {
+app.get('/api/admin/create-admin', async (req, res) => {
     const bcrypt = require('bcryptjs');
     
     // Проверяем, есть ли уже админ
