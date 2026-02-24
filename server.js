@@ -12,6 +12,17 @@ const io = new Server(server);
 
 app.use(express.json());
 
+// Инициализация MongoDB
+async function initDatabase() {
+    try {
+        await db.init();
+        console.log('✓ База данных MongoDB подключена');
+    } catch (error) {
+        console.error('✗ Ошибка подключения к MongoDB:', error.message);
+        console.log('Попробуйте запустить MongoDB или измените MONGO_URI в database.js');
+    }
+}
+
 // Cache control
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -848,10 +859,17 @@ function endRound(roomId, result) {
 // ==================== ЗАПУСК ====================
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
-    console.log(`\n🌻 СЕРВЕР ЗАПУЩЕН на порту ${PORT}!`);
-    console.log('🌐 Откройте: http://localhost:3000');
-    console.log('🔑 Админ: логин - admin, пароль - admin123');
-    console.log('💾 База данных: JSON файлы');
-    console.log('🤖 Бот-система: включена\n');
-});
+async function startServer() {
+    // Инициализируем базу данных MongoDB
+    await initDatabase();
+    
+    server.listen(PORT, () => {
+        console.log(`\n🌻 СЕРВЕР ЗАПУЩЕН на порту ${PORT}!`);
+        console.log('🌐 Откройте: http://localhost:3000');
+        console.log('🔑 Админ: логин - admin, пароль - admin123');
+        console.log('💾 База данных: MongoDB');
+        console.log('🤖 Бот-система: включена\n');
+    });
+}
+
+startServer();
