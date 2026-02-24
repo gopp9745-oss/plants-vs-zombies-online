@@ -846,6 +846,455 @@ app.post('/api/admin/unban', async (req, res) => {
     res.json({ success: true, message: `Игрок ${username} разблокирован!` });
 });
 
+// ==================== НОВЫЕ ADMIN ФУНКЦИИ ====================
+
+// Изменить роль игрока
+app.post('/api/admin/set-role', async (req, res) => {
+    const { sessionId, username, role } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    if (!['player', 'admin', 'moderator'].includes(role)) {
+        return res.json({ success: false, message: 'Неверная роль' });
+    }
+    
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $set: { role: role }}
+    );
+    
+    res.json({ success: true, message: `Роль игрока ${username} изменена на ${role}!` });
+});
+
+// Изменить уровень игрока
+app.post('/api/admin/set-level', async (req, res) => {
+    const { sessionId, username, level } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $set: { level: parseInt(level), xp: 0 }}
+    );
+    
+    res.json({ success: true, message: `Уровень игрока ${username} изменён на ${level}!` });
+});
+
+// Изменить XP игрока
+app.post('/api/admin/set-xp', async (req, res) => {
+    const { sessionId, username, xp } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $set: { xp: parseInt(xp) }}
+    );
+    
+    res.json({ success: true, message: `XP игрока ${username} изменён на ${xp}!` });
+});
+
+// Изменить победы
+app.post('/api/admin/set-wins', async (req, res) => {
+    const { sessionId, username, wins } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $set: { wins: parseInt(wins) }}
+    );
+    
+    res.json({ success: true, message: `Победы игрока ${username} изменены на ${wins}!` });
+});
+
+// Дать монеты игроку
+app.post('/api/admin/give-coins', async (req, res) => {
+    const { sessionId, username, coins } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $inc: { coins: parseInt(coins) }}
+    );
+    
+    res.json({ success: true, message: `Игроку ${username} выдано ${coins} монет!` });
+});
+
+// Забрать монеты у игрока
+app.post('/api/admin/take-coins', async (req, res) => {
+    const { sessionId, username, coins } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = await usersCollection.findOne({ username: username.toLowerCase() });
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const newCoins = Math.max(0, target.coins - parseInt(coins));
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $set: { coins: newCoins }}
+    );
+    
+    res.json({ success: true, message: `У игрока ${username} забрано ${coins} монет!` });
+});
+
+// Удалить игрока
+app.post('/api/admin/delete-user', async (req, res) => {
+    const { sessionId, username } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    if (username.toLowerCase() === 'admin') {
+        return res.json({ success: false, message: 'Нельзя удалить админа' });
+    }
+    
+    await usersCollection.deleteOne({ username: username.toLowerCase() });
+    
+    res.json({ success: true, message: `Игрок ${username} удалён!` });
+});
+
+// Сбросить прогресс игрока
+app.post('/api/admin/reset-progress', async (req, res) => {
+    const { sessionId, username } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $set: { 
+            coins: 100,
+            wins: 0,
+            losses: 0,
+            xp: 0,
+            level: 1,
+            totalGames: 0,
+            longestWinStreak: 0,
+            currentWinStreak: 0,
+            achievements: [],
+            inventory: {}
+        }}
+    );
+    
+    res.json({ success: true, message: `Прогресс игрока ${username} сброшен!` });
+});
+
+// Сбросить ежедневные квесты всем игрокам
+app.post('/api/admin/reset-quests', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await usersCollection.updateMany(
+        {},
+        { $set: { dailyQuests: [], dailyQuestsDate: null }}
+    );
+    
+    res.json({ success: true, message: 'Ежедневные квесты сброшены всем игрокам!' });
+});
+
+// Получить все матчи (с пагинацией)
+app.post('/api/admin/all-matches', async (req, res) => {
+    const { sessionId, page = 1, limit = 50 } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const skip = (page - 1) * limit;
+    const matches = await matchesCollection.find()
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .toArray();
+    
+    const total = await matchesCollection.countDocuments();
+    
+    res.json({ success: true, matches, total, page, totalPages: Math.ceil(total / limit) });
+});
+
+// Удалить матч
+app.post('/api/admin/delete-match', async (req, res) => {
+    const { sessionId, matchId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await matchesCollection.deleteOne({ _id: new ObjectId(matchId) });
+    
+    res.json({ success: true, message: 'Матч удалён!' });
+});
+
+// Очистить все матчи
+app.post('/api/admin/clear-matches', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await matchesCollection.deleteMany({});
+    
+    res.json({ success: true, message: 'Все матчи удалены!' });
+});
+
+// Удалить все промокоды
+app.post('/api/admin/clear-promos', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    await promosCollection.deleteMany({});
+    
+    res.json({ success: true, message: 'Все промокоды удалены!' });
+});
+
+// Дать юнита игроку
+app.post('/api/admin/give-unit', async (req, res) => {
+    const { sessionId, username, unitId, unitType } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = await usersCollection.findOne({ username: username.toLowerCase() });
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const inventory = target.inventory || {};
+    inventory[unitId] = {
+        level: 1,
+        type: unitType,
+        purchased: new Date()
+    };
+    
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $set: { inventory: inventory }}
+    );
+    
+    res.json({ success: true, message: `Игроку ${username} выдан юнит ${unitId}!` });
+});
+
+// Забрать юнита у игрока
+app.post('/api/admin/take-unit', async (req, res) => {
+    const { sessionId, username, unitId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = await usersCollection.findOne({ username: username.toLowerCase() });
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const inventory = target.inventory || {};
+    delete inventory[unitId];
+    
+    await usersCollection.updateOne(
+        { username: username.toLowerCase() },
+        { $set: { inventory: inventory }}
+    );
+    
+    res.json({ success: true, message: `У игрока ${username} забран юнит ${unitId}!` });
+});
+
+// Статистика по уровням
+app.post('/api/admin/level-stats', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const levelStats = await usersCollection.aggregate([
+        { $group: { _id: '$level', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+    ]).toArray();
+    
+    res.json({ success: true, levelStats });
+});
+
+// Топ по монетам
+app.post('/api/admin/top-coins', async (req, res) => {
+    const { sessionId, limit = 10 } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const top = await usersCollection.find()
+        .sort({ coins: -1 })
+        .limit(parseInt(limit))
+        .project({ username: 1, coins: 1, level: 1 })
+        .toArray();
+    
+    res.json({ success: true, top });
+});
+
+// Поиск игрока
+app.post('/api/admin/search-user', async (req, res) => {
+    const { sessionId, query } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const users = await usersCollection.find({
+        username: { $regex: query, $options: 'i' }
+    })
+    .project({ username: 1, role: 1, coins: 1, wins: 1, level: 1, createdAt: 1 })
+    .limit(20)
+    .toArray();
+    
+    res.json({ success: true, users });
+});
+
+// Экспорт данных (все пользователи)
+app.post('/api/admin/export-users', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const users = await usersCollection.find({ role: { $ne: 'admin' }})
+        .project({ username: 1, coins: 1, wins: 1, losses: 1, xp: 1, level: 1, totalGames: 1, createdAt: 1 })
+        .toArray();
+    
+    res.json({ success: true, users });
+});
+
+// Массовая выдача монет
+app.post('/api/admin/broadcast-coins', async (req, res) => {
+    const { sessionId, coins } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const result = await usersCollection.updateMany(
+        { role: { $ne: 'admin' } },
+        { $inc: { coins: parseInt(coins) }}
+    );
+    
+    res.json({ success: true, message: `Монеты выданы ${result.modifiedCount} игрокам!` });
+});
+
+// Просмотр инвентаря игрока
+app.post('/api/admin/view-inventory', async (req, res) => {
+    const { sessionId, username } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = await usersCollection.findOne({ username: username.toLowerCase() });
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    res.json({ success: true, inventory: target.inventory || {}, username: target.username });
+});
+
+// Настройки сервера (в памяти)
+let serverSettings = {
+    gameDuration: 180, // 3 минуты
+    winnerReward: 50,
+    loserReward: 10,
+    drawReward: 20,
+    dailyRewardBase: 50,
+    dailyRewardPerLevel: 10,
+    botTimeout: 60000,
+    xpPerWin: 50,
+    xpPerLose: 20
+};
+
+// Получить настройки сервера
+app.post('/api/admin/server-settings', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    res.json({ success: true, settings: serverSettings });
+});
+
+// Изменить настройки сервера
+app.post('/api/admin/update-settings', async (req, res) => {
+    const { sessionId, settings } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    serverSettings = { ...serverSettings, ...settings };
+    
+    res.json({ success: true, message: 'Настройки обновлены!', settings: serverSettings });
+});
+
+// Информация о базе данных
+app.post('/api/admin/db-stats', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const stats = {
+        users: await usersCollection.countDocuments(),
+        matches: await matchesCollection.countDocuments(),
+        promos: await promosCollection.countDocuments(),
+        sales: await salesCollection.countDocuments(),
+        sessions: await sessionsCollection.countDocuments()
+    };
+    
+    res.json({ success: true, stats });
+});
+
 // ==================== ДРУЗЬЯ API ====================
 
 // Получить список друзей

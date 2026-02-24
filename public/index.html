@@ -529,64 +529,256 @@
     <div id="adminScreen" class="screen">
         <h2 class="admin-title">⚙️ Админ-панель</h2>
         <div class="admin-container">
-            <div class="admin-stats">
-                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalUsers">0</div><div>Игроков</div></div>
-                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalWins">0</div><div>Побед</div></div>
-                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalGames">0</div><div>Игр</div></div>
-                <div class="admin-stat"><div class="admin-stat-value" id="adminTotalCoins">0</div><div>Монет</div></div>
+            <!-- Табы для разделов -->
+            <div class="shop-tabs" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+                <button class="btn btn-primary" id="adminTabStats" onclick="switchAdminTab('stats')">📊 Статистика</button>
+                <button class="btn btn-secondary" id="adminTabPlayers" onclick="switchAdminTab('players')">👥 Игроки</button>
+                <button class="btn btn-secondary" id="adminTabTools" onclick="switchAdminTab('tools')">🔧 Инструменты</button>
+                <button class="btn btn-secondary" id="adminTabSettings" onclick="switchAdminTab('settings')">⚙️ Настройки</button>
             </div>
-            <div class="admin-section">
-                <h3>🎁 Новый промокод</h3>
-                <form class="admin-form" onsubmit="createPromo(event)">
-                    <input type="text" id="newPromoCode" placeholder="Код" required style="padding:8px;border-radius:6px;">
-                    <input type="number" id="newPromoReward" placeholder="Награда" required style="padding:8px;border-radius:6px;">
-                    <input type="number" id="newPromoMaxUses" placeholder="Лимит" value="100" required style="padding:8px;border-radius:6px;">
-                    <button type="submit" class="btn btn-warning">Создать</button>
-                </form>
+            
+            <!-- РАЗДЕЛ: Статистика -->
+            <div id="adminStatsTab">
+                <div class="admin-stats">
+                    <div class="admin-stat"><div class="admin-stat-value" id="adminTotalUsers">0</div><div>Игроков</div></div>
+                    <div class="admin-stat"><div class="admin-stat-value" id="adminTotalWins">0</div><div>Побед</div></div>
+                    <div class="admin-stat"><div class="admin-stat-value" id="adminTotalGames">0</div><div>Игр</div></div>
+                    <div class="admin-stat"><div class="admin-stat-value" id="adminTotalCoins">0</div><div>Монет</div></div>
+                </div>
+                <div class="admin-section">
+                    <h3>📊 Доп. статистика</h3>
+                    <div id="adminDbStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;font-size:0.85rem"></div>
+                    <button class="btn btn-secondary" style="margin-top:10px" onclick="loadDbStats()">🔄 Обновить</button>
+                </div>
             </div>
-            <div class="admin-section">
-                <h3>🔥 Акция на растение/зомби</h3>
-                <form class="admin-form" onsubmit="createSale(event)">
-                    <select id="salePlantId" required style="padding:8px;border-radius:6px;">
-                        <option value="">🌻 Растения</option>
-                        <option value="sunflower">🌻 Подсолнух (50)</option>
-                        <option value="peashooter">🟢 Горох (50)</option>
-                        <option value="wallnut">🥜 Стена (50)</option>
-                        <option value="snowpea">❄️ Мороз (75)</option>
-                        <option value="chomper">👄 Хапун (75)</option>
-                        <option value="repeater">🔫 Дубль (100)</option>
-                        <option value="cherrybomb">🍒 Вишня (150)</option>
-                        <option value="iceshroom">🧊 Лед (75)</option>
-                        <option value="squash">🎃 Тыква (100)</option>
-                        <option value="twinsunflower">🌞 Двойня (150)</option>
-                        <option value="melonpult">🍉 Арбуз (200)</option>
-                        <option value="cattail">🐱 Котоушка (150)</option>
-                        <option value="">🧟 Зомби</option>
-                        <option value="zombie">🧟 Зомби (50)</option>
-                        <option value="conehead">🧢 Конус (75)</option>
-                        <option value="buckethead">🪣 Ведро (100)</option>
-                        <option value="football">🏈 Спорт (125)</option>
-                        <option value="dancing">💃 Танцор (100)</option>
-                        <option value="dolphin">🐬 Дельфин (100)</option>
-                        <option value="digger">⛏️ Копатель (125)</option>
-                        <option value="bungee">🪝 Крюк (150)</option>
-                        <option value="gargantuar">👹 Гигант (300)</option>
-                        <option value="yeti">🦬 Йети (200)</option>
-                        <option value="king">🤴 Король (250)</option>
-                        <option value="dr">🧙 Доктор (300)</option>
-                    </select>
-                    <input type="number" id="saleDiscount" placeholder="Скидка %" required style="padding:8px;border-radius:6px;">
-                    <select id="saleDuration" required style="padding:8px;border-radius:6px;">
-                        <option value="3600000">1 час</option>
-                        <option value="7200000">2 часа</option>
-                        <option value="86400000">24 часа</option>
-                    </select>
-                    <button type="submit" class="btn btn-secondary">Создать</button>
-                </form>
+            
+            <!-- РАЗДЕЛ: Игроки -->
+            <div id="adminPlayersTab" style="display:none">
+                <div class="admin-section">
+                    <h3>🔍 Поиск игрока</h3>
+                    <div style="display:flex;gap:10px;margin-bottom:15px">
+                        <input type="text" id="adminSearchInput" placeholder="Введите ник..." style="flex:1;padding:10px;border-radius:6px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);color:white">
+                        <button class="btn btn-primary" onclick="adminSearchUser()">Поиск</button>
+                    </div>
+                    <div id="adminSearchResults" style="max-height:200px;overflow-y:auto"></div>
+                </div>
+                <div class="admin-section">
+                    <h3>👥 Все игроки</h3>
+                    <div class="admin-users-list" id="adminUsersList" style="font-size:0.8rem"></div>
+                </div>
             </div>
-            <div class="admin-section">
-                <h3>👥 Игроки</h3>
-                <div class="admin-users-list" id="adminUsersList" style="font-size:0.8rem"></div>
+            
+            <!-- РАЗДЕЛ: Инструменты -->
+            <div id="adminToolsTab" style="display:none">
+                <div class="admin-section">
+                    <h3>🎁 Новый промокод</h3>
+                    <form class="admin-form" onsubmit="createPromo(event)">
+                        <input type="text" id="newPromoCode" placeholder="Код" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="newPromoReward" placeholder="Награда" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="newPromoMaxUses" placeholder="Лимит" value="100" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-warning">Создать</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🔥 Акция на растение/зомби</h3>
+                    <form class="admin-form" onsubmit="createSale(event)">
+                        <select id="salePlantId" required style="padding:8px;border-radius:6px;">
+                            <option value="">🌻 Растения</option>
+                            <option value="sunflower">🌻 Подсолнух (50)</option>
+                            <option value="peashooter">🟢 Горох (50)</option>
+                            <option value="wallnut">🥜 Стена (50)</option>
+                            <option value="snowpea">❄️ Мороз (75)</option>
+                            <option value="chomper">👄 Хапун (75)</option>
+                            <option value="repeater">🔫 Дубль (100)</option>
+                            <option value="cherrybomb">🍒 Вишня (150)</option>
+                            <option value="iceshroom">🧊 Лед (75)</option>
+                            <option value="squash">🎃 Тыква (100)</option>
+                            <option value="twinsunflower">🌞 Двойня (150)</option>
+                            <option value="melonpult">🍉 Арбуз (200)</option>
+                            <option value="cattail">🐱 Котоушка (150)</option>
+                            <option value="">🧟 Зомби</option>
+                            <option value="zombie">🧟 Зомби (50)</option>
+                            <option value="conehead">🧢 Конус (75)</option>
+                            <option value="buckethead">🪣 Ведро (100)</option>
+                            <option value="football">🏈 Спорт (125)</option>
+                            <option value="dancing">💃 Танцор (100)</option>
+                            <option value="dolphin">🐬 Дельфин (100)</option>
+                            <option value="digger">⛏️ Копатель (125)</option>
+                            <option value="bungee">🪝 Крюк (150)</option>
+                            <option value="gargantuar">👹 Гигант (300)</option>
+                            <option value="yeti">🦬 Йети (200)</option>
+                            <option value="king">🤴 Король (250)</option>
+                            <option value="dr">🧙 Доктор (300)</option>
+                        </select>
+                        <input type="number" id="saleDiscount" placeholder="Скидка %" required style="padding:8px;border-radius:6px;">
+                        <select id="saleDuration" required style="padding:8px;border-radius:6px;">
+                            <option value="3600000">1 час</option>
+                            <option value="7200000">2 часа</option>
+                            <option value="86400000">24 часа</option>
+                        </select>
+                        <button type="submit" class="btn btn-secondary">Создать</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>💰 Управление монетами</h3>
+                    <form class="admin-form" onsubmit="adminGiveCoins(event)">
+                        <input type="text" id="gcUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="gcAmount" placeholder="Количество" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-primary">Выдать</button>
+                    </form>
+                    <form class="admin-form" style="margin-top:10px" onsubmit="adminTakeCoins(event)">
+                        <input type="text" id="tcUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="tcAmount" placeholder="Количество" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-danger">Забрать</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>⭐ Управление уровнем</h3>
+                    <form class="admin-form" onsubmit="adminSetLevel(event)">
+                        <input type="text" id="slUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="slLevel" placeholder="Уровень" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-warning">Установить</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🎮 Управление XP</h3>
+                    <form class="admin-form" onsubmit="adminSetXP(event)">
+                        <input type="text" id="sxUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="sxAmount" placeholder="XP" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-warning">Установить</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🏆 Управление победами</h3>
+                    <form class="admin-form" onsubmit="adminSetWins(event)">
+                        <input type="text" id="swUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="swWins" placeholder="Победы" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-warning">Установить</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🎁 Дать/забрать юнита</h3>
+                    <form class="admin-form" onsubmit="adminGiveUnit(event)">
+                        <input type="text" id="guUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <select id="guUnitId" required style="padding:8px;border-radius:6px;">
+                            <option value="">Выберите юнита</option>
+                            <option value="sunflower">🌻 Подсолнух</option>
+                            <option value="peashooter">🟢 Горох</option>
+                            <option value="wallnut">🥜 Стена</option>
+                            <option value="snowpea">❄️ Мороз</option>
+                            <option value="chomper">👄 Хапун</option>
+                            <option value="repeater">🔫 Дубль</option>
+                            <option value="cherrybomb">🍒 Вишня</option>
+                            <option value="zombie">🧟 Зомби</option>
+                            <option value="conehead">🧢 Конус</option>
+                            <option value="buckethead">🪣 Ведро</option>
+                            <option value="football">🏈 Спорт</option>
+                            <option value="gargantuar">👹 Гигант</option>
+                        </select>
+                        <select id="guUnitType" required style="padding:8px;border-radius:6px;">
+                            <option value="plant">🌻 Растение</option>
+                            <option value="zombie">🧟 Зомби</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">Дать</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🚫 Бан/разбан игрока</h3>
+                    <form class="admin-form" onsubmit="adminBanUser(event)">
+                        <input type="text" id="banUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-danger">Забанить</button>
+                    </form>
+                    <form class="admin-form" style="margin-top:10px" onsubmit="adminUnbanUser(event)">
+                        <input type="text" id="unbanUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-primary">Разбанить</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>👑 Изменить роль</h3>
+                    <form class="admin-form" onsubmit="adminSetRole(event)">
+                        <input type="text" id="roleUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <select id="roleType" required style="padding:8px;border-radius:6px;">
+                            <option value="player">Игрок</option>
+                            <option value="moderator">Модератор</option>
+                            <option value="admin">Админ</option>
+                        </select>
+                        <button type="submit" class="btn btn-warning">Изменить</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🗑️ Опасные операции</h3>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <button class="btn btn-danger" onclick="adminResetProgress()">🔄 Сбросить прогресс игрока</button>
+                        <button class="btn btn-danger" onclick="adminDeleteUser()">❌ Удалить игрока</button>
+                        <button class="btn btn-danger" onclick="adminClearMatches()">📜 Очистить матчи</button>
+                        <button class="btn btn-danger" onclick="adminClearPromos()">🎫 Очистить промокоды</button>
+                        <button class="btn btn-danger" onclick="adminResetQuests()">📋 Сбросить квесты всем</button>
+                    </div>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>📢 Массовые рассылки</h3>
+                    <form class="admin-form" onsubmit="adminBroadcastCoins(event)">
+                        <input type="number" id="bcAmount" placeholder="Монет каждому" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-primary">Выдать всем</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>📤 Экспорт данных</h3>
+                    <button class="btn btn-secondary" onclick="adminExportUsers()">📥 Скачать игроков (JSON)</button>
+                </div>
+            </div>
+            
+            <!-- РАЗДЕЛ: Настройки -->
+            <div id="adminSettingsTab" style="display:none">
+                <div class="admin-section">
+                    <h3>⚙️ Настройки сервера</h3>
+                    <div id="serverSettingsForm" style="display:flex;flex-direction:column;gap:10px;max-width:300px">
+                        <label style="display:flex;justify-content:space-between">
+                            <span>Длительность игры (сек):</span>
+                            <input type="number" id="settingGameDuration" style="width:80px;padding:5px;border-radius:4px">
+                        </label>
+                        <label style="display:flex;justify-content:space-between">
+                            <span>Награда за победу:</span>
+                            <input type="number" id="settingWinnerReward" style="width:80px;padding:5px;border-radius:4px">
+                        </label>
+                        <label style="display:flex;justify-content:space-between">
+                            <span>Награда за поражение:</span>
+                            <input type="number" id="settingLoserReward" style="width:80px;padding:5px;border-radius:4px">
+                        </label>
+                        <label style="display:flex;justify-content:space-between">
+                            <span>Награда за ничью:</span>
+                            <input type="number" id="settingDrawReward" style="width:80px;padding:5px;border-radius:4px">
+                        </label>
+                        <label style="display:flex;justify-content:space-between">
+                            <span>Баз. ежед. награда:</span>
+                            <input type="number" id="settingDailyBase" style="width:80px;padding:5px;border-radius:4px">
+                        </label>
+                        <label style="display:flex;justify-content:space-between">
+                            <span>XP за победу:</span>
+                            <input type="number" id="settingXpWin" style="width:80px;padding:5px;border-radius:4px">
+                        </label>
+                        <button class="btn btn-primary" onclick="saveServerSettings()">💾 Сохранить</button>
+                    </div>
+                </div>
+                <div class="admin-section">
+                    <h3>📊 Статистика по уровням</h3>
+                    <div id="levelStatsList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:10px"></div>
+                </div>
+                <div class="admin-section">
+                    <h3>💰 Топ по монетам</h3>
+                    <div id="topCoinsList" style="max-height:200px;overflow-y:auto"></div>
+                </div>
             </div>
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
@@ -1250,6 +1442,353 @@
                 const data = await res.json();
                 alert(data.message);
                 if (data.success) e.target.reset();
+            } catch(e) {}
+        }
+        
+        // === НОВЫЕ ADMIN ФУНКЦИИ ===        
+        function switchAdminTab(tab) {
+            document.getElementById('adminTabStats').className = tab === 'stats' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('adminTabPlayers').className = tab === 'players' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('adminTabTools').className = tab === 'tools' ? 'btn btn-primary' : 'btn btn-secondary';
+            document.getElementById('adminTabSettings').className = tab === 'settings' ? 'btn btn-primary' : 'btn btn-secondary';
+            
+            document.getElementById('adminStatsTab').style.display = tab === 'stats' ? 'block' : 'none';
+            document.getElementById('adminPlayersTab').style.display = tab === 'players' ? 'block' : 'none';
+            document.getElementById('adminToolsTab').style.display = tab === 'tools' ? 'block' : 'none';
+            document.getElementById('adminSettingsTab').style.display = tab === 'settings' ? 'block' : 'none';
+            
+            if (tab === 'settings') {
+                loadServerSettings();
+                loadLevelStats();
+                loadTopCoins();
+            }
+        }
+        
+        async function loadDbStats() {
+            try {
+                const res = await fetch('/api/admin/db-stats', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('adminDbStats').innerHTML = `
+                        <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;text-align:center">
+                            <div style="font-size:1.5rem;color:#4ade80">${data.stats.users}</div>
+                            <div style="font-size:0.8rem">Пользователей</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;text-align:center">
+                            <div style="font-size:1.5rem;color:#fbbf24">${data.stats.matches}</div>
+                            <div style="font-size:0.8rem">Матчей</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;text-align:center">
+                            <div style="font-size:1.5rem;color:#6366f1">${data.stats.promos}</div>
+                            <div style="font-size:0.8rem">Промокодов</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;text-align:center">
+                            <div style="font-size:1.5rem;color:#ef4444">${data.stats.sessions}</div>
+                            <div style="font-size:0.8rem">Сессий</div>
+                        </div>
+                    `;
+                }
+            } catch(e) {}
+        }
+        
+        async function adminSearchUser() {
+            const query = document.getElementById('adminSearchInput').value.trim();
+            if (!query) return;
+            
+            try {
+                const res = await fetch('/api/admin/search-user', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, query})});
+                const data = await res.json();
+                
+                if (data.success && data.users.length > 0) {
+                    document.getElementById('adminSearchResults').innerHTML = data.users.map(u =>
+                        `<div class="admin-user-row" style="cursor:pointer" onclick="viewPlayerProfile('${u.username}')">
+                            <span>${u.username}</span>
+                            <span>${u.role}</span>
+                            <span>${u.level}ур</span>
+                            <span>${u.coins}💰</span>
+                        </div>`
+                    ).join('');
+                } else {
+                    document.getElementById('adminSearchResults').innerHTML = '<p style="color:#ef4444">Ничего не найдено</p>';
+                }
+            } catch(e) {}
+        }
+        
+        async function adminGiveCoins(e) {
+            e.preventDefault();
+            const username = document.getElementById('gcUsername').value.trim();
+            const coins = document.getElementById('gcAmount').value;
+            if (!username || !coins) return;
+            
+            try {
+                const res = await fetch('/api/admin/give-coins', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, coins: parseInt(coins)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminTakeCoins(e) {
+            e.preventDefault();
+            const username = document.getElementById('tcUsername').value.trim();
+            const coins = document.getElementById('tcAmount').value;
+            if (!username || !coins) return;
+            
+            try {
+                const res = await fetch('/api/admin/take-coins', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, coins: parseInt(coins)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminSetLevel(e) {
+            e.preventDefault();
+            const username = document.getElementById('slUsername').value.trim();
+            const level = document.getElementById('slLevel').value;
+            if (!username || !level) return;
+            
+            try {
+                const res = await fetch('/api/admin/set-level', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, level: parseInt(level)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminSetXP(e) {
+            e.preventDefault();
+            const username = document.getElementById('sxUsername').value.trim();
+            const xp = document.getElementById('sxAmount').value;
+            if (!username || !xp) return;
+            
+            try {
+                const res = await fetch('/api/admin/set-xp', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, xp: parseInt(xp)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminSetWins(e) {
+            e.preventDefault();
+            const username = document.getElementById('swUsername').value.trim();
+            const wins = document.getElementById('swWins').value;
+            if (!username || !wins) return;
+            
+            try {
+                const res = await fetch('/api/admin/set-wins', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, wins: parseInt(wins)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminGiveUnit(e) {
+            e.preventDefault();
+            const username = document.getElementById('guUsername').value.trim();
+            const unitId = document.getElementById('guUnitId').value;
+            const unitType = document.getElementById('guUnitType').value;
+            if (!username || !unitId) return;
+            
+            try {
+                const res = await fetch('/api/admin/give-unit', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, unitId, unitType})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminBanUser(e) {
+            e.preventDefault();
+            const username = document.getElementById('banUsername').value.trim();
+            if (!username) return;
+            
+            if (!confirm(`Забанить игрока ${username}?`)) return;
+            
+            try {
+                const res = await fetch('/api/admin/ban', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminUnbanUser(e) {
+            e.preventDefault();
+            const username = document.getElementById('unbanUsername').value.trim();
+            if (!username) return;
+            
+            try {
+                const res = await fetch('/api/admin/unban', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminSetRole(e) {
+            e.preventDefault();
+            const username = document.getElementById('roleUsername').value.trim();
+            const role = document.getElementById('roleType').value;
+            if (!username || !role) return;
+            
+            if (!confirm(`Изменить роль игрока ${username} на ${role}?`)) return;
+            
+            try {
+                const res = await fetch('/api/admin/set-role', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, role})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminResetProgress() {
+            const username = prompt('Введите ник игрока для сброса прогресса:');
+            if (!username) return;
+            if (!confirm(`Сбросить прогресс игрока ${username}? Все монеты, победы и уровень будут сброшены!`)) return;
+            
+            try {
+                const res = await fetch('/api/admin/reset-progress', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username})});
+                const data = await res.json();
+                alert(data.message);
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminDeleteUser() {
+            const username = prompt('Введите ник игрока для удаления:');
+            if (!username) return;
+            if (!confirm(`УДАЛИТЬ игрока ${username}? Это действие необратимо!`)) return;
+            
+            try {
+                const res = await fetch('/api/admin/delete-user', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username})});
+                const data = await res.json();
+                alert(data.message);
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminClearMatches() {
+            if (!confirm('Удалить ВСЕ матчи? Это действие необратимо!')) return;
+            
+            try {
+                const res = await fetch('/api/admin/clear-matches', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                alert(data.message);
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminClearPromos() {
+            if (!confirm('Удалить ВСЕ промокоды? Это действие необратимо!')) return;
+            
+            try {
+                const res = await fetch('/api/admin/clear-promos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                alert(data.message);
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminResetQuests() {
+            if (!confirm('Сбросить ежедневные квесты всем игрокам?')) return;
+            
+            try {
+                const res = await fetch('/api/admin/reset-quests', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                alert(data.message);
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminBroadcastCoins(e) {
+            e.preventDefault();
+            const amount = document.getElementById('bcAmount').value;
+            if (!amount) return;
+            
+            if (!confirm(`Выдать по ${amount} монет ВСЕМ игрокам?`)) return;
+            
+            try {
+                const res = await fetch('/api/admin/broadcast-coins', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, coins: parseInt(amount)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function adminExportUsers() {
+            try {
+                const res = await fetch('/api/admin/export-users', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    const blob = new Blob([JSON.stringify(data.users, null, 2)], {type: 'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'pvz_players_' + new Date().toISOString().split('T')[0] + '.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            } catch(e) { alert('Ошибка экспорта'); }
+        }
+        
+        async function loadServerSettings() {
+            try {
+                const res = await fetch('/api/admin/server-settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('settingGameDuration').value = data.settings.gameDuration;
+                    document.getElementById('settingWinnerReward').value = data.settings.winnerReward;
+                    document.getElementById('settingLoserReward').value = data.settings.loserReward;
+                    document.getElementById('settingDrawReward').value = data.settings.drawReward;
+                    document.getElementById('settingDailyBase').value = data.settings.dailyRewardBase;
+                    document.getElementById('settingXpWin').value = data.settings.xpPerWin;
+                }
+            } catch(e) {}
+        }
+        
+        async function saveServerSettings() {
+            const settings = {
+                gameDuration: parseInt(document.getElementById('settingGameDuration').value),
+                winnerReward: parseInt(document.getElementById('settingWinnerReward').value),
+                loserReward: parseInt(document.getElementById('settingLoserReward').value),
+                drawReward: parseInt(document.getElementById('settingDrawReward').value),
+                dailyRewardBase: parseInt(document.getElementById('settingDailyBase').value),
+                xpPerWin: parseInt(document.getElementById('settingXpWin').value)
+            };
+            
+            try {
+                const res = await fetch('/api/admin/update-settings', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, settings})});
+                const data = await res.json();
+                alert(data.message);
+            } catch(e) { alert('Ошибка'); }
+        }
+        
+        async function loadLevelStats() {
+            try {
+                const res = await fetch('/api/admin/level-stats', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('levelStatsList').innerHTML = data.levelStats.map(l =>
+                        `<div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;text-align:center">
+                            <div style="font-size:1.2rem;color:#fbbf24">${l._id}</div>
+                            <div style="font-size:0.8rem">ур.</div>
+                            <div style="font-size:1rem;color:#4ade80">${l.count}</div>
+                        </div>`
+                    ).join('');
+                }
+            } catch(e) {}
+        }
+        
+        async function loadTopCoins() {
+            try {
+                const res = await fetch('/api/admin/top-coins', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('topCoinsList').innerHTML = data.top.map((u, i) =>
+                        `<div class="admin-user-row">
+                            <span style="color:#fbbf24">#${i+1}</span>
+                            <span>${u.username}</span>
+                            <span style="color:#fbbf24">${u.coins}💰</span>
+                        </div>`
+                    ).join('');
+                }
             } catch(e) {}
         }
         
