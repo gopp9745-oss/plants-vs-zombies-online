@@ -687,11 +687,15 @@ app.post('/api/elo', async (req, res) => {
     const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
+    const elo = user.elo || ELO_CONFIG.initial;
+    const rankObj = getEloRank(elo);
+    
     res.json({ 
         success: true, 
-        elo: user.elo || ELO_CONFIG.initial,
+        elo: elo,
         seasonElo: user.seasonElo || ELO_CONFIG.initial,
-        rank: getEloRank(user.elo || ELO_CONFIG.initial)
+        rank: rankObj.name,  // Возвращаем строку
+        rankInfo: rankObj   // И объект с полной информацией
     });
 });
 
