@@ -11,6 +11,6 @@ services:
       - key: PORT
         value: 3000
       - key: MONGO_URI
-        value: mongodb://10.60.136.117:27017
+        value: mongodb+srv://grimteam:%3Ckolop908%3E@cluster0.iifadf8.mongodb.net/
       - key: DB_NAME
         value: pvz_online
