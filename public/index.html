@@ -622,11 +622,26 @@
         .inventory-btn { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); }
         .logout-btn { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
         
-        /* Адаптивность для нового макета */
+        /* Адаптивность для нового макета - кнопки остаются на месте */
         @media (max-width: 900px) {
             .profile-left-panel, .profile-right-panel { display: none; }
             .profile-center-panel { width: 100%; margin-top: 0; }
             .game-preview-map { width: 100%; max-width: 350px; height: 180px; }
+            
+            /* Перемещаем все кнопки в центр на мобильных */
+            .profile-buttons-mobile {
+                display: flex !important;
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+                max-width: 300px;
+                margin: 20px auto;
+            }
+        }
+        
+        /* Контейнер для кнопок профиля - всегда видим */
+        .profile-buttons-mobile {
+            display: none;
         }
         
         @media (max-width: 600px) {
