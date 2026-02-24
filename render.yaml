@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: plants-vs-zombies-online
+    env: node
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGO_URI
+        value: mongodb://10.60.136.117:27017
+      - key: DB_NAME
+        value: pvz_online
