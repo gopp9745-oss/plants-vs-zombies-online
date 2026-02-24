@@ -36,6 +36,102 @@ let matchesCollection = null;
 let promosCollection = null;
 let salesCollection = null;
 let sessionsCollection = null;
+let seasonsCollection = null;
+
+// ==================== ELO РЕЙТИНГ ====================
+const ELO_CONFIG = {
+    initial: 1000,
+    kFactor: 32, // Коэффициент K для расчёта ELO
+    minRating: 100,
+    maxRating: 3000
+};
+
+// Функция расчёта ELO
+function calculateEloChange(winnerElo, loserElo, isDraw = false) {
+    const expectedWinner = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+    const expectedLoser = 1 / (1 + Math.pow(10, (winnerElo - loserElo) / 400));
+    
+    let winnerChange, loserChange;
+    
+    if (isDraw) {
+        winnerChange = Math.round(ELO_CONFIG.kFactor * (0.5 - expectedWinner));
+        loserChange = Math.round(ELO_CONFIG.kFactor * (0.5 - expectedLoser));
+    } else {
+        winnerChange = Math.round(ELO_CONFIG.kFactor * (1 - expectedWinner));
+        loserChange = Math.round(ELO_CONFIG.kFactor * (0 - expectedLoser));
+    }
+    
+    return { winnerChange, loserChange };
+}
+
+// ==================== СЕЗОНЫ ====================
+const SEASONS = [
+    { id: 1, name: 'Сезон 1: Весна', startDate: '2024-03-01', endDate: '2024-05-31', reward: 1000 },
+    { id: 2, name: 'Сезон 2: Лето', startDate: '2024-06-01', endDate: '2024-08-31', reward: 1500 },
+    { id: 3, name: 'Сезон 3: Осень', startDate: '2024-09-01', endDate: '2024-11-30', reward: 2000 },
+    { id: 4, name: 'Сезон 4: Зима', startDate: '2024-12-01', endDate: '2025-02-28', reward: 2500 },
+    { id: 5, name: 'Сезон 5: Новая Эра', startDate: '2025-03-01', endDate: '2025-05-31', reward: 3000 }
+];
+
+function getCurrentSeason() {
+    const now = new Date();
+    return SEASONS.find(s => {
+        const start = new Date(s.startDate);
+        const end = new Date(s.endDate);
+        return now >= start && now <= end;
+    }) || SEASONS[SEASONS.length - 1]; // Возвращаем последний сезон если нет активного
+}
+
+// ==================== УЛУЧШЕННЫЕ ДОСТИЖЕНИЯ ====================
+const ACHIEVEMENTS = [
+    // Победы
+    { id: 'first_win', name: 'Первая победа', desc: 'Выиграйте первый матч', icon: '🎉', reward: 50, category: 'wins', requirement: 1 },
+    { id: 'wins_10', name: 'Новичок бой', desc: '10 побед', icon: '⭐', reward: 100, category: 'wins', requirement: 10 },
+    { id: 'wins_50', name: 'Опытный боец', desc: '50 побед', icon: '🌟', reward: 250, category: 'wins', requirement: 50 },
+    { id: 'wins_100', name: 'Мастер арены', desc: '100 побед', icon: '🏆', reward: 500, category: 'wins', requirement: 100 },
+    { id: 'wins_500', name: 'Легенда PvZ', desc: '500 побед', icon: '👑', reward: 2000, category: 'wins', requirement: 500 },
+    
+    // Монеты
+    { id: 'coins_1000', name: 'Тысячник', desc: 'Соберите 1000 монет за всё время', icon: '💰', reward: 100, category: 'coins', requirement: 1000 },
+    { id: 'coins_10000', name: 'Богач', desc: 'Соберите 10000 монет', icon: '💎', reward: 500, category: 'coins', requirement: 10000 },
+    { id: 'coins_50000', name: 'Миллионер', desc: 'Соберите 50000 монет', icon: '🤑', reward: 2000, category: 'coins', requirement: 50000 },
+    
+    // Уровень
+    { id: 'level_5', name: 'Растущий', desc: 'Достигните 5 уровня', icon: '📈', reward: 150, category: 'level', requirement: 5 },
+    { id: 'level_10', name: 'Продвинутый', desc: 'Достигните 10 уровня', icon: '🚀', reward: 300, category: 'level', requirement: 10 },
+    { id: 'level_20', name: 'Мастер', desc: 'Достигните 20 уровня', icon: '🎖️', reward: 750, category: 'level', requirement: 20 },
+    { id: 'level_30', name: 'Король PvZ', desc: 'Достигните 30 уровня', icon: '🏅', reward: 1500, category: 'level', requirement: 30 },
+    
+    // Серия побед
+    { id: 'streak_3', name: 'Серия побед', desc: '3 победы подряд', icon: '🔥', reward: 75, category: 'streak', requirement: 3 },
+    { id: 'streak_5', name: 'Непобедимый', desc: '5 побед подряд', icon: '⚡', reward: 150, category: 'streak', requirement: 5 },
+    { id: 'streak_10', name: 'Бог арены', desc: '10 побед подряд', icon: '💥', reward: 500, category: 'streak', requirement: 10 },
+    
+    // Игры
+    { id: 'games_50', name: 'Ветеран', desc: 'Сыграйте 50 матчей', icon: '🎮', reward: 200, category: 'games', requirement: 50 },
+    { id: 'games_100', name: 'Завсегдатай', desc: 'Сыграйте 100 матчей', icon: '🕹️', reward: 400, category: 'games', requirement: 100 },
+    { id: 'games_500', name: 'Геймер', desc: 'Сыграйте 500 матчей', icon: '🎯', reward: 1000, category: 'games', requirement: 500 },
+    
+    // ELO
+    { id: 'elo_1200', name: 'Серебро', desc: 'Достигните 1200 ELO', icon: '🥈', reward: 200, category: 'elo', requirement: 1200 },
+    { id: 'elo_1500', name: 'Золото', desc: 'Достигните 1500 ELO', icon: '🥇', reward: 500, category: 'elo', requirement: 1500 },
+    { id: 'elo_2000', name: 'Платина', desc: 'Достигните 2000 ELO', icon: '💠', reward: 1000, category: 'elo', requirement: 2000 },
+    { id: 'elo_2500', name: 'Алмаз', desc: 'Достигните 2500 ELO', icon: '💎', reward: 2500, category: 'elo', requirement: 2500 },
+    
+    // Сезонные
+    { id: 'season_winner', name: 'Чемпион сезона', desc: 'Займите 1 место в сезоне', icon: '🏆', reward: 5000, category: 'season', requirement: 1 },
+    { id: 'season_top10', name: 'Топ-10 сезона', desc: 'Войдите в топ-10 сезона', icon: '🌟', reward: 1000, category: 'season', requirement: 10 }
+];
+
+const ACHIEVEMENT_CATEGORIES = {
+    wins: { name: 'Победы', icon: '🏆', color: '#fbbf24' },
+    coins: { name: 'Монеты', icon: '💰', color: '#fbbf24' },
+    level: { name: 'Уровень', icon: '📊', color: '#6366f1' },
+    streak: { name: 'Серии', icon: '🔥', color: '#ef4444' },
+    games: { name: 'Игры', icon: '🎮', color: '#4ade80' },
+    elo: { name: 'Рейтинг', icon: '⭐', color: '#8b5cf6' },
+    season: { name: 'Сезон', icon: '🏅', color: '#f472b6' }
+};
 
 async function connectDB() {
     try {
@@ -389,38 +485,27 @@ app.post('/api/update-quest', async (req, res) => {
 });
 
 // ==================== ДОСТИЖЕНИЯ ====================
-const ACHIEVEMENTS = [
-    { id: 'first_win', name: 'Первая победа', desc: 'Выиграйте первый матч', icon: '🎉', reward: 50 },
-    { id: 'wins_10', name: 'Новичок бой', desc: '10 побед', icon: '⭐', reward: 100 },
-    { id: 'wins_50', name: 'Опытный боец', desc: '50 побед', icon: '🌟', reward: 250 },
-    { id: 'wins_100', name: 'Мастер арены', desc: '100 побед', icon: '🏆', reward: 500 },
-    { id: 'coins_1000', name: 'Тысячник', desc: 'Соберите 1000 монет', icon: '💰', reward: 100 },
-    { id: 'level_5', name: 'Растущий', desc: 'Достигните 5 уровня', icon: '📈', reward: 150 },
-    { id: 'level_10', name: 'Продвинутый', desc: 'Достигните 10 уровня', icon: '🚀', reward: 300 },
-    { id: 'streak_3', name: 'Серия побед', desc: '3 победы подряд', icon: '🔥', reward: 75 },
-    { id: 'streak_5', name: 'Непобедимый', desc: '5 побед подряд', icon: '⚡', reward: 150 },
-    { id: 'games_50', name: 'Ветеран', desc: 'Сыграйте 50 матчей', icon: '🎮', reward: 200 }
-];
+// Используем улучшенные ACHIEVEMENTS с категориями (объявлены выше)
 
 async function checkAchievements(user) {
     const newAchievements = [];
     const userAchievements = user.achievements || [];
+    const userElo = user.elo || ELO_CONFIG.initial;
+    const userTotalCoins = user.totalCoins || user.coins;
     
     for (const ach of ACHIEVEMENTS) {
         if (userAchievements.includes(ach.id)) continue;
         
         let unlocked = false;
-        switch (ach.id) {
-            case 'first_win': unlocked = user.wins >= 1; break;
-            case 'wins_10': unlocked = user.wins >= 10; break;
-            case 'wins_50': unlocked = user.wins >= 50; break;
-            case 'wins_100': unlocked = user.wins >= 100; break;
-            case 'coins_1000': unlocked = user.coins >= 1000; break;
-            case 'level_5': unlocked = user.level >= 5; break;
-            case 'level_10': unlocked = user.level >= 10; break;
-            case 'streak_3': unlocked = user.currentWinStreak >= 3; break;
-            case 'streak_5': unlocked = user.currentWinStreak >= 5; break;
-            case 'games_50': unlocked = (user.wins + user.losses) >= 50; break;
+        let currentValue = 0;
+        
+        switch (ach.category) {
+            case 'wins': currentValue = user.wins || 0; unlocked = currentValue >= ach.requirement; break;
+            case 'coins': currentValue = userTotalCoins; unlocked = currentValue >= ach.requirement; break;
+            case 'level': currentValue = user.level || 1; unlocked = currentValue >= ach.requirement; break;
+            case 'streak': currentValue = user.currentWinStreak || 0; unlocked = currentValue >= ach.requirement; break;
+            case 'games': currentValue = (user.wins || 0) + (user.losses || 0); unlocked = currentValue >= ach.requirement; break;
+            case 'elo': currentValue = userElo; unlocked = currentValue >= ach.requirement; break;
         }
         
         if (unlocked) {
@@ -529,6 +614,9 @@ app.post('/api/register', async (req, res) => {
         losses: 0,
         xp: 0,
         level: 1,
+        elo: ELO_CONFIG.initial,
+        seasonElo: ELO_CONFIG.initial,
+        totalCoins: 0,
         createdAt: new Date(),
         lastDaily: null,
         totalGames: 0,
@@ -572,8 +660,112 @@ app.post('/api/login', async (req, res) => {
             losses: user.losses,
             xp: user.xp,
             level: user.level,
-            totalGames: user.totalGames
+            totalGames: user.totalGames,
+            elo: user.elo || ELO_CONFIG.initial,
+            seasonElo: user.seasonElo || ELO_CONFIG.initial
         }
+    });
+});
+
+// ==================== ELO API ====================
+
+// Получить свой ELO
+app.post('/api/elo', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    res.json({ 
+        success: true, 
+        elo: user.elo || ELO_CONFIG.initial,
+        seasonElo: user.seasonElo || ELO_CONFIG.initial,
+        rank: getEloRank(user.elo || ELO_CONFIG.initial)
+    });
+});
+
+function getEloRank(elo) {
+    if (elo >= 2500) return { name: 'Алмаз', icon: '💎', color: '#00d4ff' };
+    if (elo >= 2000) return { name: 'Платина', icon: '💠', color: '#8b5cf6' };
+    if (elo >= 1500) return { name: 'Золото', icon: '🥇', color: '#fbbf24' };
+    if (elo >= 1200) return { name: 'Серебро', icon: '🥈', color: '#94a3b8' };
+    if (elo >= 1000) return { name: 'Бронза', icon: '🥉', color: '#cd7f32' };
+    return { name: 'Новичок', icon: '🌱', color: '#22c55e' };
+}
+
+// Лидерборд по ELO
+app.get('/api/leaderboard-elo', async (req, res) => {
+    const leaders = await usersCollection
+        .find({ role: { $ne: 'banned' }})
+        .sort({ elo: -1 })
+        .limit(10)
+        .project({ username: 1, elo: 1, seasonElo: 1, wins: 1, level: 1 })
+        .toArray();
+    
+    res.json({ success: true, leaders });
+});
+
+// Лидерборд по сезонному ELO
+app.get('/api/leaderboard-season', async (req, res) => {
+    const currentSeason = getCurrentSeason();
+    const leaders = await usersCollection
+        .find({ role: { $ne: 'banned' }})
+        .sort({ seasonElo: -1 })
+        .limit(10)
+        .project({ username: 1, seasonElo: 1, elo: 1, wins: 1, level: 1 })
+        .toArray();
+    
+    res.json({ success: true, leaders, season: currentSeason });
+});
+
+// ==================== СЕЗОНЫ API ====================
+
+// Получить информацию о сезоне
+app.get('/api/seasons', (req, res) => {
+    const currentSeason = getCurrentSeason();
+    res.json({ success: true, seasons: SEASONS, currentSeason });
+});
+
+// Получить награды сезона
+app.post('/api/season-rewards', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await sessionsCollection.findOne({ sessionId });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await usersCollection.findOne({ _id: new ObjectId(session.userId) });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const currentSeason = getCurrentSeason();
+    const seasonRank = await usersCollection.countDocuments({ 
+        role: { $ne: 'banned' }, 
+        seasonElo: { $gt: user.seasonElo || ELO_CONFIG.initial }
+    }) + 1;
+    
+    let reward = 0;
+    let rankTitle = '';
+    
+    if (seasonRank === 1) {
+        reward = currentSeason.reward * 2;
+        rankTitle = 'Чемпион!';
+    } else if (seasonRank <= 3) {
+        reward = Math.floor(currentSeason.reward * 1.5);
+        rankTitle = 'Топ-3';
+    } else if (seasonRank <= 10) {
+        reward = currentSeason.reward;
+        rankTitle = 'Топ-10';
+    } else if (seasonRank <= 50) {
+        reward = Math.floor(currentSeason.reward * 0.5);
+        rankTitle = 'Топ-50';
+    }
+    
+    res.json({ 
+        success: true, 
+        rank: seasonRank,
+        title: rankTitle,
+        reward: reward,
+        season: currentSeason
     });
 });
 
