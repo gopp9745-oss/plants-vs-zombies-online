@@ -73,8 +73,31 @@
         .stat-value { font-size: 1.5rem; font-weight: bold; color: #4ade80; animation: statCount 0.5s ease-out; }
         @keyframes statCount { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .stat-label { font-size: 0.8rem; color: #94a3b8; }
-        .profile-menu { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 700px; }
-        .profile-btn { padding: 15px 25px; min-width: 150px; }
+        .profile-menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; max-width: 900px; width: 100%; }
+        .profile-btn { padding: 18px 15px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+        .profile-btn .btn-icon { font-size: 1.5rem; margin-bottom: 2px; }
+        .profile-btn .btn-text { font-size: 0.9rem; }
+        
+        /* Группировка кнопок профиля */
+        .profile-section { margin-bottom: 20px; width: 100%; }
+        .profile-section-title { font-size: 1rem; color: #94a3b8; margin-bottom: 10px; text-align: left; padding-left: 5px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+        .profile-section .profile-menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+        
+        /* Новый улучшенный дизайн кнопок */
+        .profile-btn { position: relative; overflow: hidden; border-radius: 12px; }
+        .profile-btn::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%); pointer-events: none; }
+        
+        /* Разные цвета для разных секций */
+        .profile-section.game .profile-btn { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); }
+        .profile-section.stats .profile-btn { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        .profile-section.content .profile-btn { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .profile-section.social .profile-btn { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+        .profile-section.system .profile-btn { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
+        .profile-section.admin .profile-btn { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        
+        /* hover эффекты */
+        .profile-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+        .profile-btn:active { transform: translateY(0); }
         
         .leaderboard-container { background: rgba(255,255,255,0.1); padding: 25px; border-radius: 15px; max-width: 500px; width: 100%; backdrop-filter: blur(10px); }
         .leaderboard-title { font-size: 1.8rem; text-align: center; margin-bottom: 20px; color: #fbbf24; animation: titlePulse 2s ease-in-out infinite; }
@@ -524,6 +547,94 @@
         .profile-view { background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; text-align: center; }
         .profile-avatar { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(90deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 20px; }
         
+        /* === НОВЫЙ МАКЕТ ПРОФИЛЯ === */
+        .profile-left-panel, .profile-right-panel { display: flex; flex-direction: column; gap: 10px; width: 140px; }
+        .profile-left-panel { position: absolute; left: 20px; top: 180px; }
+        .profile-right-panel { position: absolute; right: 20px; top: 180px; }
+        
+        .profile-center-panel { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+        
+        /* Карта-превью игры */
+        .game-preview-map {
+            width: 280px;
+            height: 160px;
+            background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%);
+            border-radius: 12px;
+            border: 3px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .map-lanes-preview {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        .lane-preview { flex: 1; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .lane-preview:last-child { border-bottom: none; }
+        
+        .house-preview {
+            position: absolute;
+            font-size: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            animation: houseFloat 2s ease-in-out infinite;
+        }
+        .house-preview.plant { left: 10px; }
+        .house-preview.zombie { right: 10px; }
+        @keyframes houseFloat {
+            0%,100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-55%) scale(1.1); }
+        }
+        
+        .vs-preview {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+            z-index: 10;
+            animation: vsPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes vsPulse {
+            0%,100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+        
+        .center-buttons { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 250px; }
+        
+        .game-btn {
+            padding: 15px 25px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .inventory-btn { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); }
+        .logout-btn { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        
+        /* Адаптивность для нового макета */
+        @media (max-width: 900px) {
+            .profile-left-panel, .profile-right-panel { display: none; }
+            .profile-center-panel { width: 100%; margin-top: 0; }
+            .game-preview-map { width: 100%; max-width: 350px; height: 180px; }
+        }
+        
+        @media (max-width: 600px) {
+            .game-preview-map { height: 150px; }
+            .center-buttons { gap: 8px; }
+            .game-btn { padding: 12px 20px; font-size: 1rem; }
+        }
+        
         @media (max-width: 768px) {
             .game-title { font-size: 1.8rem !important; text-align: center !important; width: 100% !important; }
             .game-subtitle { font-size: 0.9rem !important; text-align: center !important; }
@@ -605,21 +716,84 @@
                 <div class="stat"><div class="stat-value" id="statXP">0</div><div class="stat-label">Опыта</div></div>
             </div>
         </div>
-        <div class="profile-menu">
-            <button class="btn btn-primary profile-btn" onclick="findGame()">Найти игру</button>
-            <button class="btn btn-secondary profile-btn" onclick="findBotGame()">Играть с ботом</button>
-            <button class="btn btn-secondary profile-btn" onclick="showShop()">Магазин</button>
-            <button class="btn btn-warning profile-btn" onclick="showLeaderboard()">Лидерборд</button>
-            <button class="btn btn-secondary profile-btn" onclick="showMatchHistory()">История игр</button>
-            <button class="btn btn-secondary profile-btn" onclick="showHallOfFame()">Путь Славы</button>
-            <button class="btn btn-secondary profile-btn" onclick="showSeasonInfo()">🏅 Сезон</button>
-            <button class="btn btn-secondary profile-btn" onclick="showELORating()">🔢 ELO Рейтинг</button>
-            <button class="btn btn-secondary profile-btn" onclick="showAchievements()">🏆 Достижения</button>
-            <button class="btn btn-secondary profile-btn" onclick="showQuests()">📋 Квесты</button>
-            <button class="btn btn-secondary profile-btn" onclick="showFriends()">👥 Друзья</button>
-            <button class="btn btn-secondary profile-btn" onclick="showInventory()">🎒 Инвентарь</button>
-            <button class="btn btn-secondary profile-btn" id="adminBtn" style="display:none" onclick="showAdmin()">Админ</button>
-            <button class="btn btn-danger profile-btn" onclick="logout()">Выход</button>
+        
+        <!-- НОВОЕ РАСПОЛОЖЕНИЕ КНОПОК -->
+        
+        <!-- ЛЕВАЯ СТОРОНА - Инвентарь и контент -->
+        <div class="profile-left-panel">
+            <button class="btn profile-btn inventory-btn" onclick="showInventory()">
+                <span class="btn-icon">🎒</span>
+                <span class="btn-text">Инвентарь</span>
+            </button>
+            <button class="btn profile-btn" onclick="showShop()">
+                <span class="btn-icon">🏪</span>
+                <span class="btn-text">Магазин</span>
+            </button>
+            <button class="btn profile-btn" onclick="showMatchHistory()">
+                <span class="btn-icon">📜</span>
+                <span class="btn-text">История</span>
+            </button>
+            <button class="btn profile-btn" onclick="showAchievements()">
+                <span class="btn-icon">🏆</span>
+                <span class="btn-text">Достижения</span>
+            </button>
+        </div>
+        
+        <!-- ЦЕНТР - Карта и кнопки игры -->
+        <div class="profile-center-panel">
+            <div class="game-preview-map" id="gamePreviewMap">
+                <div class="map-lanes-preview">
+                    <div class="lane-preview" style="background: rgba(74, 222, 128, 0.1);"></div>
+                    <div class="lane-preview" style="background: rgba(74, 222, 128, 0.15);"></div>
+                    <div class="lane-preview" style="background: rgba(74, 222, 128, 0.2);"></div>
+                    <div class="lane-preview" style="background: rgba(239, 68, 68, 0.15);"></div>
+                    <div class="lane-preview" style="background: rgba(239, 68, 68, 0.1);"></div>
+                </div>
+                <div class="house-preview plant">🌻</div>
+                <div class="house-preview zombie">🧟</div>
+                <div class="vs-preview">VS</div>
+            </div>
+            
+            <div class="center-buttons">
+                <button class="btn btn-primary game-btn" onclick="findGame()">
+                    <span>🎯</span> Найти игру
+                </button>
+                <button class="btn btn-secondary game-btn" onclick="findBotGame()">
+                    <span>🤖</span> Играть с ботом
+                </button>
+            </div>
+        </div>
+        
+        <!-- ПРАВАЯ СТОРОНА - Статистика и другое -->
+        <div class="profile-right-panel">
+            <button class="btn profile-btn" onclick="showLeaderboard()">
+                <span class="btn-icon">🏆</span>
+                <span class="btn-text">Лидерборд</span>
+            </button>
+            <button class="btn profile-btn" onclick="showELORating()">
+                <span class="btn-icon">🔢</span>
+                <span class="btn-text">ELO</span>
+            </button>
+            <button class="btn profile-btn" onclick="showSeasonInfo()">
+                <span class="btn-icon">🏅</span>
+                <span class="btn-text">Сезон</span>
+            </button>
+            <button class="btn profile-btn" onclick="showQuests()">
+                <span class="btn-icon">📋</span>
+                <span class="btn-text">Квесты</span>
+            </button>
+            <button class="btn profile-btn" onclick="showFriends()">
+                <span class="btn-icon">👥</span>
+                <span class="btn-text">Друзья</span>
+            </button>
+            <button class="btn profile-btn" id="adminBtn" style="display:none" onclick="showAdmin()">
+                <span class="btn-icon">🔧</span>
+                <span class="btn-text">Админ</span>
+            </button>
+            <button class="btn profile-btn logout-btn" onclick="logout()">
+                <span class="btn-icon">🚪</span>
+                <span class="btn-text">Выход</span>
+            </button>
         </div>
     </div>
     
@@ -1041,7 +1215,6 @@
             </div>
         </div>
         <div class="game-controls" id="gameControls"></div>
-        <button class="btn btn-danger" style="margin-top:15px" onclick="leaveGame()">Выход</button>
     </div>
     
     <div id="gameEndScreen" class="screen">
@@ -2076,6 +2249,9 @@
         let gameResources = { sun: 50, brain: 50 };
         let gameLoop = null;
         let houseHP = { plant: 100, zombie: 100 }; // HP домов в процентах
+        let projectiles = []; // Массив снарядов
+        let explosions = []; // Массив взрывов
+        let effects = []; // Массив визуальных эффектов
         
         function startGame(data) {
             showScreen('gameScreen');
@@ -2083,12 +2259,295 @@
             gameState = { mySide: myPlayer.side, opponent: data.players.find(p => p.id !== socket.id), units: [] };
             gameResources = { sun: 50, brain: 50 };
             houseHP = { plant: 100, zombie: 100 };
+            projectiles = [];
+            explosions = [];
+            effects = [];
             updateResourceDisplay();
             updateHouseHP();
             document.getElementById('mySide').textContent = myPlayer.side==='plant'?'🌻 Растения':'🧟 Зомби';
             document.getElementById('opponentName').textContent = gameState.opponent.username;
             initGameControls();
             startGameLoop();
+        }
+        
+        // === СИСТЕМА СНАРЯДОВ ===
+        function createProjectile(laneIndex, fromUnit, targetUnit, damage, type = 'pea') {
+            const lane = document.querySelector(`.game-lane[data-lane="${laneIndex}"]`);
+            if (!lane) return;
+            
+            const projectile = document.createElement('div');
+            projectile.className = `projectile ${type}`;
+            projectile.style.top = '50%';
+            projectile.style.transform = 'translateY(-50%)';
+            
+            // Начальная позиция - от юнита
+            const startPos = parseFloat(fromUnit.element.style.left) || 50;
+            projectile.style.left = startPos + '%';
+            
+            lane.appendChild(projectile);
+            
+            const projData = {
+                element: projectile,
+                lane: laneIndex,
+                fromUnit: fromUnit,
+                damage: damage,
+                type: type,
+                speed: type === 'melon' ? 1.5 : 3, // Арбузы медленнее
+                direction: fromUnit.side === 'plant' ? 1 : -1 // Растения стреляют вправо, зомби влево
+            };
+            projectiles.push(projData);
+        }
+        
+        // === СИСТЕМА ВЗРЫВОВ ===
+        function createExplosion(laneIndex, position, damage, radius = 20) {
+            const lane = document.querySelector(`.game-lane[data-lane="${laneIndex}"]`);
+            if (!lane) return;
+            
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            explosion.innerHTML = '💥';
+            explosion.style.left = position;
+            explosion.style.top = '50%';
+            explosion.style.transform = 'translateY(-50%)';
+            lane.appendChild(explosion);
+            
+            // Анимация взрыва
+            setTimeout(() => explosion.remove(), 500);
+            
+            // Наносим урон всем юнитам на линии в радиусе
+            if (gameState && gameState.units) {
+                gameState.units.forEach(unit => {
+                    if (unit.lane === laneIndex) {
+                        const unitPos = parseFloat(unit.element.style.left) || 50;
+                        const explPos = parseFloat(position);
+                        if (Math.abs(unitPos - explPos) < radius) {
+                            unit.health -= damage;
+                            unit.element.classList.add('damage');
+                            setTimeout(() => unit.element.classList.remove('damage'), 300);
+                            
+                            // Показываем урон
+                            const damageText = document.createElement('div');
+                            damageText.textContent = '-' + damage;
+                            damageText.style.cssText = 'position:absolute;top:-20px;left:50%;transform:translateX(-50%);color:#ef4444;font-weight:bold;font-size:14px;animation:damageText 1s forwards;z-index:100';
+                            unit.element.appendChild(damageText);
+                            setTimeout(() => damageText.remove(), 1000);
+                            
+                            if (unit.health <= 0 && unit.element) {
+                                unit.element.classList.add('unit-death');
+                                setTimeout(() => {
+                                    if (unit.element) unit.element.remove();
+                                }, 500);
+                                gameState.units = gameState.units.filter(u => u !== unit);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // === СИСТЕМА ЛЕЧЕНИЯ ===
+        function createHealEffect(unit, amount) {
+            const healText = document.createElement('div');
+            healText.textContent = '+' + amount;
+            healText.style.cssText = 'position:absolute;top:-25px;left:50%;transform:translateX(-50%);color:#4ade80;font-weight:bold;font-size:14px;animation:damageFloat 1s forwards;z-index:100';
+            unit.element.appendChild(healText);
+            setTimeout(() => healText.remove(), 1000);
+        }
+        
+        // === СИСТЕМА ЗАМОРОЗКИ ===
+        function createFreezeEffect(unit, duration) {
+            unit.element.classList.add('frozen-effect');
+            unit.frozen = true;
+            unit.originalSpeed = unit.moveSpeed || 1;
+            unit.moveSpeed = unit.originalSpeed * 0.3; // Замедляем на 70%
+            
+            setTimeout(() => {
+                if (unit.element) {
+                    unit.element.classList.remove('frozen-effect');
+                    unit.frozen = false;
+                    unit.moveSpeed = unit.originalSpeed;
+                }
+            }, duration * 1000);
+        }
+        
+        // === ОБНОВЛЕНИЕ СНАРЯДОВ ===
+        function updateProjectiles() {
+            projectiles = projectiles.filter(proj => {
+                if (!proj.element || !proj.element.parentElement) return false;
+                
+                const currentLeft = parseFloat(proj.element.style.left) || 0;
+                let newPos = currentLeft + (proj.speed * proj.direction);
+                
+                // Проверка выхода за границы поля
+                if (newPos > 100 || newPos < 0) {
+                    proj.element.remove();
+                    return false;
+                }
+                
+                // Проверка столкновения с врагами
+                const targets = gameState.units.filter(u => 
+                    u.side !== proj.fromUnit.side && 
+                    u.lane === proj.lane
+                );
+                
+                for (const target of targets) {
+                    const targetPos = parseFloat(target.element.style.left) || 50;
+                    if (Math.abs(newPos - targetPos) < 5) {
+                        // Попадание!
+                        let damage = proj.damage;
+                        
+                        // Критический урон (с шансом 15%)
+                        if (Math.random() < 0.15) {
+                            damage *= 2;
+                            proj.element.classList.add('critical-hit');
+                        }
+                        
+                        target.health -= damage;
+                        
+                        // Показываем урон
+                        const damageText = document.createElement('div');
+                        damageText.textContent = '-' + damage + (Math.random() < 0.15 ? ' 💥' : '');
+                        damageText.style.cssText = 'position:absolute;top:-20px;left:50%;transform:translateX(-50%);color:#ef4444;font-weight:bold;font-size:14px;animation:damageText 1s forwards;z-index:100';
+                        if (Math.random() < 0.15) damageText.style.color = '#fbbf24'; // Критический - золотой
+                        target.element.appendChild(damageText);
+                        setTimeout(() => damageText.remove(), 1000);
+                        
+                        // Эффект заморозки от снежного горошка
+                        if (proj.type === 'frozen') {
+                            createFreezeEffect(target, 3);
+                        }
+                        
+                        target.element.classList.add('damage');
+                        setTimeout(() => {
+                            target.element.classList.remove('damage');
+                            if (proj.element) proj.element.classList.remove('critical-hit');
+                        }, 200);
+                        
+                        if (target.health <= 0 && target.element) {
+                            target.element.classList.add('unit-death');
+                            setTimeout(() => {
+                                if (target.element) target.element.remove();
+                            }, 500);
+                            gameState.units = gameState.units.filter(u => u !== target);
+                        }
+                        
+                        proj.element.remove();
+                        return false;
+                    }
+                }
+                
+                proj.element.style.left = newPos + '%';
+                return true;
+            });
+        }
+        
+        // === СПЕЦИАЛЬНЫЕ СПОСОБНОСТИ ЮНИТОВ ===
+        function handleUnitAbilities(unit) {
+            if (!unit.ability) return;
+            
+            switch(unit.ability) {
+                case 'explode':
+                    // Вишнёвая бомба - взрывается при смерти
+                    if (unit.health <= 20 && !unit.exploded) {
+                        unit.exploded = true;
+                        const pos = unit.element.style.left;
+                        createExplosion(unit.lane, pos, 1800, 25);
+                        if (unit.element) unit.element.remove();
+                        gameState.units = gameState.units.filter(u => u !== unit);
+                        
+                        // Урон дому если взрыв у края
+                        if (unit.side === 'plant' && parseFloat(pos) < 20) {
+                            houseHP.plant -= 30;
+                            updateHouseHP();
+                        } else if (unit.side === 'zombie' && parseFloat(pos) > 80) {
+                            houseHP.zombie -= 30;
+                            updateHouseHP();
+                        }
+                    }
+                    break;
+                    
+                case 'eat':
+                    // Хапун поедает зомби
+                    if (unit.eating && unit.target) {
+                        unit.target.health -= unit.damage / 10;
+                        if (unit.target.health <= 0 && unit.target.element) {
+                            unit.target.element.remove();
+                            gameState.units = gameState.units.filter(u => u !== unit.target);
+                            unit.eating = false;
+                            unit.target = null;
+                        }
+                    }
+                    break;
+                    
+                case 'dig':
+                    // Копатель появляется за растениями
+                    if (!unit.appeared) {
+                        unit.appeared = true;
+                        if (unit.element) {
+                            unit.element.style.left = '85%';
+                        }
+                    }
+                    break;
+                    
+                case 'grab':
+                    // Крючник хватает растение
+                    if (!unit.grabbing && Math.random() < 0.01) {
+                        const target = gameState.units.find(u => u.side !== unit.side && u.lane === unit.lane);
+                        if (target) {
+                            unit.grabbing = true;
+                            unit.grabTarget = target;
+                            target.element.style.opacity = '0.5';
+                            // Через 2 секунды растение исчезает
+                            setTimeout(() => {
+                                if (target.element) {
+                                    target.element.remove();
+                                    gameState.units = gameState.units.filter(u => u !== target);
+                                }
+                                unit.grabbing = false;
+                            }, 2000);
+                        }
+                    }
+                    break;
+                    
+                case 'summon':
+                    // Танцор призывает зомби-тени
+                    if (!unit.summonCooldown && Math.random() < 0.05) {
+                        unit.summonCooldown = true;
+                        // Призываем тень
+                        const shadowData = units.zombie.find(u => u.id === 'zombie');
+                        if (shadowData) {
+                            placeUnit(unit.lane, {...shadowData, health: shadowData.health * 0.5}, unit.side, '95%');
+                        }
+                        setTimeout(() => { unit.summonCooldown = false; }, 5000);
+                    }
+                    break;
+                    
+                case 'rage':
+                    // Газетчик яростный при низком HP
+                    if (unit.health < unit.maxHealth * 0.3 && !unit.enraged) {
+                        unit.enraged = true;
+                        unit.damage *= 2;
+                        unit.moveSpeed *= 1.5;
+                        if (unit.element) {
+                            unit.element.style.filter = 'hue-rotate(-30deg) brightness(1.5)';
+                        }
+                    }
+                    break;
+                    
+                case 'jump':
+                    // Кенгуру прыгает через растения
+                    if (!unit.jumping && Math.random() < 0.02) {
+                        unit.jumping = true;
+                        const currentLeft = parseFloat(unit.element.style.left) || 50;
+                        unit.element.style.left = (currentLeft + 30) + '%';
+                        unit.element.style.transition = 'left 0.5s ease-out';
+                        setTimeout(() => {
+                            unit.jumping = false;
+                            unit.element.style.transition = 'left 0.5s linear';
+                        }, 500);
+                    }
+                    break;
+            }
         }
         
         function updateResourceDisplay() {
@@ -2113,14 +2572,22 @@
             // Проверка на проигрыш
             if (houseHP.plant <= 0 || houseHP.zombie <= 0) {
                 if (gameLoop) clearInterval(gameLoop);
-                const winner = houseHP.plant > 0 ? 'plant' : 'zombie';
-                const winnerSide = gameState.mySide;
-                const isDraw = houseHP.plant <= 0 && houseHP.zombie <= 0;
                 
-                if (isDraw) {
+                // Правильное определение победителя:
+                // - Если plant HP <= 0, зомби победили (winner = 'zombie')
+                // - Если zombie HP <= 0, растения победили (winner = 'plant')
+                // - Если оба <= 0, это не может произойти вnormal game
+                
+                let winner;
+                if (houseHP.plant <= 0 && houseHP.zombie <= 0) {
+                    // Ничья - оба дома уничтожены одновременно
                     socket.emit('gameOver', { winner: 'draw' });
+                } else if (houseHP.plant <= 0) {
+                    // Дом растений уничтожен - зомби победили
+                    socket.emit('gameOver', { winner: 'zombie' });
                 } else {
-                    socket.emit('gameOver', { winner: winnerSide === winner ? winnerSide : winner });
+                    // Дом зомби уничтожен - растения победили
+                    socket.emit('gameOver', { winner: 'plant' });
                 }
                 return;
             }
@@ -2900,50 +3367,35 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
         
         // Мобильная поддержка - добавляем touch event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            // Функция для преобразования touch в click
-            function addTouchSupport(selector, callback) {
-                document.querySelectorAll(selector).forEach(function(el) {
-                    // Убираем стандартный onclick чтобы избежать двойного вызова
-                    el.removeAttribute('onclick');
-                    el.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        callback();
-                    });
-                    // Также добавляем touchend для мобильных
-                    el.addEventListener('touchend', function(e) {
-                        e.preventDefault();
-                        callback();
-                    });
-                });
-            }
+            // Отключаем стандартные события для ускорения отклика
+            document.addEventListener('touchstart', function(e) {
+                // Не отменяем событие, только предотвращаем задержку
+            }, { passive: true });
             
-            // Главное меню
-            addTouchSupport('#mainMenu .btn-primary', function() { showAuth('login'); });
-            addTouchSupport('#mainMenu .btn-secondary', function() { showAuth('register'); });
-            addTouchSupport('#mainMenu .btn-warning', function() { showLeaderboard(); });
-            
-            // Добавим обработчики для всех кнопок меню
-            document.querySelectorAll('.menu-buttons .btn').forEach(function(btn) {
-                btn.removeAttribute('onclick');
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    var text = btn.textContent.trim();
-                    if (text === 'Вход') showAuth('login');
-                    else if (text === 'Регистрация') showAuth('register');
-                    else if (text === 'Лидерборд') showLeaderboard();
-                });
-                btn.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    var text = btn.textContent.trim();
-                    if (text === 'Вход') showAuth('login');
-                    else if (text === 'Регистрация') showAuth('register');
-                    else if (text === 'Лидерборд') showLeaderboard();
-                });
+            // Предотвращаем двойной зум на кнопках
+            document.querySelectorAll('.btn, button').forEach(function(el) {
+                el.addEventListener('touchstart', function(e) {
+                    // Предотвращаем увеличение при двойном тапе
+                    if (e.touches.length > 1) {
+                        e.preventDefault();
+                    }
+                }, { passive: false });
             });
             
             // Отладочный лог
             console.log('Мобильная поддержка загружена');
         });
+        
+        // Функция для безопасного вызова функций по клику
+        function safeCall(func) {
+            if (typeof func === 'function') {
+                try {
+                    func();
+                } catch(e) {
+                    console.error('Ошибка вызова функции:', e);
+                }
+            }
+        }
     </script>
 </body>
 </html>
