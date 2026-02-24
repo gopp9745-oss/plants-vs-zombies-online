@@ -66,20 +66,29 @@ function calculateEloChange(winnerElo, loserElo, isDraw = false) {
 
 // ==================== СЕЗОНЫ ====================
 const SEASONS = [
-    { id: 1, name: 'Сезон 1: Весна', startDate: '2024-03-01', endDate: '2024-05-31', reward: 1000 },
-    { id: 2, name: 'Сезон 2: Лето', startDate: '2024-06-01', endDate: '2024-08-31', reward: 1500 },
-    { id: 3, name: 'Сезон 3: Осень', startDate: '2024-09-01', endDate: '2024-11-30', reward: 2000 },
-    { id: 4, name: 'Сезон 4: Зима', startDate: '2024-12-01', endDate: '2025-02-28', reward: 2500 },
-    { id: 5, name: 'Сезон 5: Новая Эра', startDate: '2025-03-01', endDate: '2025-05-31', reward: 3000 }
+    { id: 1, name: 'Сезон 1: Весна', startDate: '2024-03-01', endDate: '2024-05-31', reward: 1000, rewards: { top1: 500, top3: 300, top10: 150, top50: 50 } },
+    { id: 2, name: 'Сезон 2: Лето', startDate: '2024-06-01', endDate: '2024-08-31', reward: 1500, rewards: { top1: 750, top3: 450, top10: 225, top50: 75 } },
+    { id: 3, name: 'Сезон 3: Осень', startDate: '2024-09-01', endDate: '2024-11-30', reward: 2000, rewards: { top1: 1000, top3: 600, top10: 300, top50: 100 } },
+    { id: 4, name: 'Сезон 4: Зима', startDate: '2024-12-01', endDate: '2025-02-28', reward: 2500, rewards: { top1: 1250, top3: 750, top10: 375, top50: 125 } },
+    { id: 5, name: 'Сезон 5: Новая Эра', startDate: '2025-03-01', endDate: '2025-05-31', reward: 3000, rewards: { top1: 1500, top3: 900, top10: 450, top50: 150 } }
 ];
 
 function getCurrentSeason() {
     const now = new Date();
-    return SEASONS.find(s => {
+    // Ищем активный сезон
+    const activeSeason = SEASONS.find(s => {
         const start = new Date(s.startDate);
         const end = new Date(s.endDate);
         return now >= start && now <= end;
-    }) || SEASONS[SEASONS.length - 1]; // Возвращаем последний сезон если нет активного
+    });
+    // Если нет активного, возвращаем последний сезон с дефолтными наградами
+    if (!activeSeason) {
+        return {
+            ...SEASONS[SEASONS.length - 1],
+            rewards: { top1: 500, top3: 300, top10: 150, top50: 50 }
+        };
+    }
+    return activeSeason;
 }
 
 // ==================== УЛУЧШЕННЫЕ ДОСТИЖЕНИЯ ====================
@@ -651,7 +660,6 @@ app.post('/api/login', async (req, res) => {
     
     res.json({ 
         success: true, 
-        sessionId,
         user: { 
             username: user.username, 
             role: user.role, 
@@ -662,7 +670,8 @@ app.post('/api/login', async (req, res) => {
             level: user.level,
             totalGames: user.totalGames,
             elo: user.elo || ELO_CONFIG.initial,
-            seasonElo: user.seasonElo || ELO_CONFIG.initial
+            seasonElo: user.seasonElo || ELO_CONFIG.initial,
+            currentSeason: user.currentSeason || 1
         }
     });
 });

@@ -404,7 +404,9 @@
             <button class="btn btn-warning profile-btn" onclick="showLeaderboard()">Лидерборд</button>
             <button class="btn btn-secondary profile-btn" onclick="showMatchHistory()">История игр</button>
             <button class="btn btn-secondary profile-btn" onclick="showHallOfFame()">Путь Славы</button>
-            <button class="btn btn-secondary profile-btn" onclick="showAchievements()">🏅 Достижения</button>
+            <button class="btn btn-secondary profile-btn" onclick="showSeasonInfo()">🏅 Сезон</button>
+            <button class="btn btn-secondary profile-btn" onclick="showELORating()">🔢 ELO Рейтинг</button>
+            <button class="btn btn-secondary profile-btn" onclick="showAchievements()">🏆 Достижения</button>
             <button class="btn btn-secondary profile-btn" onclick="showQuests()">📋 Квесты</button>
             <button class="btn btn-secondary profile-btn" onclick="showFriends()">👥 Друзья</button>
             <button class="btn btn-secondary profile-btn" onclick="showInventory()">🎒 Инвентарь</button>
@@ -475,6 +477,22 @@
         <h2 class="leaderboard-title" style="color:#fbbf24">🏅 Достижения</h2>
         <div class="match-history-container">
             <div id="achievementsList"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="seasonScreen" class="screen">
+        <h2 class="leaderboard-title" style="color:#60a5fa">🏅 Сезон</h2>
+        <div class="match-history-container" style="max-width:600px">
+            <div id="seasonInfo"></div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+    
+    <div id="eloScreen" class="screen">
+        <h2 class="leaderboard-title" style="color:#a78bfa">🔢 ELO Рейтинг</h2>
+        <div class="match-history-container" style="max-width:600px">
+            <div id="eloInfo"></div>
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
     </div>
@@ -2530,6 +2548,146 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
         function selectSkin(unitId, skin, index) {
             // Здесь можно сохранить выбор скина
             alert(`Скин ${skin} выбран! (Скоро будет доступно)`);
+        }
+        
+        // === СЕЗОНЫ ===
+        async function showSeasonInfo() {
+            showScreen('seasonScreen');
+            try {
+                const res = await fetch('/api/seasons');
+                const data = await res.json();
+                
+                if (data.success) {
+                    const seasons = data.seasons || [];
+                    const userSeasonElo = currentUser?.seasonElo || 1000;
+                    const userSeason = currentUser?.currentSeason || 1;
+                    
+                    // Ранги
+                    const ranks = [
+                        { name: 'Бронза', min: 0, icon: '🥉', color: '#cd7f32' },
+                        { name: 'Серебро', min: 1200, icon: '🥈', color: '#c0c0c0' },
+                        { name: 'Золото', min: 1400, icon: '🥇', color: '#ffd700' },
+                        { name: 'Платина', min: 1600, icon: '💎', color: '#e5e4e2' },
+                        { name: 'Алмаз', min: 1800, icon: '🔮', color: '#b9f2ff' }
+                    ];
+                    
+                    const currentRank = ranks.find(r => userSeasonElo >= r.min) || ranks[0];
+                    
+                    let html = `
+                        <div style="text-align:center;margin-bottom:20px">
+                            <div style="font-size:3rem">${currentRank.icon}</div>
+                            <div style="font-size:1.5rem;font-weight:bold;color:${currentRank.color}">${currentRank.name}</div>
+                            <div style="font-size:2rem;color:#60a5fa">${userSeasonElo} ELO</div>
+                            <div style="color:#94a3b8">Сезон ${userSeason}</div>
+                        </div>
+                        <h3 style="margin-bottom:15px;text-align:center">🏆 Награды сезона</h3>
+                    `;
+                    
+                    seasons.forEach(season => {
+                        const rewards = season.rewards || {};
+                        html += `
+                            <div class="match-row" style="flex-direction:column;margin-bottom:15px">
+                                <div style="font-weight:bold;font-size:1.2rem;margin-bottom:10px">${season.name}</div>
+                                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:0.85rem">
+                                    <div>🥇 Top-1: <span style="color:#fbbf24">${rewards.top1 || 0}💰</span></div>
+                                    <div>🥈 Top-3: <span style="color:#fbbf24">${rewards.top3 || 0}💰</span></div>
+                                    <div>🏅 Top-10: <span style="color:#fbbf24">${rewards.top10 || 0}💰</span></div>
+                                    <div>🎯 Top-50: <span style="color:#fbbf24">${rewards.top50 || 0}💰</span></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    document.getElementById('seasonInfo').innerHTML = html;
+                }
+            } catch(e) {
+                document.getElementById('seasonInfo').innerHTML = '<p style="text-align:center;color:#ef4444">Ошибка загрузки сезонов</p>';
+            }
+        }
+        
+        // === ELO РЕЙТИНГ ===
+        async function showELORating() {
+            showScreen('eloScreen');
+            try {
+                const res = await fetch('/api/elo', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                
+                if (data.success) {
+                    const elo = data.elo || 1000;
+                    const rank = data.rank || 'Новичок';
+                    const rankInfo = data.rankInfo || {};
+                    
+                    // Ранги
+                    const ranks = [
+                        { name: 'Новичок', min: 0, max: 999, icon: '🌱', color: '#86efac' },
+                        { name: 'Бронза', min: 1000, max: 1199, icon: '🥉', color: '#cd7f32' },
+                        { name: 'Серебро', min: 1200, max: 1399, icon: '🥈', color: '#c0c0c0' },
+                        { name: 'Золото', min: 1400, max: 1599, icon: '🥇', color: '#ffd700' },
+                        { name: 'Платина', min: 1600, max: 1799, icon: '💎', color: '#e5e4e2' },
+                        { name: 'Алмаз', min: 1800, max: 9999, icon: '🔮', color: '#b9f2ff' }
+                    ];
+                    
+                    const currentRank = ranks.find(r => elo >= r.min && elo <= r.max) || ranks[0];
+                    const nextRank = ranks.find(r => r.min > elo);
+                    
+                    // Прогресс до следующего ранга
+                    let progressPercent = 0;
+                    if (nextRank) {
+                        progressPercent = ((elo - currentRank.min) / (nextRank.min - currentRank.min)) * 100;
+                    } else {
+                        progressPercent = 100;
+                    }
+                    
+                    let html = `
+                        <div style="text-align:center;margin-bottom:25px">
+                            <div style="font-size:4rem">${currentRank.icon}</div>
+                            <div style="font-size:1.8rem;font-weight:bold;color:${currentRank.color}">${currentRank.name}</div>
+                            <div style="font-size:2.5rem;color:#a78bfa;margin:15px 0">${elo} ELO</div>
+                    `;
+                    
+                    if (nextRank) {
+                        html += `
+                            <div style="margin-top:15px">
+                                <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:20px;overflow:hidden;margin-bottom:10px">
+                                    <div style="background:linear-gradient(90deg,${currentRank.color},${nextRank.color});height:100%;width:${progressPercent}%;transition:width 0.3s"></div>
+                                </div>
+                                <div style="color:#94a3b8;font-size:0.9rem">До ${nextRank.name}: ${nextRank.min - elo} ELO</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `<div style="color:#fbbf24;margin-top:15px">🏆 Максимальный ранг!</div>`;
+                    }
+                    
+                    html += `</div>`;
+                    
+                    // Таблица лидеров ELO
+                    html += `<h3 style="margin-bottom:15px;text-align:center">🌟 Топ игроки</h3>`;
+                    
+                    // Загружаем лидерборд ELO
+                    const lbRes = await fetch('/api/leaderboard-elo');
+                    const lbData = await lbRes.json();
+                    
+                    if (lbData.success && lbData.leaders) {
+                        const sorted = [...lbData.leaders].sort((a,b) => (b.elo || 1000) - (a.elo || 1000));
+                        html += sorted.slice(0, 10).map((p, i) => {
+                            const pRank = ranks.find(r => (p.elo || 1000) >= r.min && (p.elo || 1000) <= r.max) || ranks[0];
+                            return `
+                                <div class="match-row ${i<3?'top-3':''}" style="cursor:pointer" onclick="viewPlayerProfile('${p.username}')">
+                                    <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
+                                    <span class="username">${p.username}</span>
+                                    <span style="color:${pRank.color}">${pRank.icon} ${p.elo || 1000}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                    
+                    document.getElementById('eloInfo').innerHTML = html;
+                } else {
+                    document.getElementById('eloInfo').innerHTML = '<p style="text-align:center;color:#ef4444">Ошибка загрузки ELO</p>';
+                }
+            } catch(e) {
+                document.getElementById('eloInfo').innerHTML = '<p style="text-align:center;color:#ef4444">Ошибка загрузки ELO</p>';
+            }
         }
         
         // Мобильная поддержка - добавляем touch event listeners
