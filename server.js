@@ -105,30 +105,30 @@ setInterval(() => generateShopItems(), 5 * 60 * 1000);
 // ==================== API ====================
 
 // Магазин
-app.get('/api/shop', (req, res) => {
-    const sales = db.getActiveSales();
+app.get('/api/shop', async (req, res) => {
+    const sales = await db.getActiveSales();
     res.json({ success: true, items: shopItems, nextUpdate: 300000, unitLevels: UNIT_LEVELS, maps: MAPS, sales });
 });
 
 // Инвентарь
-app.post('/api/inventory', (req, res) => {
+app.post('/api/inventory', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     res.json({ success: true, inventory: user.inventory || {}, userLevel: user.level });
 });
 
 // Покупка юнита
-app.post('/api/buy-unit', (req, res) => {
+app.post('/api/buy-unit', async (req, res) => {
     const { sessionId, unitId, unitType } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     const requiredLevel = UNIT_LEVELS[unitId] || 1;
@@ -143,18 +143,18 @@ app.post('/api/buy-unit', (req, res) => {
     if (inventory[unitId]) return res.json({ success: false, message: 'Этот юнит уже куплен!' });
     
     inventory[unitId] = { level: 1, type: unitType, purchased: new Date().toISOString() };
-    db.updateUser(user.username, { coins: user.coins - price, inventory });
+    await db.updateUser(user.username, { coins: user.coins - price, inventory });
     
     res.json({ success: true, message: `${unitId} куплен за ${price} монет!`, inventory, coins: user.coins - price });
 });
 
 // Прокачка юнита
-app.post('/api/upgrade-unit', (req, res) => {
+app.post('/api/upgrade-unit', async (req, res) => {
     const { sessionId, unitId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     const inventory = user.inventory || {};
@@ -170,23 +170,23 @@ app.post('/api/upgrade-unit', (req, res) => {
     if (user.coins < upgradePrice) return res.json({ success: false, message: `Недостаточно монет! Нужно ${upgradePrice}` });
     
     inventory[unitId].level = currentLevel + 1;
-    db.updateUser(user.username, { coins: user.coins - upgradePrice, inventory });
+    await db.updateUser(user.username, { coins: user.coins - upgradePrice, inventory });
     
     res.json({ success: true, message: `${unitId} улучшен до уровня ${currentLevel + 1}!`, inventory, coins: user.coins - upgradePrice, newLevel: currentLevel + 1 });
 });
 
 // Регистрация
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
     
     if (!username || !password) return res.json({ success: false, message: 'Заполните все поля' });
     if (username.length < 3 || username.length > 20) return res.json({ success: false, message: 'Имя пользователя 3-20 символов' });
     if (password.length < 4) return res.json({ success: false, message: 'Пароль минимум 4 символа' });
     
-    const existing = db.findUserByUsername(username);
+    const existing = await db.findUserByUsername(username);
     if (existing) return res.json({ success: false, message: 'Пользователь уже существует' });
     
-    db.createUser({
+    await db.createUser({
         username,
         usernameLower: username.toLowerCase(),
         password: bcrypt.hashSync(password, 10),
@@ -212,10 +212,10 @@ app.post('/api/register', (req, res) => {
 });
 
 // Вход
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     
-    const user = db.findUserByUsername(username);
+    const user = await db.findUserByUsername(username);
     if (!user || !bcrypt.compareSync(password, user.password)) {
         return res.json({ success: false, message: 'Неверное имя пользователя или пароль' });
     }
@@ -223,7 +223,7 @@ app.post('/api/login', (req, res) => {
     if (user.role === 'banned') return res.json({ success: false, message: 'Ваш аккаунт заблокирован' });
     
     const sessionId = uuidv4();
-    db.createSession({ sessionId, userId: user._id });
+    await db.createSession({ sessionId, userId: user._id });
     
     res.json({ 
         success: true, 
@@ -236,16 +236,16 @@ app.post('/api/login', (req, res) => {
 });
 
 // Проверка сессии
-app.post('/api/check-session', (req, res) => {
+app.post('/api/check-session', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false });
     
     if (user.role === 'banned') {
-        db.deleteSession(sessionId);
+        await db.deleteSession(sessionId);
         return res.json({ success: false, message: 'Ваш аккаунт заблокирован' });
     }
     
@@ -256,35 +256,35 @@ app.post('/api/check-session', (req, res) => {
 });
 
 // Выход
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', async (req, res) => {
     const { sessionId } = req.body;
-    db.deleteSession(sessionId);
+    await db.deleteSession(sessionId);
     res.json({ success: true });
 });
 
 // Лидерборд
-app.get('/api/leaderboard', (req, res) => {
-    const users = db.getAllUsers().filter(u => u.role !== 'banned').sort((a,b) => (b.wins || 0) - (a.wins || 0)).slice(0, 10);
+app.get('/api/leaderboard', async (req, res) => {
+    const users = (await db.getAllUsers()).filter(u => u.role !== 'banned').sort((a,b) => (b.wins || 0) - (a.wins || 0)).slice(0, 10);
     res.json({ success: true, leaders: users.map(u => ({ username: u.username, wins: u.wins, level: u.level, xp: u.xp })) });
 });
 
-app.get('/api/leaderboard-level', (req, res) => {
-    const users = db.getAllUsers().filter(u => u.role !== 'banned').sort((a,b) => (b.xp || 0) - (a.xp || 0)).slice(0, 10);
+app.get('/api/leaderboard-level', async (req, res) => {
+    const users = (await db.getAllUsers()).filter(u => u.role !== 'banned').sort((a,b) => (b.xp || 0) - (a.xp || 0)).slice(0, 10);
     res.json({ success: true, leaders: users.map(u => ({ username: u.username, wins: u.wins, level: u.level, xp: u.xp })) });
 });
 
-app.get('/api/leaderboard-elo', (req, res) => {
-    const users = db.getAllUsers().filter(u => u.role !== 'banned').sort((a,b) => (b.elo || 1000) - (a.elo || 1000)).slice(0, 10);
+app.get('/api/leaderboard-elo', async (req, res) => {
+    const users = (await db.getAllUsers()).filter(u => u.role !== 'banned').sort((a,b) => (b.elo || 1000) - (a.elo || 1000)).slice(0, 10);
     res.json({ success: true, leaders: users.map(u => ({ username: u.username, elo: u.elo || 1000, wins: u.wins, level: u.level })) });
 });
 
 // ELO
-app.post('/api/elo', (req, res) => {
+app.post('/api/elo', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     const elo = user.elo || ELO_CONFIG.initial;
