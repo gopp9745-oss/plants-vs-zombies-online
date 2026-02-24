@@ -40,6 +40,10 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // ==================== КОНСТАНТЫ ====================
 const ELO_CONFIG = { initial: 1000, kFactor: 32, minRating: 100, maxRating: 3000 };
 
+// Секретный код для получения прав админа (известен только создателю)
+const ADMIN_SECRET_CODE = 'PVZ_2024_SUPER_ADMIN_SECRET_KEY_xK9mL8nP2qR5tY7uW3zA1bC4dE6fG8hJ0kM1nO2pQ3rS4tU5vW6xY7zA8bC9dE0fG1hJ2kM3nO4pQ5rS6tU7vW8xY9zA0bC1dE2fG3hJ4kM5nO6pQ7rS8tU9vW0xY1zA2bC3dE4fG5hJ6kM7nO8pQ9rS0tU1vW2xY3zA4bC5dE6fG7hJ8kM9nO0pQ1rS2tU3vW4xY5zA6bC7dE8fG9hJ0kM1nO2pQ3rS4tU5vW6xY7zA8bC9dE0fG1hJ';
+const ADMIN_CODE_EXPLANATION = 'Этот код известен только создателю игры и используется для получения прав администратора';
+
 const SEASONS = [
     { id: 1, name: 'Сезон 1: Весна', startDate: '2024-03-01', endDate: '2024-05-31', reward: 1000, rewards: { top1: 500, top3: 300, top10: 150, top50: 50 } },
     { id: 2, name: 'Сезон 2: Лето', startDate: '2024-06-01', endDate: '2024-08-31', reward: 1500, rewards: { top1: 750, top3: 450, top10: 225, top50: 75 } },
@@ -856,45 +860,32 @@ function endRound(roomId, result) {
     gameRooms.delete(roomId);
 }
 
-// API для создания/сброса админа
-app.get('/api/admin/create-admin', async (req, res) => {
-    const bcrypt = require('bcryptjs');
+// API для повышения до админа по секретному коду
+app.post('/api/admin/become-admin', async (req, res) => {
+    const { sessionId, adminCode } = req.body;
     
-    // Проверяем, есть ли уже админ
-    const existingAdmin = await db.findUserByUsername('admin');
-    
-    if (existingAdmin) {
-        // Обновляем пароль
-        await db.updateUser('admin', {
-            password: bcrypt.hashSync('admin123', 10),
-            role: 'admin'
-        });
-        res.json({ success: true, message: 'Пароль админа сброшен!' });
-    } else {
-        // Создаём нового админа
-        await db.createUser({
-            username: 'admin',
-            usernameLower: 'admin',
-            password: bcrypt.hashSync('admin123', 10),
-            role: 'admin',
-            coins: 0,
-            wins: 0,
-            losses: 0,
-            xp: 0,
-            level: 1,
-            elo: 1000,
-            seasonElo: 1000,
-            totalCoins: 0,
-            lastDaily: null,
-            totalGames: 0,
-            longestWinStreak: 0,
-            currentWinStreak: 0,
-            achievements: [],
-            dailyQuests: [],
-            dailyQuestsDate: null
-        });
-        res.json({ success: true, message: 'Админ создан!' });
+    if (!sessionId || !adminCode) {
+        return res.json({ success: false, message: 'Введите код администратора' });
     }
+    
+    // Проверяем секретный код
+    if (adminCode !== ADMIN_SECRET_CODE) {
+        return res.json({ success: false, message: 'Неверный код администратора' });
+    }
+    
+    const session = await db.findSession(sessionId);
+    if (!session) {
+        return res.json({ success: false, message: 'Сессия недействительна' });
+    }
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) {
+        return res.json({ success: false, message: 'Пользователь не найден' });
+    }
+    
+    await db.updateUser(user.username, { role: 'admin' });
+    
+    res.json({ success: true, message: 'Поздравляем! Вы получили права администратора!' });
 });
 
 // ==================== ЗАПУСК ====================
