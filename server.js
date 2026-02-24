@@ -856,6 +856,47 @@ function endRound(roomId, result) {
     gameRooms.delete(roomId);
 }
 
+// API для создания/сброса админа
+app.post('/api/admin/create-admin', async (req, res) => {
+    const bcrypt = require('bcryptjs');
+    
+    // Проверяем, есть ли уже админ
+    const existingAdmin = await db.findUserByUsername('admin');
+    
+    if (existingAdmin) {
+        // Обновляем пароль
+        await db.updateUser('admin', {
+            password: bcrypt.hashSync('admin123', 10),
+            role: 'admin'
+        });
+        res.json({ success: true, message: 'Пароль админа сброшен!' });
+    } else {
+        // Создаём нового админа
+        await db.createUser({
+            username: 'admin',
+            usernameLower: 'admin',
+            password: bcrypt.hashSync('admin123', 10),
+            role: 'admin',
+            coins: 0,
+            wins: 0,
+            losses: 0,
+            xp: 0,
+            level: 1,
+            elo: 1000,
+            seasonElo: 1000,
+            totalCoins: 0,
+            lastDaily: null,
+            totalGames: 0,
+            longestWinStreak: 0,
+            currentWinStreak: 0,
+            achievements: [],
+            dailyQuests: [],
+            dailyQuestsDate: null
+        });
+        res.json({ success: true, message: 'Админ создан!' });
+    }
+});
+
 // ==================== ЗАПУСК ====================
 const PORT = process.env.PORT || 3000;
 
