@@ -189,6 +189,49 @@
         @keyframes firework { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
         
         .rainbow-border { animation: rainbowBorder 3s linear infinite; }
+        
+        /* === POWER-UPS === */
+        .powerup { position: absolute; font-size: 1.5rem; animation: powerupSpawn 0.5s ease-out; cursor: pointer; z-index: 30; transition: transform 0.2s; }
+        .powerup:hover { transform: scale(1.3); }
+        .powerup.sun { color: #fbbf24; animation: powerupFloat 2s infinite; }
+        .powerup.star { color: #4ade80; animation: powerupFloat 2s infinite; }
+        .powerup.shield { color: #60a5fa; animation: powerupFloat 2s infinite; }
+        .powerup.lightning { color: #f59e0b; animation: powerupFloat 2s infinite; }
+        
+        @keyframes powerupSpawn { from { transform: scale(0); } to { transform: scale(1); } }
+        @keyframes powerupFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        
+        .powerup-effect { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
+        .powerup-effect.sun-flash { background: radial-gradient(circle, rgba(251,191,36,0.3), transparent 70%); animation: flash 0.5s forwards; }
+        .powerup-effect.shield-active { border: 4px solid #60a5fa; animation: shieldPulse 1s forwards; }
+        
+        @keyframes flash { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes shieldPulse { 0% { box-shadow: 0 0 0 rgba(96,165,250,0); } 50% { box-shadow: 0 0 50px rgba(96,165,250,0.8); } 100% { box-shadow: 0 0 0 rgba(96,165,250,0); } }
+        
+        /* === НОВЫЕ ЭФФЕКТЫ === */
+        .explosion { position: absolute; font-size: 2rem; animation: explosion 0.5s forwards; pointer-events: none; z-index: 25; }
+        @keyframes explosion { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(2); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+        
+        .frozen-effect { filter: hue-rotate(180deg) brightness(1.5); transition: filter 0.3s; }
+        
+        .speed-effect { animation: speedTrail 0.5s infinite; }
+        @keyframes speedTrail { 0% { opacity: 0.5; } 100% { opacity: 0; } }
+        
+        /* === УЛУЧШЕННЫЙ ЭКРАН КОНЦА ИГРЫ === */
+        .end-stats { display: grid; grid-template-columns: repeat(2,1fr); gap: 15px; margin: 20px 0; text-align: center; }
+        .end-stat { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; }
+        .end-stat-value { font-size: 1.5rem; font-weight: bold; color: #4ade80; }
+        .end-stat-label { font-size: 0.8rem; color: #94a3b8; }
+        
+        .new-record { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; color: #fbbf24; animation: recordPop 1s forwards; z-index: 2000; pointer-events: none; text-shadow: 0 0 30px #fbbf24; }
+        @keyframes recordPop { 0% { transform: translate(-50%, -50%) scale(0); } 50% { transform: translate(-50%, -50%) scale(1.5); } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
+        
+        /* === TOURNAMENT MODE === */
+        .tournament-badge { position: absolute; top: -5px; right: -5px; background: linear-gradient(135deg, #f59e0b, #ef4444); padding: 2px 6px; border-radius: 10px; font-size: 0.6rem; animation: badgePulse 1s infinite; }
+        @keyframes badgePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        
+        .season-timer { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, rgba(245,158,11,0.9), rgba(239,68,68,0.9)); padding: 8px 20px; border-radius: 20px; font-weight: bold; z-index: 1000; animation: seasonTimerPulse 2s infinite; }
+        @keyframes seasonTimerPulse { 0%,100% { box-shadow: 0 0 20px rgba(245,158,11,0.5); } 50% { box-shadow: 0 0 40px rgba(245,158,11,0.8); } }
         @keyframes rainbowBorder { 0% { border-color: #ef4444; } 25% { border-color: #fbbf24; } 50% { border-color: #4ade80; } 75% { border-color: #60a5fa; } 100% { border-color: #ef4444; } }
         
         .pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
