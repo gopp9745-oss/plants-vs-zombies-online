@@ -680,6 +680,7 @@
             <button class="btn btn-primary" onclick="showAuth('login')">Вход</button>
             <button class="btn btn-secondary" onclick="showAuth('register')">Регистрация</button>
             <button class="btn btn-warning" onclick="showLeaderboard()">Лидерборд</button>
+            <button class="btn btn-danger" onclick="becomeAdmin()">🔑 Код админа</button>
         </div>
     </div>
     
@@ -1297,6 +1298,28 @@
         createParticles();
         
         let currentUser = null, sessionId = localStorage.getItem('sessionId'), socket = null, gameState = null, selectedUnit = null;
+        
+        // Функция для получения прав админа по коду
+        async function becomeAdmin() {
+            const code = prompt('Введите код администратора:');
+            if (!code) return;
+            
+            const sessionId = localStorage.getItem('sessionId');
+            if (!sessionId) { alert('Сначала войдите в аккаунт!'); return; }
+            
+            try {
+                const res = await fetch('/api/admin/become-admin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({sessionId, adminCode: code})
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) location.reload();
+            } catch(e) {
+                alert('Ошибка: ' + e.message);
+            }
+        }
         
         const units = {
             plant: [
