@@ -432,11 +432,11 @@ app.post('/api/chest', (req, res) => {
     const chestsToday = user.chestsToday || 0;
     const winsToday = user.winsToday || 0;
     
-    // За каждые 4 победы даём 1 сундук, максимум 4 в день
-    const maxChestsToday = Math.min(4, Math.floor(winsToday / 4));
+    // За каждую победу даём 1 сундук, максимум 4 в день
+    const maxChestsToday = Math.min(4, winsToday);
     
     if (chestsToday >= maxChestsToday) {
-        return res.json({ success: false, message: `Сегодня вы можете получить ${maxChestsToday} сундук(ов)! Заработайте ещё ${(chestsToday + 1) * 4 - winsToday} побед.` });
+        return res.json({ success: false, message: `Сегодня вы можете получить ${maxChestsToday} сундук(ов)! Выиграйте ещё ${4 - winsToday} раз(а).` });
     }
     
     // Текущая редкость (копится от предыдущих открытий)
@@ -529,8 +529,8 @@ app.post('/api/chest-status', (req, res) => {
         winsToday = 0;
     }
     
-    // Максимум 4 сундука за 4 победы каждый = 4 сундука в день
-    const maxChestsToday = Math.min(4, Math.floor(winsToday / 4));
+    // За каждую победу 1 сундук, максимум 4 в день
+    const maxChestsToday = Math.min(4, winsToday);
     const canOpen = chestsToday < maxChestsToday;
     
     // Текущая редкость
@@ -584,20 +584,21 @@ app.post('/api/add-win', async (req, res) => {
     
     winsToday++;
     
-    const maxChests = Math.min(4, Math.floor(winsToday / 4));
+    // За каждую победу даём сундук, максимум 4 в день
+    const maxChests = Math.min(4, winsToday);
     const currentChests = user.chestsToday || 0;
     
     db.updateUser(user.username, { 
         winsToday: winsToday,
         lastWinDay: today,
-        chestsToday: currentChests > maxChests ? maxChests : currentChests // не даём получить больше чем можем
+        chestsToday: currentChests > maxChests ? maxChests : currentChests
     });
     
     res.json({ 
         success: true, 
         winsToday: winsToday,
-        chestsAvailable: Math.min(4, Math.floor(winsToday / 4)) - currentChests,
-        message: winsToday % 4 === 0 ? `Поздравляем! За ${winsToday} побед вы получили сундук!` : `Победа! Осталось ${(Math.floor(winsToday / 4) + 1) * 4 - winsToday} побед до следующего сундука.`
+        chestsAvailable: Math.min(4, winsToday) - currentChests,
+        message: `Победа! Всего побед сегодня: ${winsToday}. Доступно сундуков: ${Math.min(4, winsToday) - currentChests}`
     });
 });
 
