@@ -870,6 +870,14 @@
         
         <!-- ЦЕНТР - Карта и кнопки игры -->
         <div class="profile-center-panel">
+            <!-- Шкала сундуков -->
+            <div id="chestBar" style="display:none;margin-bottom:15px;padding:12px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.2);text-align:center">
+                <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px">🎁 Доступные сундуки</div>
+                <div style="display:flex;justify-content:center;gap:10px;margin-bottom:8px" id="chestIcons"></div>
+                <div style="font-size:0.8rem;color:#fbbf24" id="chestInfo"></div>
+                <button class="btn btn-primary" style="margin-top:10px;padding:8px 20px;font-size:0.85rem" onclick="openChest()">🎁 Открыть сундук</button>
+            </div>
+            
             <div class="game-preview-map" id="gamePreviewMap">
                 <div class="map-lanes-preview">
                     <div class="lane-preview" style="background: rgba(74, 222, 128, 0.1);"></div>
@@ -1668,6 +1676,123 @@
             document.getElementById('authSubmitBtn').textContent = tab==='login'?'Войти':'Регистрация';
         }
         
+        // === СИСТЕМА СУНДУКОВ ===
+        let userChests = { common: 0, rare: 0, epic: 0, legendary: 0 };
+        
+        async function loadChests() {
+            try {
+                const res = await fetch('/api/chests', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    userChests = data.chests || { common: 0, rare: 0, epic: 0, legendary: 0 };
+                    updateChestBar();
+                }
+            } catch(e) {}
+        }
+        
+        function updateChestBar() {
+            const chestBar = document.getElementById('chestBar');
+            const chestIcons = document.getElementById('chestIcons');
+            const chestInfo = document.getElementById('chestInfo');
+            
+            const totalChests = userChests.common + userChests.rare + userChests.epic + userChests.legendary;
+            
+            if (totalChests > 0) {
+                chestBar.style.display = 'block';
+                
+                // Иконки сундуков
+                let iconsHtml = '';
+                if (userChests.legendary > 0) {
+                    iconsHtml += `<div style="position:relative">
+                        <span style="font-size:2rem">👑</span>
+                        <span style="position:absolute;top:-5px;right:-5px;background:#fbbf24;color:#1a1a2e;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.legendary}</span>
+                    </div>`;
+                }
+                if (userChests.epic > 0) {
+                    iconsHtml += `<div style="position:relative">
+                        <span style="font-size:2rem">🟣</span>
+                        <span style="position:absolute;top:-5px;right:-5px;background:#a855f7;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.epic}</span>
+                    </div>`;
+                }
+                if (userChests.rare > 0) {
+                    iconsHtml += `<div style="position:relative">
+                        <span style="font-size:2rem">🔵</span>
+                        <span style="position:absolute;top:-5px;right:-5px;background:#3b82f6;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.rare}</span>
+                    </div>`;
+                }
+                if (userChests.common > 0) {
+                    iconsHtml += `<div style="position:relative">
+                        <span style="font-size:2rem">🟤</span>
+                        <span style="position:absolute;top:-5px;right:-5px;background:#92400e;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.common}</span>
+                    </div>`;
+                }
+                chestIcons.innerHTML = iconsHtml;
+                
+                // Информация о сундуках
+                const chestValues = {
+                    legendary: { min: 500, max: 2000, name: 'Легендарный' },
+                    epic: { min: 200, max: 800, name: 'Эпический' },
+                    rare: { min: 100, max: 400, name: 'Редкий' },
+                    common: { min: 30, max: 150, name: 'Обычный' }
+                };
+                
+                // Показываем информацию о самом ценном сундуке
+                let bestChest = 'common';
+                let bestValue = chestValues.common.min;
+                if (userChests.legendary > 0) { bestChest = 'legendary'; bestValue = chestValues.legendary.min; }
+                else if (userChests.epic > 0) { bestChest = 'epic'; bestValue = chestValues.epic.min; }
+                else if (userChests.rare > 0) { bestChest = 'rare'; bestValue = chestValues.rare.min; }
+                
+                chestInfo.innerHTML = `${chestValues[bestChest].name}: ${bestValue}-${chestValues[bestChest].max} монет`;
+            } else {
+                chestBar.style.display = 'none';
+            }
+        }
+        
+        async function openChest() {
+            // Показываем выбор сундука
+            const totalChests = userChests.common + userChests.rare + userChests.epic + userChests.legendary;
+            if (totalChests === 0) {
+                alert('У вас нет сундуков! Играйте, чтобы получить сундуки!');
+                return;
+            }
+            
+            // Показываем доступные сундуки для открытия
+            let message = 'Выберите сундук для открытия:\n\n';
+            if (userChests.common > 0) message += `🟤 Обычный: ${userChests.common} шт.\n`;
+            if (userChests.rare > 0) message += `🔵 Редкий: ${userChests.rare} шт.\n`;
+            if (userChests.epic > 0) message += `🟣 Эпический: ${userChests.epic} шт.\n`;
+            if (userChests.legendary > 0) message += `👑 Легендарный: ${userChests.legendary} шт.\n`;
+            
+            const choice = prompt(message + '\nВведите тип (common/rare/epic/legendary):');
+            if (!choice) return;
+            
+            const chestType = choice.toLowerCase();
+            if (!userChests[chestType] || userChests[chestType] <= 0) {
+                alert('У вас нет такого сундука!');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/open-chest', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, chestType})});
+                const data = await res.json();
+                
+                if (data.success) {
+                    const rewards = data.rewards || 0;
+                    alert(`🎁 Поздравляем! Вы получили ${rewards} монет! 💰`);
+                    
+                    // Обновляем данные
+                    currentUser.coins = data.coins;
+                    document.getElementById('statCoins').textContent = currentUser.coins;
+                    await loadChests();
+                } else {
+                    alert(data.message || 'Ошибка открытия сундука');
+                }
+            } catch(e) {
+                alert('Ошибка открытия сундука');
+            }
+        }
+        
         function showProfile() {
             showScreen('profileScreen');
             const level = currentUser.level || 1;
@@ -1679,6 +1804,9 @@
             document.getElementById('statWins').textContent = currentUser.wins || 0;
             document.getElementById('statXP').textContent = currentUser.xp || 0;
             document.getElementById('adminBtn').style.display = currentUser.role==='admin'?'block':'none';
+            
+            // Загружаем сундуки
+            loadChests();
         }
         
         async function handleAuth(e) {
