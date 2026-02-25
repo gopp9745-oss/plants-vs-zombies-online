@@ -400,14 +400,21 @@ app.post('/api/daily-reward', (req, res) => {
     });
 });
 
-// Счастливый сундук - раз в день
-const CHEST_REWARDS = [
-    { type: 'coins', min: 10, max: 50, chance: 30 },
-    { type: 'coins', min: 50, max: 100, chance: 20 },
-    { type: 'coins', min: 100, max: 200, chance: 10 },
-    { type: 'xp', min: 25, max: 50, chance: 15 },
-    { type: 'xp', min: 50, max: 100, chance: 10 },
-    { type: 'rare', min: 200, max: 500, chance: 5 }
+// Система сундуков как в Clash Royale
+const CHEST_RARITIES = {
+    common: { name: 'Обычный', color: '#9ca3af', icon: '📦', minMult: 1, maxMult: 1.5 },
+    rare: { name: 'Редкий', color: '#3b82f6', icon: '🟦', minMult: 1.5, maxMult: 2.5 },
+    epic: { name: 'Эпик', color: '#8b5cf6', icon: '🟪', minMult: 2.5, maxMult: 4 },
+    mythic: { name: 'Мифический', color: '#f59e0b', icon: '🟧', minMult: 4, maxMult: 6 },
+    legendary: { name: 'Легендарный', color: '#ef4444', icon: '🟥', minMult: 6, maxMult: 10 }
+};
+
+const BASE_CHEST_REWARDS = [
+    { min: 10, max: 30 },
+    { min: 20, max: 50 },
+    { min: 30, max: 70 },
+    { min: 40, max: 90 },
+    { min: 50, max: 120 }
 ];
 
 app.post('/api/chest', (req, res) => {
@@ -423,48 +430,70 @@ app.post('/api/chest', (req, res) => {
         return res.json({ success: false, message: 'Вы уже открывали сундук сегодня! Приходите завтра.' });
     }
     
-    // Выбираем случайную награду
-    const roll = Math.random() * 100;
-    let cumulative = 0;
-    let selectedReward = CHEST_REWARDS[0];
+    // Подсчитываем общее количество открытий сундука
+    const chestAttempts = user.chestAttempts || 0;
+    const newAttempts = chestAttempts + 1;
     
-    for (const reward of CHEST_REWARDS) {
-        cumulative += reward.chance;
-        if (roll < cumulative) {
-            selectedReward = reward;
-            break;
-        }
+    // Определяем редкость: повышается только на 4, 8, 12, 16... попытках
+    let rarity = 'common';
+    let rarityLevel = 1;
+    
+    if (newAttempts >= 16) {
+        rarity = 'legendary';
+        rarityLevel = 5;
+    } else if (newAttempts >= 12) {
+        rarity = 'mythic';
+        rarityLevel = 4;
+    } else if (newAttempts >= 8) {
+        rarity = 'epic';
+        rarityLevel = 3;
+    } else if (newAttempts >= 4) {
+        rarity = 'rare';
+        rarityLevel = 2;
     }
     
-    const rewardAmount = Math.floor(Math.random() * (selectedReward.max - selectedReward.min + 1)) + selectedReward.min;
-    let message = '';
-    let newCoins = user.coins;
-    let newXP = user.xp;
+    // Базовая награда
+    const baseReward = BASE_CHEST_REWARDS[Math.floor(Math.random() * BASE_CHEST_REWARDS.length)];
+    const baseAmount = Math.floor(Math.random() * (baseReward.max - baseReward.min + 1)) + baseReward.min;
     
-    if (selectedReward.type === 'coins') {
-        newCoins = user.coins + rewardAmount;
-        message = `💰 Вы получили ${rewardAmount} монет!`;
-    } else if (selectedReward.type === 'xp') {
-        newXP = user.xp + rewardAmount;
-        message = `⭐ Вы получили ${rewardAmount} опыта!`;
-    } else if (selectedReward.type === 'rare') {
-        newCoins = user.coins + rewardAmount;
-        message = `🎉 ЛЕГЕНДАРНАЯ НАГРАДА! Вы получили ${rewardAmount} монет!`;
-    }
+    // Множитель редкости
+    const rarityData = CHEST_RARITIES[rarity];
+    const multiplier = rarityData.minMult + Math.random() * (rarityData.maxMult - rarityData.minMult);
+    const rewardAmount = Math.floor(baseAmount * multiplier);
+    
+    // Опыт тоже растёт с редкостью
+    const xpReward = Math.floor(rewardAmount * 0.3);
+    
+    let newCoins = user.coins + rewardAmount;
+    let newXP = user.xp + xpReward;
+    
+    // Проверяем повышение уровня
+    const { level: newLevel, xp: newXPAfterLevel } = calculateLevel(newXP);
     
     db.updateUser(user.username, { 
         lastChestDate: today,
+        chestAttempts: newAttempts,
+        chestRarity: rarityLevel,
         coins: newCoins,
-        xp: newXP
+        xp: newXPAfterLevel
     });
     
     res.json({ 
         success: true, 
-        message,
+        message: `🎁 Вы открыли ${rarityData.icon} ${rarityData.name} сундук!\n💰 +${rewardAmount} монет\n⭐ +${xpReward} опыта`,
         reward: rewardAmount,
-        rewardType: selectedReward.type,
+        xpReward: xpReward,
+        rarity: rarity,
+        rarityName: rarityData.name,
+        rarityIcon: rarityData.icon,
+        rarityColor: rarityData.color,
+        rarityLevel: rarityLevel,
+        attempts: newAttempts,
+        nextRarityAt: Math.ceil(newAttempts / 4) * 4,
         coins: newCoins,
-        xp: newXP
+        xp: newXPAfterLevel,
+        newLevel: newLevel,
+        levelUp: newLevel > user.level
     });
 });
 
@@ -480,12 +509,72 @@ app.post('/api/chest-status', (req, res) => {
     const today = new Date().toDateString();
     const canOpen = user.lastChestDate !== today;
     
+    const chestAttempts = user.chestAttempts || 0;
+    const currentRarity = user.chestRarity || 1;
+    
+    // Определяем текущую редкость
+    let rarity = 'common';
+    let rarityName = 'Обычный';
+    let rarityIcon = '📦';
+    let rarityColor = '#9ca3af';
+    
+    if (currentRarity >= 5) {
+        rarity = 'legendary';
+        rarityName = 'Легендарный';
+        rarityIcon = '🟥';
+        rarityColor = '#ef4444';
+    } else if (currentRarity >= 4) {
+        rarity = 'mythic';
+        rarityName = 'Мифический';
+        rarityIcon = '🟧';
+        rarityColor = '#f59e0b';
+    } else if (currentRarity >= 3) {
+        rarity = 'epic';
+        rarityName = 'Эпический';
+        rarityIcon = '🟪';
+        rarityColor = '#8b5cf6';
+    } else if (currentRarity >= 2) {
+        rarity = 'rare';
+        rarityName = 'Редкий';
+        rarityIcon = '🟦';
+        rarityColor = '#3b82f6';
+    }
+    
+    // Следующее повышение редкости
+    const nextRarityAt = Math.ceil(chestAttempts / 4) * 4;
+    const attemptsUntilRarity = nextRarityAt - chestAttempts;
+    
+    // Прогресс до следующей редкости
+    const progressInTier = chestAttempts % 4;
+    const progressPercent = (progressInTier / 4) * 100;
+    
     res.json({ 
         success: true, 
-        canOpen,
-        nextReward: CHEST_REWARDS[Math.floor(Math.random() * CHEST_REWARDS.length)]
+        canOpen: canOpen,
+        attempts: chestAttempts,
+        currentRarity: currentRarity,
+        rarity: rarity,
+        rarityName: rarityName,
+        rarityIcon: rarityIcon,
+        rarityColor: rarityColor,
+        nextRarityAt: nextRarityAt,
+        attemptsUntilRarity: attemptsUntilRarity,
+        progressPercent: progressPercent,
+        chestRarities: CHEST_RARITIES
     });
 });
+
+function calculateLevel(xp) {
+    const xpPerLevel = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450];
+    let level = 1;
+    for (let i = xpPerLevel.length - 1; i >= 0; i--) {
+        if (xp >= xpPerLevel[i]) {
+            level = i + 1;
+            break;
+        }
+    }
+    return { level, xp };
+}
 
 // API для получения информации о серии
 app.post('/api/streak', (req, res) => {
