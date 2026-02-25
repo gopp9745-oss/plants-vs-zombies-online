@@ -98,6 +98,7 @@ class MongoDB {
     }
     
     async findUserByUsername(username) {
+        if (!username) return null;
         return await getDb().collection('users').findOne({ usernameLower: username.toLowerCase() });
     }
     
@@ -111,6 +112,10 @@ class MongoDB {
     }
     
     async updateUser(username, data) {
+        if (!username) {
+            console.error('updateUser: username is undefined or null');
+            return null;
+        }
         const result = await getDb().collection('users').findOneAndUpdate(
             { usernameLower: username.toLowerCase() },
             { $set: data },
@@ -120,6 +125,7 @@ class MongoDB {
     }
     
     async deleteUser(username) {
+        if (!username) return false;
         const result = await getDb().collection('users').deleteOne({ usernameLower: username.toLowerCase() });
         return result.deletedCount > 0;
     }
@@ -248,10 +254,12 @@ class MongoDB {
     }
     
     async findPromo(code) {
+        if (!code) return null;
         return await getDb().collection('promos').findOne({ code: code.toUpperCase() });
     }
     
     async updatePromo(code, data) {
+        if (!code) return null;
         const result = await getDb().collection('promos').findOneAndUpdate(
             { code: code.toUpperCase() },
             { $set: data },

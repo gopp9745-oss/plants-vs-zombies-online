@@ -114,7 +114,13 @@ app.post('/api/friends', async (req, res) => {
     const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
     
-    const user = await db.findUser({ _id: session.userId });
+    let user;
+    try {
+        user = await db.findUser({ _id: session.userId });
+    } catch(e) {
+        console.error('Error finding user:', e);
+        return res.json({ success: false, message: 'Ошибка поиска пользователя' });
+    }
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     const friends = user.friends || [];

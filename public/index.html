@@ -892,6 +892,35 @@
                 </button>
             </div>
             
+            <!-- Секция наград и статистики - всегда видна -->
+            <div style="margin-top:15px;padding:15px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.2);text-align:center;width:100%;max-width:300px">
+                <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:12px">📊 Ваша статистика</div>
+                
+                <!-- Уровень и XP -->
+                <div style="margin-bottom:15px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                        <span style="color:#fbbf24;font-weight:bold">⭐ Уровень <span id="displayLevel">1</span></span>
+                        <span style="color:#4ade80;font-size:0.8rem" id="xpDisplay">0 XP</span>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.2);border-radius:10px;height:10px;overflow:hidden">
+                        <div id="xpProgressBar" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);height:100%;width:0%;transition:width 0.3s"></div>
+                    </div>
+                    <div style="font-size:0.7rem;color:#94a3b8;margin-top:3px" id="xpToNextLevel">До след. уровня: 100 XP</div>
+                </div>
+                
+                <!-- Статистика -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px">
+                        <div style="font-size:1.2rem;font-weight:bold;color:#fbbf24" id="displayCoins">0</div>
+                        <div style="font-size:0.7rem;color:#94a3b8">💰 Монет</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px">
+                        <div style="font-size:1.2rem;font-weight:bold;color:#4ade80" id="displayWins">0</div>
+                        <div style="font-size:0.7rem;color:#94a3b8">🏆 Побед</div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Шкала сундуков под кнопками игры -->
             <div id="chestBar" style="display:none;margin-top:15px;padding:12px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.2);text-align:center;width:100%;max-width:300px">
                 <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px">🎁 Доступные сундуки</div>
@@ -1804,6 +1833,19 @@
             document.getElementById('statWins').textContent = currentUser.wins || 0;
             document.getElementById('statXP').textContent = currentUser.xp || 0;
             document.getElementById('adminBtn').style.display = currentUser.role==='admin'?'block':'none';
+            
+            // Обновляем отображение наград (всегда видно)
+            const userLevel = currentUser.level || 1;
+            const userXP = currentUser.xp || 0;
+            const xpForNextLevel = userLevel * 100;
+            const xpProgress = Math.min(100, (userXP / xpForNextLevel) * 100);
+            
+            document.getElementById('displayLevel').textContent = userLevel;
+            document.getElementById('xpDisplay').textContent = userXP + ' XP';
+            document.getElementById('xpProgressBar').style.width = xpProgress + '%';
+            document.getElementById('xpToNextLevel').textContent = 'До след. уровня: ' + (xpForNextLevel - userXP) + ' XP';
+            document.getElementById('displayCoins').textContent = currentUser.coins || 0;
+            document.getElementById('displayWins').textContent = currentUser.wins || 0;
             
             // Загружаем сундуки
             loadChests();
