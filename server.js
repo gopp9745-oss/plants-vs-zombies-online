@@ -333,7 +333,7 @@ app.get('/api/profile/:username', (req, res) => {
     res.json({ success: true, profile: { username: user.username, wins: user.wins, losses: user.losses, level: user.level, xp: user.xp, totalGames: user.totalGames, longestWinStreak: user.longestWinStreak, createdAt: user.createdAt }});
 });
 
-// Ежедневная награда
+// Ежедневная награда с учётом серий
 app.post('/api/daily-reward', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
@@ -344,16 +344,100 @@ app.post('/api/daily-reward', (req, res) => {
     
     const now = new Date();
     const lastDaily = user.lastDaily ? new Date(user.lastDaily) : null;
+    const lastDailyStreak = user.lastDailyStreak || 0;
+    const lastDailyDate = user.lastDailyDate ? new Date(user.lastDailyDate) : null;
     
-    if (lastDaily) {
-        const hours = (now - lastDaily) / (1000 * 60 * 60);
-        if (hours < 24) return res.json({ success: false, message: `До следующей награды: ${Math.floor(24 - hours)}ч` });
+    // Проверяем, получал ли игрок награду сегодня
+    const today = new Date().toDateString();
+    if (user.lastDailyDate === today) {
+        return res.json({ success: false, message: 'Вы уже получили ежедневную награду сегодня!' });
     }
     
-    const reward = 50 + user.level * 10;
-    db.updateUser(user.username, { lastDaily: now.toISOString(), coins: user.coins + reward });
+    // Вычисляем новую серию
+    let newStreak = 1;
+    if (lastDailyDate) {
+        const daysSinceLastDaily = Math.floor((now - lastDailyDate) / (1000 * 60 * 60 * 24));
+        if (daysSinceLastDaily === 1) {
+            // Получил вчера - продолжаем серию
+            newStreak = lastDailyStreak + 1;
+        } else if (daysSinceLastDaily === 0) {
+            // Получил сегодня (проверка уже выше)
+            return res.json({ success: false, message: 'Вы уже получили ежедневную награду сегодня!' });
+        }
+        // Если прошло более 1 дня - сбрасываем серию
+    }
     
-    res.json({ success: true, message: `Получено ${reward} монет!`, coins: user.coins + reward });
+    // Награда за серию (каждый 7й день - бонус!)
+    const baseReward = 50 + user.level * 10;
+    let bonusReward = 0;
+    let streakMessage = '';
+    
+    if (newStreak >= 7) {
+        bonusReward = 500;
+        streakMessage = ' 🎉 Недельная серия! Бонус 500 монет!';
+    } else if (newStreak >= 3) {
+        bonusReward = 100;
+        streakMessage = ' 🔥 Серия ' + newStreak + ' дней! Бонус 100 монет!';
+    } else if (newStreak >= 2) {
+        bonusReward = 25;
+        streakMessage = ' ✨ Серия ' + newStreak + ' дня! Бонус 25 монет!';
+    }
+    
+    const totalReward = baseReward + bonusReward;
+    db.updateUser(user.username, { 
+        lastDaily: now.toISOString(),
+        lastDailyDate: today,
+        lastDailyStreak: newStreak,
+        coins: user.coins + totalReward
+    });
+    
+    res.json({ 
+        success: true, 
+        message: `Получено ${totalReward} монет!${streakMessage}`, 
+        coins: user.coins + totalReward,
+        streak: newStreak,
+        bonus: bonusReward
+    });
+});
+
+// API для получения информации о серии
+app.post('/api/streak', (req, res) => {
+    const { sessionId } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false });
+    
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false });
+    
+    const today = new Date().toDateString();
+    const lastDailyDate = user.lastDailyDate;
+    const streak = user.lastDailyStreak || 0;
+    
+    // Проверяем, получал ли сегодня
+    const claimedToday = lastDailyDate === today;
+    
+    // Проверяем, не сломалась ли серия
+    let streakBroken = false;
+    if (lastDailyDate) {
+        const lastDate = new Date(lastDailyDate);
+        const now = new Date();
+        const daysDiff = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+        if (daysDiff > 1) {
+            streakBroken = true;
+        }
+    }
+    
+    // Следующая награда
+    const nextBonus = streak >= 6 ? 500 : (streak >= 2 ? 100 : 25);
+    const nextBonusDay = streak + 1;
+    
+    res.json({ 
+        success: true, 
+        streak: streakBroken ? 0 : streak,
+        claimedToday,
+        nextBonus,
+        nextBonusDay
+    });
 });
 
 // Промокоды
