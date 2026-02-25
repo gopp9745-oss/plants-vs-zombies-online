@@ -63,6 +63,60 @@
         .auth-message.success { background: rgba(74,222,128,0.3); border: 1px solid #4ade80; }
         
         .profile-header { width: 100%; max-width: 700px; display: flex; justify-content: space-between; align-items: center; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        
+        /* Переключатель интерфейса ПК/телефон */
+        .interface-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .interface-toggle:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .interface-toggle.active {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.2);
+        }
+        
+        .interface-toggle-icon {
+            font-size: 1.2rem;
+        }
+        
+        .interface-toggle-text {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        
+        /* Классы для принудительного отображения */
+        .force-pc-mode .profile-left-panel,
+        .force-pc-mode .profile-right-panel {
+            display: flex !important;
+        }
+        
+        .force-pc-mode .mobile-nav {
+            display: none !important;
+        }
+        
+        .force-mobile-mode .profile-left-panel,
+        .force-mobile-mode .profile-right-panel {
+            display: none !important;
+        }
+        
+        .force-mobile-mode .mobile-nav {
+            display: flex !important;
+        }
+        
+        .force-mobile-mode body {
+            padding-bottom: 70px;
+        }
         .user-info { display: flex; align-items: center; gap: 15px; }
         .user-avatar { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #1a1a2e; animation: avatarPulse 2s ease-in-out infinite; }
         @keyframes avatarPulse { 0%,100% { box-shadow: 0 0 20px rgba(74, 222, 128, 0.5); } 50% { box-shadow: 0 0 40px rgba(74, 222, 128, 0.8); } }
@@ -786,6 +840,10 @@
                 <div class="stat"><div class="stat-value" id="statWins">0</div><div class="stat-label">Побед</div></div>
                 <div class="stat"><div class="stat-value" id="statXP">0</div><div class="stat-label">Опыта</div></div>
             </div>
+            <button class="interface-toggle" id="interfaceToggleBtn" onclick="toggleInterfaceMode()" title="Сменить интерфейс">
+                <span class="interface-toggle-icon">🔄</span>
+                <span class="interface-toggle-text">Авто</span>
+            </button>
         </div>
         
         <!-- НОВОЕ РАСПОЛОЖЕНИЕ КНОПОК -->
@@ -1392,6 +1450,65 @@
         createParticles();
         
         let currentUser = null, sessionId = localStorage.getItem('sessionId'), socket = null, gameState = null, selectedUnit = null;
+        
+        // === СИСТЕМА ПЕРЕКЛЮЧЕНИЯ ИНТЕРФЕЙСА ===
+        let currentInterfaceMode = localStorage.getItem('interfaceMode') || 'auto'; // 'auto', 'pc', 'mobile'
+        
+        function initInterfaceMode() {
+            updateInterfaceMode();
+            // Слушаем изменение размера окна
+            window.addEventListener('resize', updateInterfaceMode);
+        }
+        
+        function updateInterfaceMode() {
+            const isMobile = window.innerWidth <= 900;
+            const body = document.body;
+            
+            // Удаляем старые классы
+            body.classList.remove('force-pc-mode', 'force-mobile-mode');
+            
+            if (currentInterfaceMode === 'pc') {
+                body.classList.add('force-pc-mode');
+                updateToggleButton('pc');
+            } else if (currentInterfaceMode === 'mobile') {
+                body.classList.add('force-mobile-mode');
+                updateToggleButton('mobile');
+            } else {
+                // Авто режим - используем CSS media queries
+                updateToggleButton('auto');
+            }
+        }
+        
+        function toggleInterfaceMode() {
+            // Циклически переключаем: auto -> pc -> mobile -> auto
+            if (currentInterfaceMode === 'auto') {
+                currentInterfaceMode = 'pc';
+            } else if (currentInterfaceMode === 'pc') {
+                currentInterfaceMode = 'mobile';
+            } else {
+                currentInterfaceMode = 'auto';
+            }
+            
+            localStorage.setItem('interfaceMode', currentInterfaceMode);
+            updateInterfaceMode();
+            
+            // Показываем уведомление
+            const modeNames = { 'auto': 'Авто', 'pc': 'ПК', 'mobile': 'Телефон' };
+            alert('Интерфейс: ' + modeNames[currentInterfaceMode]);
+        }
+        
+        function updateToggleButton(mode) {
+            const btn = document.getElementById('interfaceToggleBtn');
+            if (!btn) return;
+            
+            const icons = { 'auto': '🔄', 'pc': '🖥️', 'mobile': '📱' };
+            const texts = { 'auto': 'Авто', 'pc': 'ПК', 'mobile': 'Телефон' };
+            
+            btn.innerHTML = `<span class="interface-toggle-icon">${icons[mode]}</span><span class="interface-toggle-text">${texts[mode]}</span>`;
+        }
+        
+        // Инициализируем при загрузке
+        document.addEventListener('DOMContentLoaded', initInterfaceMode);
         
         // Функция для получения прав админа по коду
         async function becomeAdmin() {
