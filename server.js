@@ -400,6 +400,93 @@ app.post('/api/daily-reward', (req, res) => {
     });
 });
 
+// Счастливый сундук - раз в день
+const CHEST_REWARDS = [
+    { type: 'coins', min: 10, max: 50, chance: 30 },
+    { type: 'coins', min: 50, max: 100, chance: 20 },
+    { type: 'coins', min: 100, max: 200, chance: 10 },
+    { type: 'xp', min: 25, max: 50, chance: 15 },
+    { type: 'xp', min: 50, max: 100, chance: 10 },
+    { type: 'rare', min: 200, max: 500, chance: 5 }
+];
+
+app.post('/api/chest', (req, res) => {
+    const { sessionId } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const today = new Date().toDateString();
+    if (user.lastChestDate === today) {
+        return res.json({ success: false, message: 'Вы уже открывали сундук сегодня! Приходите завтра.' });
+    }
+    
+    // Выбираем случайную награду
+    const roll = Math.random() * 100;
+    let cumulative = 0;
+    let selectedReward = CHEST_REWARDS[0];
+    
+    for (const reward of CHEST_REWARDS) {
+        cumulative += reward.chance;
+        if (roll < cumulative) {
+            selectedReward = reward;
+            break;
+        }
+    }
+    
+    const rewardAmount = Math.floor(Math.random() * (selectedReward.max - selectedReward.min + 1)) + selectedReward.min;
+    let message = '';
+    let newCoins = user.coins;
+    let newXP = user.xp;
+    
+    if (selectedReward.type === 'coins') {
+        newCoins = user.coins + rewardAmount;
+        message = `💰 Вы получили ${rewardAmount} монет!`;
+    } else if (selectedReward.type === 'xp') {
+        newXP = user.xp + rewardAmount;
+        message = `⭐ Вы получили ${rewardAmount} опыта!`;
+    } else if (selectedReward.type === 'rare') {
+        newCoins = user.coins + rewardAmount;
+        message = `🎉 ЛЕГЕНДАРНАЯ НАГРАДА! Вы получили ${rewardAmount} монет!`;
+    }
+    
+    db.updateUser(user.username, { 
+        lastChestDate: today,
+        coins: newCoins,
+        xp: newXP
+    });
+    
+    res.json({ 
+        success: true, 
+        message,
+        reward: rewardAmount,
+        rewardType: selectedReward.type,
+        coins: newCoins,
+        xp: newXP
+    });
+});
+
+// API для получения информации о сундуке
+app.post('/api/chest-status', (req, res) => {
+    const { sessionId } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false });
+    
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false });
+    
+    const today = new Date().toDateString();
+    const canOpen = user.lastChestDate !== today;
+    
+    res.json({ 
+        success: true, 
+        canOpen,
+        nextReward: CHEST_REWARDS[Math.floor(Math.random() * CHEST_REWARDS.length)]
+    });
+});
+
 // API для получения информации о серии
 app.post('/api/streak', (req, res) => {
     const { sessionId } = req.body;
