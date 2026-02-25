@@ -626,6 +626,99 @@ app.post('/api/chest', (req, res) => {
     });
 });
 
+app.post('/api/chests', (req, res) => {
+    const { sessionId } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false });
+    
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false });
+    
+    const today = new Date().toDateString();
+    
+    let chestsToday = user.chestsToday || 0;
+    let winsToday = user.winsToday || 0;
+    
+    if (user.lastChestDay !== today) {
+        chestsToday = 0;
+        winsToday = 0;
+    }
+    
+    const maxChestsToday = Math.min(4, winsToday);
+    let currentRarity = user.chestRarity || 1;
+    if (currentRarity > 5) currentRarity = 5;
+    
+    res.json({
+        success: true,
+        chests: {
+            common: Math.max(0, maxChestsToday - chestsToday),
+            rare: 0,
+            epic: 0,
+            legendary: 0
+        }
+    });
+});
+
+app.post('/api/open-chest', (req, res) => {
+    const { sessionId, chestType } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const today = new Date().toDateString();
+    let chestsToday = user.chestsToday || 0;
+    let winsToday = user.winsToday || 0;
+    
+    if (user.lastChestDay !== today) {
+        chestsToday = 0;
+        winsToday = 0;
+    }
+    
+    const maxChestsToday = Math.min(4, winsToday);
+    
+    if (chestsToday >= maxChestsToday) {
+        return res.json({ success: false, message: 'Нет доступных сундуков! Выиграйте больше игр.' });
+    }
+    
+    let currentRarity = user.chestRarity || 1;
+    let newRarity = currentRarity;
+    const upgradeChance = CHEST_RARITIES[currentRarity].chance;
+    
+    if (upgradeChance > 0 && Math.random() * 100 < upgradeChance) {
+        newRarity = Math.min(5, currentRarity + 1);
+    }
+    
+    const baseReward = BASE_CHEST_REWARDS[Math.floor(Math.random() * BASE_CHEST_REWARDS.length)];
+    const baseAmount = Math.floor(Math.random() * (baseReward.max - baseReward.min + 1)) + baseReward.min;
+    
+    const rarityData = CHEST_RARITIES[newRarity];
+    const multiplier = rarityData.minMult + Math.random() * (rarityData.maxMult - rarityData.minMult);
+    const rewardAmount = Math.floor(baseAmount * multiplier);
+    
+    const xpReward = Math.floor(rewardAmount * 0.3);
+    const newCoins = user.coins + rewardAmount;
+    const newXP = user.xp + xpReward;
+    const { level: newLevel, xp: newXPAfterLevel } = calculateLevel(newXP);
+    
+    db.updateUser(user.username, {
+        chestsToday: chestsToday + 1,
+        chestRarity: newRarity,
+        coins: newCoins,
+        xp: newXPAfterLevel
+    });
+    
+    res.json({
+        success: true,
+        rewards: rewardAmount,
+        coins: newCoins,
+        xp: newXPAfterLevel,
+        level: newLevel,
+        message: `Вы получили ${rewardAmount} монет!`
+    });
+});
+
 // API для получения информации о сундуке
 app.post('/api/chest-status', (req, res) => {
     const { sessionId } = req.body;
