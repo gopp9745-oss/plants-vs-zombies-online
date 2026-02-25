@@ -108,6 +108,125 @@ setInterval(() => generateShopItems(), 5 * 60 * 1000);
 
 // ==================== API ====================
 
+// Друзья
+app.post('/api/friends', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const friends = user.friends || [];
+    const friendUsers = [];
+    
+    for (const friendUsername of friends) {
+        const friendUser = await db.findUserByUsername(friendUsername);
+        if (friendUser) {
+            friendUsers.push({
+                username: friendUser.username,
+                level: friendUser.level || 1,
+                wins: friendUser.wins || 0,
+                online: false
+            });
+        }
+    }
+    
+    res.json({ success: true, friends: friendUsers });
+});
+
+app.post('/api/friends/add', async (req, res) => {
+    const { sessionId, friendUsername } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    if (friendUsername.toLowerCase() === user.username.toLowerCase()) {
+        return res.json({ success: false, message: 'Нельзя добавить себя в друзья' });
+    }
+    
+    const friend = await db.findUserByUsername(friendUsername);
+    if (!friend) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const friends = user.friends || [];
+    if (friends.includes(friendUsername)) {
+        return res.json({ success: false, message: 'Игрок уже в друзьях' });
+    }
+    
+    friends.push(friendUsername);
+    await db.updateUser(user.username, { friends });
+    
+    // Добавляем себя к другу
+    const friendFriends = friend.friends || [];
+    if (!friendFriends.includes(user.username)) {
+        friendFriends.push(user.username);
+        await db.updateUser(friend.username, { friends: friendFriends });
+    }
+    
+    res.json({ success: true, message: `${friendUsername} добавлен в друзья!` });
+});
+
+app.post('/api/friends/remove', async (req, res) => {
+    const { sessionId, friendUsername } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const friends = user.friends || [];
+    const newFriends = friends.filter(f => f !== friendUsername);
+    await db.updateUser(user.username, { friends: newFriends });
+    
+    res.json({ success: true, message: `${friendUsername} удалён из друзей` });
+});
+
+// ELO
+app.post('/api/elo', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const elo = user.elo || ELO_CONFIG.initial;
+    const rank = getEloRank(elo);
+    
+    // Получаем топ игроков по ELO
+    const allUsers = await db.getAllUsers();
+    const sortedByElo = allUsers
+        .filter(u => u.role !== 'banned')
+        .sort((a, b) => (b.elo || 1000) - (a.elo || 1000))
+        .slice(0, 10);
+    
+    const userRank = sortedByElo.findIndex(u => u.username === user.username) + 1;
+    
+    res.json({ 
+        success: true, 
+        elo: elo, 
+        seasonElo: user.seasonElo || ELO_CONFIG.initial, 
+        rank: rank,
+        rankPosition: userRank || '—',
+        topPlayers: sortedByElo.map(u => ({
+            username: u.username,
+            elo: u.elo || 1000,
+            level: u.level || 1
+        }))
+    });
+});
+
+function getEloRank(elo) {
+    if (elo >= 2500) return { name: 'Алмаз', icon: '💎', color: '#b9f2ff' };
+    if (elo >= 2000) return { name: 'Платина', icon: '💠', color: '#e5e4e2' };
+    if (elo >= 1500) return { name: 'Золото', icon: '🥇', color: '#ffd700' };
+    if (elo >= 1200) return { name: 'Серебро', icon: '🥈', color: '#c0c0c0' };
+    if (elo >= 1000) return { name: 'Бронза', icon: '🥉', color: '#cd7f32' };
+    return { name: 'Новичок', icon: '🌱', color: '#86efac' };
+}
+
 // Магазин
 app.get('/api/shop', async (req, res) => {
     const sales = await db.getActiveSales();
