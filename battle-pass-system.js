@@ -27,37 +27,37 @@ const BATTLE_PASS_REWARDS = {
     free: {
         1: { type: 'coins', amount: 50 },
         2: { type: 'xp', amount: 100 },
-        3: { type: 'coins', amount: 75 },
+        3: { type: 'crystals', amount: 10 },
         4: { type: 'xp', amount: 150 },
         5: { type: 'rare_unit', name: 'Эпический юнит', amount: 1 },
         10: { type: 'coins', amount: 200 },
-        15: { type: 'xp', amount: 300 },
+        15: { type: 'crystals', amount: 20 },
         20: { type: 'rare_unit', name: 'Эпический юнит', amount: 2 },
         25: { type: 'coins', amount: 500 },
         30: { type: 'legendary_unit', name: 'Легендарный юнит', amount: 1 },
         40: { type: 'xp', amount: 500 },
-        50: { type: 'coins', amount: 1000 },
+        50: { type: 'crystals', amount: 40 },
         60: { type: 'rare_unit', name: 'Эпический юнит', amount: 3 },
         75: { type: 'xp', amount: 750 },
         90: { type: 'coins', amount: 1500 },
         100: { type: 'legendary_unit', name: 'Легендарный юнит', amount: 2 }
     },
     premium: {
-        1: { type: 'coins', amount: 100 },
+        1: { type: 'crystals', amount: 20 },
         2: { type: 'xp', amount: 200 },
         3: { type: 'coins', amount: 150 },
         4: { type: 'xp', amount: 300 },
-        5: { type: 'rare_unit', name: 'Эпический юнит', amount: 2 },
-        10: { type: 'legendary_unit', name: 'Легендарный юнит', amount: 1 },
-        15: { type: 'coins', amount: 400 },
-        20: { type: 'rare_unit', name: 'Эпический юнит', amount: 3 },
+        5: { type: 'plant_chest_rare', amount: 1 },
+        10: { type: 'plant_chest_epic', amount: 1 },
+        15: { type: 'crystals', amount: 40 },
+        20: { type: 'plant_chest_epic', amount: 1 },
         25: { type: 'xp', amount: 600 },
-        30: { type: 'legendary_unit', name: 'Легендарный юнит', amount: 2 },
+        30: { type: 'plant_chest_mythic', amount: 1 },
         40: { type: 'coins', amount: 800 },
-        50: { type: 'legendary_unit', name: 'Легендарный юнит', amount: 3 },
+        50: { type: 'plant_chest_legendary', amount: 1 },
         60: { type: 'xp', amount: 1000 },
         75: { type: 'legendary_unit', name: 'Легендарный юнит', amount: 2 },
-        90: { type: 'coins', amount: 2000 },
+        90: { type: 'crystals', amount: 80 },
         100: { type: 'legendary_unit', name: 'Легендарный юнит', amount: 5 }
     }
 };
@@ -199,11 +199,19 @@ async function claimBattlePassReward(sessionId, tier, isPremium = false) {
         const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
         updateData.xp = newXP;
         if (newLevel > (user.level || 1)) updateData.level = newLevel;
+    } else if (reward.type === 'crystals') {
+        updateData.crystals = (user.crystals || 0) + reward.amount;
     } else if (reward.type === 'rare_unit' || reward.type === 'legendary_unit') {
         // Добавляем редкий юнит в инвентарь
         const inventory = user.inventory || {};
         inventory[reward.name] = { level: reward.amount, type: reward.type.replace('_unit', ''), purchased: new Date().toISOString() };
         updateData.inventory = inventory;
+    } else if (reward.type && reward.type.startsWith('plant_chest_')) {
+        const rarityKey = reward.type.replace('plant_chest_', '');
+        const chests = user.plantChests || { common: 0, rare: 0, epic: 0, mythic: 0, legendary: 0 };
+        if (chests[rarityKey] === undefined) chests[rarityKey] = 0;
+        chests[rarityKey] += reward.amount || 1;
+        updateData.plantChests = chests;
     }
     
     await db.updateUser(user.username, updateData);

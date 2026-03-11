@@ -43,6 +43,7 @@ async function createAdminIfNotExists() {
             password: bcrypt.hashSync('admin123', 10),
             role: 'admin',
             coins: 0,
+            crystals: 0,
             wins: 0,
             losses: 0,
             xp: 0,
@@ -63,6 +64,13 @@ async function createAdminIfNotExists() {
             dailyQuestsCoins: 0,
             dailyQuestsUnits: 0,
             dailyQuestsChat: 0,
+            plantChests: {
+                common: 0,
+                rare: 0,
+                epic: 0,
+                mythic: 0,
+                legendary: 0
+            },
             battlePass: {
                 season: 1,
                 level: 0,
@@ -125,6 +133,15 @@ class MongoDB {
     async createUser(userData) {
         const user = {
             ...userData,
+            coins: 0,
+            crystals: 0,
+            plantChests: {
+                common: 0,
+                rare: 0,
+                epic: 0,
+                mythic: 0,
+                legendary: 0
+            },
             battlePass: {
                 season: 1,
                 level: 0,

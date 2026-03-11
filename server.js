@@ -132,6 +132,15 @@ const MAPS = [
 const ALL_PLANTS = ['sunflower','peashooter','wallnut','cherrybomb','iceshroom','snowpea','chomper','repeater','squash','twinsunflower','melonpult','cattail'];
 const ALL_ZOMBIES = ['zombie','conehead','buckethead','football','dancing','dolphin','digger','bungee','gargantuar','yeti','king','dr'];
 
+// Цены сундуков растений за кристаллы
+const PLANT_CHEST_PRICES = {
+    common: 20,
+    rare: 50,
+    epic: 120,
+    mythic: 250,
+    legendary: 500
+};
+
 // ==================== МАГАЗИН ====================
 let shopItems = [];
 function generateShopItems(userLevel = 1) {
@@ -410,9 +419,17 @@ app.post('/api/login', async (req, res) => {
         success: true, 
         sessionId,
         user: { 
-            username: user.username, role: user.role, coins: user.coins, wins: user.wins, losses: user.losses,
-            xp: user.xp, level: user.level, totalGames: user.totalGames,
-            elo: user.elo || ELO_CONFIG.initial, seasonElo: user.seasonElo || ELO_CONFIG.initial
+            username: user.username,
+            role: user.role,
+            coins: user.coins,
+            crystals: user.crystals || 0,
+            wins: user.wins,
+            losses: user.losses,
+            xp: user.xp,
+            level: user.level,
+            totalGames: user.totalGames,
+            elo: user.elo || ELO_CONFIG.initial,
+            seasonElo: user.seasonElo || ELO_CONFIG.initial
         }
     });
 });
@@ -433,7 +450,17 @@ app.post('/api/check-session', async (req, res) => {
     
     res.json({ 
         success: true, 
-        user: { username: user.username, role: user.role, coins: user.coins, wins: user.wins, losses: user.losses, xp: user.xp, level: user.level, totalGames: user.totalGames }
+        user: {
+            username: user.username,
+            role: user.role,
+            coins: user.coins,
+            crystals: user.crystals || 0,
+            wins: user.wins,
+            losses: user.losses,
+            xp: user.xp,
+            level: user.level,
+            totalGames: user.totalGames
+        }
     });
 });
 
@@ -561,19 +588,23 @@ app.post('/api/daily-reward', (req, res) => {
     }
     
     const totalReward = baseReward + bonusReward;
+    const crystalReward = 1 + Math.floor(newStreak / 3);
     db.updateUser(user.username, { 
         lastDaily: now.toISOString(),
         lastDailyDate: today,
         lastDailyStreak: newStreak,
-        coins: user.coins + totalReward
+        coins: user.coins + totalReward,
+        crystals: (user.crystals || 0) + crystalReward
     });
     
     res.json({ 
         success: true, 
-        message: `Получено ${totalReward} монет!${streakMessage}`, 
+        message: `Получено ${totalReward} монет и ${crystalReward} кристаллов!${streakMessage}`, 
         coins: user.coins + totalReward,
         streak: newStreak,
-        bonus: bonusReward
+        bonus: bonusReward,
+        crystals: (user.crystals || 0) + crystalReward,
+        crystalReward
     });
 });
 
@@ -832,6 +863,54 @@ app.post('/api/chest-status', (req, res) => {
         upgradeChance: upgradeChance,
         chestsUntilNext: Math.max(0, chestsUntilNext),
         chestRarities: CHEST_RARITIES
+    });
+});
+
+// Сундуки растений за кристаллы
+app.post('/api/plant-chests', (req, res) => {
+    const { sessionId } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+    res.json({
+        success: true,
+        crystals: user.crystals || 0,
+        chests: user.plantChests || { common: 0, rare: 0, epic: 0, mythic: 0, legendary: 0 }
+    });
+});
+
+app.post('/api/buy-plant-chest', (req, res) => {
+    const { sessionId, rarity } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+    const price = PLANT_CHEST_PRICES[rarity];
+    if (!price) return res.json({ success: false, message: 'Неизвестная редкость сундука' });
+
+    const currentCrystals = user.crystals || 0;
+    if (currentCrystals < price) {
+        return res.json({ success: false, message: 'Недостаточно кристаллов' });
+    }
+
+    const chests = user.plantChests || { common: 0, rare: 0, epic: 0, mythic: 0, legendary: 0 };
+    chests[rarity] = (chests[rarity] || 0) + 1;
+
+    db.updateUser(user.username, {
+        crystals: currentCrystals - price,
+        plantChests: chests
+    });
+
+    res.json({
+        success: true,
+        message: `Куплен сундук растений (${rarity}) за ${price} кристаллов!`,
+        crystals: currentCrystals - price,
+        chests
     });
 });
 

@@ -921,6 +921,10 @@
                     <div style="font-size:1.2rem;font-weight:bold;color:#4ade80" id="displayWins">0</div>
                     <div style="font-size:0.7rem;color:#94a3b8">🏆 Побед</div>
                 </div>
+                <div style="background:rgba(37,99,235,0.15);padding:10px;border-radius:8px;grid-column:span 2">
+                    <div style="font-size:1.2rem;font-weight:bold;color:#60a5fa" id="displayCrystals">0</div>
+                    <div style="font-size:0.7rem;color:#94a3b8">💎 Кристаллы</div>
+                </div>
             </div>
         </div>
         
@@ -1805,37 +1809,37 @@
                 free: {
                     1: { type: 'coins', amount: 50, name: 'Монеты' },
                     2: { type: 'xp', amount: 100, name: 'Игровой опыт' },
-                    3: { type: 'coins', amount: 75, name: 'Монеты' },
+                    3: { type: 'crystals', amount: 10, name: 'Кристаллы' },
                     4: { type: 'xp', amount: 150, name: 'Игровой опыт' },
                     5: { type: 'rare_unit', amount: 1, name: 'Эпический юнит' },
                     10: { type: 'coins', amount: 200, name: 'Монеты' },
-                    15: { type: 'xp', amount: 300, name: 'Игровой опыт' },
+                    15: { type: 'crystals', amount: 20, name: 'Кристаллы' },
                     20: { type: 'rare_unit', amount: 2, name: 'Эпический юнит' },
                     25: { type: 'coins', amount: 500, name: 'Монеты' },
                     30: { type: 'legendary_unit', amount: 1, name: 'Легендарный юнит' },
                     40: { type: 'xp', amount: 500, name: 'Игровой опыт' },
-                    50: { type: 'coins', amount: 1000, name: 'Монеты' },
+                    50: { type: 'crystals', amount: 40, name: 'Кристаллы' },
                     60: { type: 'rare_unit', amount: 3, name: 'Эпический юнит' },
                     75: { type: 'xp', amount: 750, name: 'Игровой опыт' },
                     90: { type: 'coins', amount: 1500, name: 'Монеты' },
                     100: { type: 'legendary_unit', amount: 2, name: 'Легендарный юнит' }
                 },
                 premium: {
-                    1: { type: 'coins', amount: 100, name: 'Монеты' },
+                    1: { type: 'crystals', amount: 20, name: 'Кристаллы' },
                     2: { type: 'xp', amount: 200, name: 'Игровой опыт' },
                     3: { type: 'coins', amount: 150, name: 'Монеты' },
                     4: { type: 'xp', amount: 300, name: 'Игровой опыт' },
-                    5: { type: 'rare_unit', amount: 2, name: 'Эпический юнит' },
-                    10: { type: 'legendary_unit', amount: 1, name: 'Легендарный юнит' },
-                    15: { type: 'coins', amount: 400, name: 'Монеты' },
-                    20: { type: 'rare_unit', amount: 3, name: 'Эпический юнит' },
+                    5: { type: 'plant_chest_rare', amount: 1, name: 'Сундук растений (редкий)' },
+                    10: { type: 'plant_chest_epic', amount: 1, name: 'Сундук растений (эпический)' },
+                    15: { type: 'crystals', amount: 40, name: 'Кристаллы' },
+                    20: { type: 'plant_chest_epic', amount: 1, name: 'Сундук растений (эпический)' },
                     25: { type: 'xp', amount: 600, name: 'Игровой опыт' },
-                    30: { type: 'legendary_unit', amount: 2, name: 'Легендарный юнит' },
+                    30: { type: 'plant_chest_mythic', amount: 1, name: 'Сундук растений (мифический)' },
                     40: { type: 'coins', amount: 800, name: 'Монеты' },
-                    50: { type: 'legendary_unit', amount: 3, name: 'Легендарный юнит' },
+                    50: { type: 'plant_chest_legendary', amount: 1, name: 'Сундук растений (легендарный)' },
                     60: { type: 'xp', amount: 1000, name: 'Игровой опыт' },
                     75: { type: 'legendary_unit', amount: 2, name: 'Легендарный юнит' },
-                    90: { type: 'coins', amount: 2000, name: 'Монеты' },
+                    90: { type: 'crystals', amount: 80, name: 'Кристаллы' },
                     100: { type: 'legendary_unit', amount: 5, name: 'Легендарный юнит' }
                 }
             }
@@ -2306,6 +2310,7 @@
             document.getElementById('xpToNextLevel').textContent = 'До след. уровня: ' + (xpForNextLevel - userXP) + ' XP';
             document.getElementById('displayCoins').textContent = currentUser.coins || 0;
             document.getElementById('displayWins').textContent = currentUser.wins || 0;
+            document.getElementById('displayCrystals').textContent = currentUser.crystals || 0;
             
             // Загружаем сундуки
             loadChests();
@@ -2328,7 +2333,7 @@
                 msg.style.display = 'block';
                 if (data.success) {
                     sessionId = data.sessionId; localStorage.setItem('sessionId', sessionId);
-                    currentUser = data.user;
+                    currentUser = data.user || {};
                     // Показываем обучение после регистрации (новым игрокам)
                     if (type === 'register') {
                         setTimeout(() => startTutorial(), 1000);
