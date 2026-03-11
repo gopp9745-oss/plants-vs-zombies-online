@@ -375,6 +375,13 @@ class MongoDB {
         return result[0]?.total || 0;
     }
     
+    async getTotalCrystals() {
+        const result = await getDb().collection('users').aggregate([
+            { $group: { _id: null, total: { $sum: '$crystals' } } }
+        ]).toArray();
+        return result[0]?.total || 0;
+    }
+    
     // Give coins to all users
     async giveCoinsToAll(amount) {
         return await getDb().collection('users').updateMany(

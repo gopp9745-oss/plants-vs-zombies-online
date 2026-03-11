@@ -1205,6 +1205,7 @@
                     <div class="admin-stat"><div class="admin-stat-value" id="adminTotalWins">0</div><div>Побед</div></div>
                     <div class="admin-stat"><div class="admin-stat-value" id="adminTotalGames">0</div><div>Игр</div></div>
                     <div class="admin-stat"><div class="admin-stat-value" id="adminTotalCoins">0</div><div>Монет</div></div>
+                    <div class="admin-stat"><div class="admin-stat-value" id="adminTotalCrystals">0</div><div>Кристаллов</div></div>
                 </div>
                 <div class="admin-section">
                     <h3>📊 Доп. статистика</h3>
@@ -1293,6 +1294,48 @@
                         <input type="text" id="tcUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
                         <input type="number" id="tcAmount" placeholder="Количество" required style="padding:8px;border-radius:6px;">
                         <button type="submit" class="btn btn-danger">Забрать</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>💎 Управление кристаллами</h3>
+                    <form class="admin-form" onsubmit="adminGiveCrystals(event)">
+                        <input type="text" id="gcrUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="gcrAmount" placeholder="Кристаллы" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-primary">Выдать</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🌱 Сундуки растений</h3>
+                    <form class="admin-form" onsubmit="adminGivePlantChest(event)">
+                        <input type="text" id="pcUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <select id="pcRarity" required style="padding:8px;border-radius:6px;">
+                            <option value="common">Обычный</option>
+                            <option value="rare">Редкий</option>
+                            <option value="epic">Эпический</option>
+                            <option value="mythic">Мифический</option>
+                            <option value="legendary">Легендарный</option>
+                        </select>
+                        <input type="number" id="pcAmount" placeholder="Количество" value="1" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-secondary">Выдать сундуки</button>
+                    </form>
+                </div>
+                
+                <div class="admin-section">
+                    <h3>🎖️ Battle Pass</h3>
+                    <form class="admin-form" onsubmit="adminSetBattlePassLevel(event)">
+                        <input type="text" id="bpUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <input type="number" id="bpLevel" placeholder="Уровень Battle Pass" required style="padding:8px;border-radius:6px;">
+                        <button type="submit" class="btn btn-warning">Установить уровень</button>
+                    </form>
+                    <form class="admin-form" style="margin-top:10px" onsubmit="adminSetBattlePassPremium(event)">
+                        <input type="text" id="bpPremiumUsername" placeholder="Ник игрока" required style="padding:8px;border-radius:6px;">
+                        <select id="bpPremiumValue" required style="padding:8px;border-radius:6px;">
+                            <option value="true">Включить Premium</option>
+                            <option value="false">Выключить Premium</option>
+                        </select>
+                        <button type="submit" class="btn btn-secondary">Обновить Premium</button>
                     </form>
                 </div>
                 
@@ -2676,12 +2719,18 @@
                     document.getElementById('adminTotalWins').textContent = data.stats.totalWins;
                     document.getElementById('adminTotalGames').textContent = data.stats.totalGames;
                     document.getElementById('adminTotalCoins').textContent = data.stats.totalCoins;
+                    document.getElementById('adminTotalCrystals').textContent = data.stats.totalCrystals || 0;
                 }
                 const res2 = await fetch('/api/admin/users', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
                 const data2 = await res2.json();
                 if (data2.success) {
                     document.getElementById('adminUsersList').innerHTML = data2.users.map(u =>
-                        `<div class="admin-user-row"><span>${u.username}</span><span>${u.role}</span><span>${u.coins}💰</span><span>${u.wins}п</span></div>`
+                        `<div class="admin-user-row">
+                            <span>${u.username}</span>
+                            <span>${u.role}${u.battlePassPremium ? ' ⭐BP' : ''}</span>
+                            <span>${u.coins}💰 / ${u.crystals || 0}💎</span>
+                            <span>${u.wins}п</span>
+                        </div>`
                     ).join('');
                 }
             } catch(e) {}
@@ -2807,6 +2856,59 @@
             
             try {
                 const res = await fetch('/api/admin/take-coins', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, coins: parseInt(coins)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+
+        async function adminGiveCrystals(e) {
+            e.preventDefault();
+            const username = document.getElementById('gcrUsername').value.trim();
+            const crystals = document.getElementById('gcrAmount').value;
+            if (!username || !crystals) return;
+            try {
+                const res = await fetch('/api/admin/give-crystals', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, crystals: parseInt(crystals)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+
+        async function adminGivePlantChest(e) {
+            e.preventDefault();
+            const username = document.getElementById('pcUsername').value.trim();
+            const rarity = document.getElementById('pcRarity').value;
+            const amount = document.getElementById('pcAmount').value;
+            if (!username || !rarity || !amount) return;
+            try {
+                const res = await fetch('/api/admin/give-plant-chest', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, rarity, amount: parseInt(amount)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+
+        async function adminSetBattlePassLevel(e) {
+            e.preventDefault();
+            const username = document.getElementById('bpUsername').value.trim();
+            const level = document.getElementById('bpLevel').value;
+            if (!username || !level) return;
+            try {
+                const res = await fetch('/api/admin/set-battlepass-level', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, level: parseInt(level)})});
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) e.target.reset();
+            } catch(e) { alert('Ошибка'); }
+        }
+
+        async function adminSetBattlePassPremium(e) {
+            e.preventDefault();
+            const username = document.getElementById('bpPremiumUsername').value.trim();
+            const value = document.getElementById('bpPremiumValue').value;
+            if (!username) return;
+            try {
+                const res = await fetch('/api/admin/set-battlepass-premium', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId, username, isPremium: value})});
                 const data = await res.json();
                 alert(data.message);
                 if (data.success) e.target.reset();

@@ -1202,7 +1202,15 @@ app.post('/api/admin/stats', (req, res) => {
     const user = db.findUser({ _id: session.userId });
     if (!user || user.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    const stats = { totalUsers: db.getUsersCount(), totalWins: db.getTotalWins(), totalGames: db.getTotalGames(), totalCoins: db.getTotalCoins(), promoCodes: db.getPromosCount(), totalMatches: db.getMatchesCount() };
+    const stats = {
+        totalUsers: db.getUsersCount(),
+        totalWins: db.getTotalWins(),
+        totalGames: db.getTotalGames(),
+        totalCoins: db.getTotalCoins(),
+        totalCrystals: db.getTotalCrystals(),
+        promoCodes: db.getPromosCount(),
+        totalMatches: db.getMatchesCount()
+    };
     res.json({ success: true, stats });
 });
 
@@ -1214,7 +1222,7 @@ app.post('/api/admin/users', (req, res) => {
     const user = db.findUser({ _id: session.userId });
     if (!user || user.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    res.json({ success: true, users: db.getAllUsers().map(u => ({ username: u.username, role: u.role, coins: u.coins, wins: u.wins, level: u.level })) });
+    res.json({ success: true, users: db.getAllUsers().map(u => ({ username: u.username, role: u.role, coins: u.coins, crystals: u.crystals || 0, wins: u.wins, level: u.level, battlePassPremium: !!u.battlePass?.isPremium })) });
 });
 
 app.post('/api/admin/create-promo', (req, res) => {
@@ -1370,6 +1378,118 @@ app.post('/api/admin/take-coins', (req, res) => {
     const newCoins = Math.max(0, target.coins - parseInt(coins));
     db.updateUser(username, { coins: newCoins });
     res.json({ success: true, message: `У игрока ${username} забрано ${coins} монет!` });
+});
+
+// Выдать кристаллы
+app.post('/api/admin/give-crystals', (req, res) => {
+    const { sessionId, username, crystals } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = db.findUserByUsername(username);
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const amount = parseInt(crystals);
+    db.updateUser(username, { crystals: (target.crystals || 0) + amount });
+    res.json({ success: true, message: `Игроку ${username} выдано ${amount} кристаллов!` });
+});
+
+// Выдать сундук растений
+app.post('/api/admin/give-plant-chest', (req, res) => {
+    const { sessionId, username, rarity, amount } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = db.findUserByUsername(username);
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const chests = target.plantChests || { common: 0, rare: 0, epic: 0, mythic: 0, legendary: 0 };
+    const key = rarity;
+    if (chests[key] === undefined) chests[key] = 0;
+    chests[key] += parseInt(amount) || 1;
+    
+    db.updateUser(username, { plantChests: chests });
+    res.json({ success: true, message: `Игроку ${username} выдано ${amount} сундуков растений (${rarity})!` });
+});
+
+// Управление Battle Pass (уровень)
+app.post('/api/admin/set-battlepass-level', (req, res) => {
+    const { sessionId, username, level } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = db.findUserByUsername(username);
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const bp = target.battlePass || {
+        season: 1,
+        level: 0,
+        xp: 0,
+        totalXp: 0,
+        claimedRewards: [],
+        quests: [],
+        questsDate: null,
+        currentTier: 1,
+        tierXp: 0,
+        maxTierXp: 1000,
+        freeRewardsClaimed: [],
+        premiumRewardsClaimed: [],
+        isPremium: false,
+        premiumRequestedAt: null
+    };
+    bp.level = parseInt(level);
+    if (bp.level < 0) bp.level = 0;
+    bp.xp = 0;
+    
+    db.updateUser(username, { battlePass: bp });
+    res.json({ success: true, message: `Уровень Battle Pass игрока ${username} изменён на ${bp.level}!` });
+});
+
+// Управление Battle Pass (Premium)
+app.post('/api/admin/set-battlepass-premium', (req, res) => {
+    const { sessionId, username, isPremium } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const admin = db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = db.findUserByUsername(username);
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const bp = target.battlePass || {
+        season: 1,
+        level: 0,
+        xp: 0,
+        totalXp: 0,
+        claimedRewards: [],
+        quests: [],
+        questsDate: null,
+        currentTier: 1,
+        tierXp: 0,
+        maxTierXp: 1000,
+        freeRewardsClaimed: [],
+        premiumRewardsClaimed: [],
+        isPremium: false,
+        premiumRequestedAt: null
+    };
+    const premium = isPremium === true || isPremium === 'true' || isPremium === 1 || isPremium === '1';
+    bp.isPremium = premium;
+    if (premium) {
+        bp.premiumRequestedAt = bp.premiumRequestedAt || new Date();
+    }
+    
+    db.updateUser(username, { battlePass: bp });
+    res.json({ success: true, message: `Premium Battle Pass для ${username} ${premium ? 'включён' : 'отключён'}.` });
 });
 
 // Сброс квестов всем
