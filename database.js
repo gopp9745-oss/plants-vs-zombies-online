@@ -71,6 +71,7 @@ async function createAdminIfNotExists() {
                 mythic: 0,
                 legendary: 0
             },
+            notifications: [],
             battlePass: {
                 season: 1,
                 level: 0,
@@ -142,6 +143,7 @@ class MongoDB {
                 mythic: 0,
                 legendary: 0
             },
+            notifications: [],
             battlePass: {
                 season: 1,
                 level: 0,

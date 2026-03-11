@@ -1194,6 +1194,43 @@ app.post('/api/battle-pass/request-premium', async (req, res) => {
 });
 
 // ==================== ADMIN API ====================
+function createRewardNotification({ title, subtitle, image, rarityColor, extra }) {
+    return {
+        id: 'reward_' + Date.now() + '_' + Math.floor(Math.random() * 100000),
+        type: 'reward',
+        title,
+        subtitle: subtitle || '',
+        image: image || '',
+        rarityColor: rarityColor || '#fbbf24',
+        extra: extra || {},
+        createdAt: new Date().toISOString()
+    };
+}
+
+function pushNotificationToUser(username, notification) {
+    const target = db.findUserByUsername(username);
+    if (!target) return false;
+    const notifications = target.notifications || [];
+    notifications.push(notification);
+    db.updateUser(username, { notifications });
+    return true;
+}
+
+// Забрать/получить уведомления (и очистить очередь)
+app.post('/api/notifications/poll', (req, res) => {
+    const { sessionId } = req.body;
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const notifications = user.notifications || [];
+    if (notifications.length) {
+        db.updateUser(user.username, { notifications: [] });
+    }
+    res.json({ success: true, notifications });
+});
 app.post('/api/admin/stats', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
@@ -1249,6 +1286,13 @@ app.post('/api/admin/give-coins', (req, res) => {
     if (!target) return res.json({ success: false, message: 'Игрок не найден' });
     
     db.updateUser(username, { coins: target.coins + parseInt(coins) });
+    pushNotificationToUser(username, createRewardNotification({
+        title: 'Получены монеты!',
+        subtitle: `+${parseInt(coins)} монет`,
+        image: '💰',
+        rarityColor: '#fbbf24',
+        extra: { kind: 'coins', amount: parseInt(coins) }
+    }));
     res.json({ success: true, message: `Игроку ${username} выдано ${coins} монет!` });
 });
 
@@ -1394,6 +1438,13 @@ app.post('/api/admin/give-crystals', (req, res) => {
     
     const amount = parseInt(crystals);
     db.updateUser(username, { crystals: (target.crystals || 0) + amount });
+    pushNotificationToUser(username, createRewardNotification({
+        title: 'Получены кристаллы!',
+        subtitle: `+${amount} кристаллов`,
+        image: '💎',
+        rarityColor: '#60a5fa',
+        extra: { kind: 'crystals', amount }
+    }));
     res.json({ success: true, message: `Игроку ${username} выдано ${amount} кристаллов!` });
 });
 
@@ -1415,6 +1466,13 @@ app.post('/api/admin/give-plant-chest', (req, res) => {
     chests[key] += parseInt(amount) || 1;
     
     db.updateUser(username, { plantChests: chests });
+    pushNotificationToUser(username, createRewardNotification({
+        title: 'Получен сундук растений!',
+        subtitle: `${rarity} x${parseInt(amount) || 1}`,
+        image: '📦🌱',
+        rarityColor: ({ common:'#9ca3af', rare:'#3b82f6', epic:'#8b5cf6', mythic:'#f59e0b', legendary:'#ef4444' }[rarity]) || '#fbbf24',
+        extra: { kind: 'plantChest', rarity, amount: parseInt(amount) || 1 }
+    }));
     res.json({ success: true, message: `Игроку ${username} выдано ${amount} сундуков растений (${rarity})!` });
 });
 
@@ -1489,6 +1547,13 @@ app.post('/api/admin/set-battlepass-premium', (req, res) => {
     }
     
     db.updateUser(username, { battlePass: bp });
+    pushNotificationToUser(username, createRewardNotification({
+        title: 'Battle Pass Premium',
+        subtitle: premium ? 'Premium активирован!' : 'Premium отключён',
+        image: '🎖️💎',
+        rarityColor: premium ? '#a855f7' : '#64748b',
+        extra: { kind: 'battlePassPremium', value: premium }
+    }));
     res.json({ success: true, message: `Premium Battle Pass для ${username} ${premium ? 'включён' : 'отключён'}.` });
 });
 
