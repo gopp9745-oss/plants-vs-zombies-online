@@ -884,51 +884,54 @@
             </div>
             
             <div class="center-buttons">
-                <button class="btn btn-primary game-btn" onclick="findGame()">
-                    <span>🎯</span> Найти игру
-                </button>
-                <button class="btn btn-secondary game-btn" onclick="findBotGame()">
-                    <span>🤖</span> Играть с ботом
-                </button>
+            <button class="btn btn-primary game-btn" onclick="findGame()">
+                <span>🎯</span> Найти игру
+            </button>
+            <button class="btn btn-secondary game-btn" onclick="findBotGame()">
+                <span>🤖</span> Играть с ботом
+            </button>
+            <button class="btn btn-warning game-btn" onclick="showBattlePass()">
+                <span>🎖️</span> Battle Pass
+            </button>
+        </div>
+        
+        <!-- Секция наград и статистики - всегда видна -->
+        <div style="margin-top:15px;padding:15px;background:rgba(255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.2);text-align:center;width:100%;max-width:300px">
+            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:12px">📊 Ваша статистика</div>
+            
+            <!-- Уровень и XP -->
+            <div style="margin-bottom:15px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                    <span style="color:#fbbf24;font-weight:bold">⭐ Уровень <span id="displayLevel">1</span></span>
+                    <span style="color:#4ade80;font-size:0.8rem" id="xpDisplay">0 XP</span>
+                </div>
+                <div style="background:rgba(255,255,0.2);border-radius:10px;height:10px;overflow:hidden">
+                    <div id="xpProgressBar" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);height:100%;width:0%;transition:width 0.3s"></div>
+                </div>
+                <div style="font-size:0.7rem;color:#94a3b8;margin-top:3px" id="xpToNextLevel">До след. уровня: 100 XP</div>
             </div>
             
-            <!-- Секция наград и статистики - всегда видна -->
-            <div style="margin-top:15px;padding:15px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.2);text-align:center;width:100%;max-width:300px">
-                <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:12px">📊 Ваша статистика</div>
-                
-                <!-- Уровень и XP -->
-                <div style="margin-bottom:15px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-                        <span style="color:#fbbf24;font-weight:bold">⭐ Уровень <span id="displayLevel">1</span></span>
-                        <span style="color:#4ade80;font-size:0.8rem" id="xpDisplay">0 XP</span>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.2);border-radius:10px;height:10px;overflow:hidden">
-                        <div id="xpProgressBar" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);height:100%;width:0%;transition:width 0.3s"></div>
-                    </div>
-                    <div style="font-size:0.7rem;color:#94a3b8;margin-top:3px" id="xpToNextLevel">До след. уровня: 100 XP</div>
+            <!-- Статистика -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div style="background:rgba(255,255,0.1);padding:10px;border-radius:8px">
+                    <div style="font-size:1.2rem;font-weight:bold;color:#fbbf24" id="displayCoins">0</div>
+                    <div style="font-size:0.7rem;color:#94a3b8">💰 Монет</div>
                 </div>
-                
-                <!-- Статистика -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                    <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px">
-                        <div style="font-size:1.2rem;font-weight:bold;color:#fbbf24" id="displayCoins">0</div>
-                        <div style="font-size:0.7rem;color:#94a3b8">💰 Монет</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px">
-                        <div style="font-size:1.2rem;font-weight:bold;color:#4ade80" id="displayWins">0</div>
-                        <div style="font-size:0.7rem;color:#94a3b8">🏆 Побед</div>
-                    </div>
+                <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px">
+                    <div style="font-size:1.2rem;font-weight:bold;color:#4ade80" id="displayWins">0</div>
+                    <div style="font-size:0.7rem;color:#94a3b8">🏆 Побед</div>
                 </div>
-            </div>
-            
-            <!-- Шкала сундуков под кнопками игры -->
-            <div id="chestBar" style="display:none;margin-top:15px;padding:12px;background:rgba(255,255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.2);text-align:center;width:100%;max-width:300px">
-                <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px">🎁 Доступные сундуки</div>
-                <div style="display:flex;justify-content:center;gap:10px;margin-bottom:8px" id="chestIcons"></div>
-                <div style="font-size:0.8rem;color:#fbbf24" id="chestInfo"></div>
-                <button class="btn btn-primary" style="margin-top:10px;padding:8px 20px;font-size:0.85rem" onclick="openChest()">🎁 Открыть сундук</button>
             </div>
         </div>
+        
+        <!-- Шкала сундуков под кнопками игры - ВСЕГДА ВИДИМА -->
+        <div id="chestBar" style="margin-top:15px;padding:12px;background:rgba(255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,0.2);text-align:center;width:100%;max-width:300px">
+            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px">🎁 Сундуки за победы</div>
+            <div style="display:flex;justify-content:center;gap:10px;margin-bottom:8px" id="chestIcons"></div>
+            <div style="font-size:0.8rem;color:#fbbf24" id="chestInfo">Загружаем...</div>
+            <button class="btn btn-primary" style="margin-top:10px;padding:8px 20px;font-size:0.85rem" onclick="openChest()">🎁 Открыть сундук</button>
+        </div>
+    </div>
         
         <!-- ПРАВАЯ СТОРОНА - Статистика и другое -->
         <div class="profile-right-panel">
@@ -1044,7 +1047,59 @@
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
     </div>
-    
+
+    <!-- BATTLE PASS -->
+    <div id="battlePassScreen" class="screen">
+        <h2 class="leaderboard-title" style="color:#fbbf24">🎖️ Battle Pass</h2>
+        <div class="match-history-container" style="max-width:700px">
+            <!-- Общая информация -->
+            <div id="battlePassHeader" style="margin-bottom:20px">
+                <div style="display:flex;flex-wrap:wrap;gap:15px;align-items:center;justify-content:space-between">
+                    <div>
+                        <div style="font-size:1rem;color:#94a3b8">Текущий сезон</div>
+                        <div style="font-size:1.4rem;font-weight:bold"><span id="bpSeason">1</span> сезон</div>
+                    </div>
+                    <div style="flex:1;min-width:220px;margin:0 15px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                            <span style="color:#fbbf24;font-weight:bold">Уровень Battle Pass: <span id="bpLevel">0</span></span>
+                            <span style="font-size:0.8rem;color:#94a3b8"><span id="bpXpCurrent">0</span>/<span id="bpXpPerLevel">1000</span> XP</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:12px;overflow:hidden">
+                            <div id="bpLevelProgress" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);height:100%;width:0%;transition:width 0.3s"></div>
+                        </div>
+                        <div style="font-size:0.75rem;color:#94a3b8;margin-top:3px" id="bpTotalXpInfo"></div>
+                    </div>
+                    <div style="flex:1;min-width:220px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                            <span style="color:#4ade80;font-weight:bold">Текущий тир: <span id="bpTier">1</span></span>
+                            <span style="font-size:0.8rem;color:#94a3b8"><span id="bpTierXpCurrent">0</span>/<span id="bpTierXpMax">1000</span> XP</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:12px;overflow:hidden">
+                            <div id="bpTierProgress" style="background:linear-gradient(90deg,#22c55e,#16a34a);height:100%;width:0%;transition:width 0.3s"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Квесты Battle Pass -->
+            <div style="margin-bottom:20px">
+                <h3 style="margin-bottom:8px;color:#22c55e">📋 Квесты Battle Pass</h3>
+                <div id="battlePassQuestTimer" style="text-align:left;margin-bottom:10px;color:#f59e0b;font-size:0.85rem"></div>
+                <div id="battlePassQuestsList"></div>
+            </div>
+
+            <!-- Награды Battle Pass -->
+            <div>
+                <h3 style="margin-bottom:8px;color:#fbbf24">🎁 Награды за уровни</h3>
+                <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:8px">
+                    Зелёные награды — бесплатные, фиолетовые — премиум. Получайте уровни, чтобы открывать новые награды.
+                </div>
+                <div id="battlePassRewards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px"></div>
+            </div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
+    </div>
+
     <div id="questsScreen" class="screen">
         <h2 class="leaderboard-title" style="color:#22c55e">📋 Ежедневные квесты</h2>
         <div id="questTimer" style="text-align:center;margin-bottom:15px;color:#f59e0b;font-size:0.9rem"></div>
@@ -1705,6 +1760,251 @@
             document.getElementById('authSubmitBtn').textContent = tab==='login'?'Войти':'Регистрация';
         }
         
+        // === BATTLE PASS (КЛИЕНТ) ===
+        const BATTLE_PASS_CLIENT_CONFIG = {
+            xpPerLevel: 1000,
+            // Набор ключевых уровней для отображения наград (чтобы не засорять экран 100 уровнями)
+            displayTiers: [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 90, 100],
+            rewards: {
+                free: {
+                    1: { type: 'coins', amount: 50, name: 'Монеты' },
+                    2: { type: 'xp', amount: 100, name: 'Игровой опыт' },
+                    3: { type: 'coins', amount: 75, name: 'Монеты' },
+                    4: { type: 'xp', amount: 150, name: 'Игровой опыт' },
+                    5: { type: 'rare_unit', amount: 1, name: 'Эпический юнит' },
+                    10: { type: 'coins', amount: 200, name: 'Монеты' },
+                    15: { type: 'xp', amount: 300, name: 'Игровой опыт' },
+                    20: { type: 'rare_unit', amount: 2, name: 'Эпический юнит' },
+                    25: { type: 'coins', amount: 500, name: 'Монеты' },
+                    30: { type: 'legendary_unit', amount: 1, name: 'Легендарный юнит' },
+                    40: { type: 'xp', amount: 500, name: 'Игровой опыт' },
+                    50: { type: 'coins', amount: 1000, name: 'Монеты' },
+                    60: { type: 'rare_unit', amount: 3, name: 'Эпический юнит' },
+                    75: { type: 'xp', amount: 750, name: 'Игровой опыт' },
+                    90: { type: 'coins', amount: 1500, name: 'Монеты' },
+                    100: { type: 'legendary_unit', amount: 2, name: 'Легендарный юнит' }
+                },
+                premium: {
+                    1: { type: 'coins', amount: 100, name: 'Монеты' },
+                    2: { type: 'xp', amount: 200, name: 'Игровой опыт' },
+                    3: { type: 'coins', amount: 150, name: 'Монеты' },
+                    4: { type: 'xp', amount: 300, name: 'Игровой опыт' },
+                    5: { type: 'rare_unit', amount: 2, name: 'Эпический юнит' },
+                    10: { type: 'legendary_unit', amount: 1, name: 'Легендарный юнит' },
+                    15: { type: 'coins', amount: 400, name: 'Монеты' },
+                    20: { type: 'rare_unit', amount: 3, name: 'Эпический юнит' },
+                    25: { type: 'xp', amount: 600, name: 'Игровой опыт' },
+                    30: { type: 'legendary_unit', amount: 2, name: 'Легендарный юнит' },
+                    40: { type: 'coins', amount: 800, name: 'Монеты' },
+                    50: { type: 'legendary_unit', amount: 3, name: 'Легендарный юнит' },
+                    60: { type: 'xp', amount: 1000, name: 'Игровой опыт' },
+                    75: { type: 'legendary_unit', amount: 2, name: 'Легендарный юнит' },
+                    90: { type: 'coins', amount: 2000, name: 'Монеты' },
+                    100: { type: 'legendary_unit', amount: 5, name: 'Легендарный юнит' }
+                }
+            }
+        };
+
+        let battlePassData = null;
+        let battlePassQuestTimerInterval = null;
+
+        function showBattlePass() {
+            showScreen('battlePassScreen');
+            loadBattlePass();
+        }
+
+        async function loadBattlePass() {
+            try {
+                const res = await fetch('/api/battle-pass/status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                const data = await res.json();
+                if (!data.success || !data.battlePass) {
+                    alert(data.message || 'Не удалось загрузить Battle Pass');
+                    return;
+                }
+                battlePassData = data.battlePass;
+                renderBattlePassHeader();
+                renderBattlePassRewards();
+                loadBattlePassQuests();
+            } catch (e) {
+                console.error(e);
+                alert('Ошибка загрузки Battle Pass');
+            }
+        }
+
+        async function loadBattlePassQuests() {
+            try {
+                const res = await fetch('/api/battle-pass/quests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                const data = await res.json();
+                if (!data.success || !data.quests) return;
+
+                if (!battlePassData) battlePassData = {};
+                battlePassData.quests = data.quests;
+                battlePassData.questsDate = data.date;
+
+                const list = document.getElementById('battlePassQuestsList');
+                list.innerHTML = data.quests.map(q => {
+                    const target = q.target || 1;
+                    const progress = q.progress || 0;
+                    const percent = Math.min(100, (progress / target) * 100);
+                    const completed = !!q.completed || progress >= target;
+                    return `<div class="match-row" style="flex-direction:column;opacity:${completed ? 1 : 0.9}">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
+                            <span style="font-size:1.8rem">${q.icon || '📋'}</span>
+                            <div style="flex:1">
+                                <div style="font-weight:bold">${q.name}</div>
+                                <div style="font-size:0.75rem;color:#94a3b8">${q.desc}</div>
+                            </div>
+                            <div style="text-align:right">
+                                <div style="color:#fbbf24;font-size:0.8rem">+${q.reward} XP</div>
+                                <div style="font-size:0.75rem;color:${completed ? '#4ade80' : '#94a3b8'}">${completed ? 'Выполнено' : progress + '/' + target}</div>
+                            </div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:12px;overflow:hidden">
+                            <div style="background:linear-gradient(90deg,#22c55e,#16a34a);height:100%;width:${percent}%;transition:width 0.3s"></div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                startBattlePassQuestTimer();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderBattlePassHeader() {
+            if (!battlePassData) return;
+            const seasonEl = document.getElementById('bpSeason');
+            const levelEl = document.getElementById('bpLevel');
+            const xpCurrentEl = document.getElementById('bpXpCurrent');
+            const xpPerLevelEl = document.getElementById('bpXpPerLevel');
+            const levelProgress = document.getElementById('bpLevelProgress');
+            const totalXpInfo = document.getElementById('bpTotalXpInfo');
+            const tierEl = document.getElementById('bpTier');
+            const tierXpCurrentEl = document.getElementById('bpTierXpCurrent');
+            const tierXpMaxEl = document.getElementById('bpTierXpMax');
+            const tierProgress = document.getElementById('bpTierProgress');
+
+            const level = battlePassData.level || 0;
+            const xp = battlePassData.xp || 0;
+            const totalXp = battlePassData.totalXp || 0;
+            const tier = battlePassData.currentTier || 1;
+            const tierXp = battlePassData.tierXp || 0;
+            const tierMax = battlePassData.maxTierXp || 1000;
+            const season = battlePassData.season || 1;
+
+            const xpPerLevel = BATTLE_PASS_CLIENT_CONFIG.xpPerLevel;
+
+            seasonEl.textContent = season;
+            levelEl.textContent = level;
+            xpCurrentEl.textContent = xp;
+            xpPerLevelEl.textContent = xpPerLevel;
+            levelProgress.style.width = Math.min(100, (xp / xpPerLevel) * 100) + '%';
+            totalXpInfo.textContent = `Всего набрано XP: ${totalXp}`;
+
+            tierEl.textContent = tier;
+            tierXpCurrentEl.textContent = tierXp;
+            tierXpMaxEl.textContent = tierMax;
+            tierProgress.style.width = Math.min(100, (tierXp / tierMax) * 100) + '%';
+        }
+
+        function renderBattlePassRewards() {
+            if (!battlePassData) return;
+            const container = document.getElementById('battlePassRewards');
+            const level = battlePassData.level || 0;
+            const freeClaimed = battlePassData.freeRewardsClaimed || [];
+            const premiumClaimed = battlePassData.premiumRewardsClaimed || [];
+
+            const tiers = BATTLE_PASS_CLIENT_CONFIG.displayTiers;
+            const rewards = BATTLE_PASS_CLIENT_CONFIG.rewards;
+
+            container.innerHTML = tiers.map(tier => {
+                const free = rewards.free[tier];
+                const premium = rewards.premium[tier];
+                const freeId = `${tier}_free`;
+                const premiumId = `${tier}_premium`;
+                const freeAvailable = level >= tier;
+                const premiumAvailable = level >= tier;
+                const freeIsClaimed = freeClaimed.includes(freeId);
+                const premiumIsClaimed = premiumClaimed.includes(premiumId);
+
+                const freeStatus = free
+                    ? freeIsClaimed ? 'Получено' : (freeAvailable ? 'Доступно' : 'Закрыто')
+                    : '—';
+                const premiumStatus = premium
+                    ? premiumIsClaimed ? 'Получено' : (premiumAvailable ? 'Доступно' : 'Закрыто')
+                    : '—';
+
+                const freeColor = freeIsClaimed ? '#4ade80' : (freeAvailable ? '#fbbf24' : '#64748b');
+                const premiumColor = premiumIsClaimed ? '#a855f7' : (premiumAvailable ? '#f97316' : '#64748b');
+
+                return `<div style="background:rgba(15,23,42,0.8);padding:10px;border-radius:10px;border:1px solid rgba(148,163,184,0.4)">
+                    <div style="font-weight:bold;margin-bottom:4px">Уровень ${tier}</div>
+                    <div style="font-size:0.8rem;margin-bottom:6px;color:#94a3b8">Достигается при уровне Battle Pass ≥ ${tier}</div>
+                    <div style="font-size:0.8rem;margin-bottom:4px">
+                        <div style="color:${freeColor};margin-bottom:2px">
+                            <span>Бесплатно: ${free ? `${free.name} x${free.amount}` : '—'}</span><br>
+                            <span style="font-size:0.75rem">${freeStatus}</span>
+                        </div>
+                        <div style="color:${premiumColor}">
+                            <span>Премиум: ${premium ? `${premium.name} x${premium.amount}` : '—'}</span><br>
+                            <span style="font-size:0.75rem">${premiumStatus}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:4px">
+                        ${free && freeAvailable && !freeIsClaimed ? `<button class="btn btn-primary" style="flex:1;padding:6px 8px;font-size:0.75rem" onclick="claimBattlePassReward(${tier}, false)">Забрать бесплатно</button>` : ''}
+                        ${premium && premiumAvailable && !premiumIsClaimed ? `<button class="btn btn-secondary" style="flex:1;padding:6px 8px;font-size:0.75rem" onclick="claimBattlePassReward(${tier}, true)">Премиум награда</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function claimBattlePassReward(tier, isPremium) {
+            try {
+                const res = await fetch('/api/battle-pass/claim-reward', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, tier, isPremium })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.message || 'Не удалось получить награду');
+                    return;
+                }
+                alert(data.message || 'Награда получена!');
+                // После успешного получения награды обновляем данные Battle Pass и профиль
+                loadBattlePass();
+                loadProfile(); // чтобы обновились монеты / уровень / инвентарь
+            } catch (e) {
+                console.error(e);
+                alert('Ошибка получения награды');
+            }
+        }
+
+        function startBattlePassQuestTimer() {
+            if (battlePassQuestTimerInterval) clearInterval(battlePassQuestTimerInterval);
+            const el = document.getElementById('battlePassQuestTimer');
+            if (!el) return;
+            battlePassQuestTimerInterval = setInterval(() => {
+                const now = new Date();
+                const tomorrow = new Date(now);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(0, 0, 0, 0);
+                const diff = tomorrow - now;
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((diff % (1000 * 60)) / 1000);
+                el.textContent = 'Новые квесты Battle Pass через: ' + hours + 'ч ' + mins + 'м ' + secs + 'с';
+            }, 1000);
+        }
+
         // === СИСТЕМА СУНДУКОВ ===
         let userChests = { common: 0, rare: 0, epic: 0, legendary: 0 };
         
@@ -1723,6 +2023,8 @@
             const chestBar = document.getElementById('chestBar');
             const chestIcons = document.getElementById('chestIcons');
             const chestInfo = document.getElementById('chestInfo');
+            
+            if (!chestBar || !chestIcons || !chestInfo) return;
             
             const totalChests = userChests.common + userChests.rare + userChests.epic + userChests.legendary;
             
