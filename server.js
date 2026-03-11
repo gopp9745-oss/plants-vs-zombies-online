@@ -52,6 +52,48 @@ const SEASONS = [
     { id: 5, name: 'Сезон 5: Новая Эра', startDate: '2025-03-01', endDate: '2025-05-31', reward: 3000, rewards: { top1: 1500, top3: 900, top10: 450, top50: 150 } }
 ];
 
+const BATTLE_PASS_SEASONS = [
+    { id: 1, name: 'Сезон 1: Цветение', duration: 60, // 60 дней
+      tiers: Array.from({length: 100}, (_, i) => ({
+        tier: i + 1,
+        freeReward: i % 2 === 0 ? { type: 'coins', amount: 50 } : { type: 'xp', amount: 100 },
+        premiumReward: i % 10 === 0 ? { type: 'rare_unit', name: 'Эпический юнит' } : { type: 'coins', amount: 150 }
+      }))
+    }
+];
+
+const BATTLE_PASS_QUESTS = [
+    { id: 'bp_win_1_game', name: 'Победитель', desc: 'Выиграйте 1 матч', reward: 100, type: 'wins', progress: 0, target: 1, category: 'battlepass' },
+    { id: 'bp_win_3_games', name: 'Готов к битве', desc: 'Выиграйте 3 матча', reward: 250, type: 'wins', progress: 0, target: 3, category: 'battlepass' },
+    { id: 'bp_play_5_games', name: 'Игроман', desc: 'Сыграйте 5 матчей', reward: 150, type: 'games', progress: 0, target: 5, category: 'battlepass' },
+    { id: 'bp_earn_200_coins', name: 'Копилка', desc: 'Заработайте 200 монет', reward: 100, type: 'coins', progress: 0, target: 200, category: 'battlepass' },
+    { id: 'bp_place_10_units', name: 'Командир', desc: 'Разместите 10 юнитов', reward: 120, type: 'units', progress: 0, target: 10, category: 'battlepass' },
+    { id: 'bp_destroy_5_units', name: 'Разрушитель', desc: 'Уничтожьте 5 вражеских юнитов', reward: 180, type: 'destroy', progress: 0, target: 5, category: 'battlepass' },
+    { id: 'bp_survive_10_minutes', name: 'Выживальщик', desc: 'Проведите в игре 10 минут', reward: 150, type: 'time', progress: 0, target: 10, category: 'battlepass' },
+    { id: 'bp_use_different_plants', name: 'Коллекционер', desc: 'Используйте 5 разных растений', reward: 200, type: 'variety', progress: 0, target: 5, category: 'battlepass' }
+];
+
+// Награды за уровни Battle Pass
+const BATTLE_PASS_REWARDS = {
+    free: {
+        1: { type: 'coins', amount: 50 },
+        2: { type: 'xp', amount: 100 },
+        3: { type: 'coins', amount: 75 },
+        4: { type: 'xp', amount: 150 },
+        5: { type: 'rare_unit', name: 'Эпический юнит', amount: 1 },
+        // ... можно расширить до 100 уровней
+    },
+    premium: {
+        1: { type: 'coins', amount: 100 },
+        2: { type: 'xp', amount: 200 },
+        3: { type: 'coins', amount: 150 },
+        4: { type: 'xp', amount: 300 },
+        5: { type: 'rare_unit', name: 'Эпический юнит', amount: 2 },
+        10: { type: 'legendary_unit', name: 'Легендарный юнит', amount: 1 },
+        // ... можно расширить до 100 уровней
+    }
+};
+
 const ACHIEVEMENTS = [
     { id: 'first_win', name: 'Первая победа', desc: 'Выиграйте первый матч', icon: '🎉', reward: 50, category: 'wins', requirement: 1 },
     { id: 'wins_10', name: 'Новичок бой', desc: '10 побед', icon: '⭐', reward: 100, category: 'wins', requirement: 10 },
@@ -403,8 +445,17 @@ app.post('/api/logout', async (req, res) => {
 
 // Лидерборд
 app.get('/api/leaderboard', async (req, res) => {
-    const users = (await db.getAllUsers()).filter(u => u.role !== 'banned').sort((a,b) => (b.wins || 0) - (a.wins || 0)).slice(0, 10);
-    res.json({ success: true, leaders: users.map(u => ({ username: u.username, wins: u.wins, level: u.level, xp: u.xp })) });
+    try {
+        const users = await db.getAllUsers();
+        if (!users) {
+            return res.json({ success: false, message: 'База данных недоступна' });
+        }
+        const filteredUsers = users.filter(u => u.role !== 'banned').sort((a,b) => (b.wins || 0) - (a.wins || 0)).slice(0, 10);
+        res.json({ success: true, leaders: filteredUsers.map(u => ({ username: u.username, wins: u.wins, level: u.level, xp: u.xp })) });
+    } catch (error) {
+        console.error('Ошибка в /api/leaderboard:', error);
+        res.json({ success: false, message: 'Ошибка сервера' });
+    }
 });
 
 app.get('/api/leaderboard-level', async (req, res) => {
@@ -929,6 +980,99 @@ app.post('/api/check-achievements', (req, res) => {
 // Карты (maps)
 app.get('/api/maps', (req, res) => res.json({ success: true, maps: MAPS }));
 
+// Battle Pass API
+app.post('/api/battle-pass/status', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const battlePass = user.battlePass || {
+        season: 1,
+        level: 0,
+        xp: 0,
+        totalXp: 0,
+        claimedRewards: [],
+        quests: [],
+        questsDate: null,
+        currentTier: 1,
+        tierXp: 0,
+        maxTierXp: 1000,
+        freeRewardsClaimed: [],
+        premiumRewardsClaimed: []
+    };
+    
+    // Проверяем, нужно ли обновить квесты
+    const today = new Date().toDateString();
+    if (!battlePass.quests || battlePass.questsDate !== today) {
+        // Генерируем новые квесты для Battle Pass
+        const availableQuests = BATTLE_PASS_QUESTS.filter(q => q.category === 'battlepass');
+        const dailyQuests = [];
+        for (let i = 0; i < 3; i++) {
+            const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
+            dailyQuests.push({
+                ...randomQuest,
+                id: `${randomQuest.id}_${Date.now()}_${i}`,
+                progress: 0,
+                completed: false
+            });
+        }
+        battlePass.quests = dailyQuests;
+        battlePass.questsDate = today;
+        await db.updateUser(user.username, { battlePass });
+    }
+    
+    res.json({ success: true, battlePass });
+});
+
+app.post('/api/battle-pass/claim-reward', async (req, res) => {
+    const { sessionId, tier, isPremium = false } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const result = await db.claimBattlePassReward(user.username, tier, isPremium);
+    if (!result) return res.json({ success: false, message: 'Ошибка получения награды' });
+    
+    if (!result.success) return res.json(result);
+    
+    // Выдаём награду пользователю
+    const rewardType = isPremium ? 'premium' : 'free';
+    const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
+    
+    let updateData = { coins: user.coins };
+    if (reward.type === 'coins') {
+        updateData.coins += reward.amount;
+    } else if (reward.type === 'xp') {
+        const { level: newLevel, xp: newXP } = calculateLevel(user.xp + reward.amount);
+        updateData.xp = newXP;
+        if (newLevel > user.level) updateData.level = newLevel;
+    }
+    // Для других типов наград (юниты и т.д.) можно добавить логику
+    
+    await db.updateUser(user.username, updateData);
+    
+    res.json({ success: true, reward, userData: updateData });
+});
+
+app.post('/api/battle-pass/complete-quest', async (req, res) => {
+    const { sessionId, questId } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    const result = await db.updateBattlePassQuestProgress(user.username, questId, 1);
+    if (!result) return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
+    
+    res.json({ success: true, battlePass: result.battlePass, quest: result.quest });
+});
+
 // ==================== ADMIN API ====================
 app.post('/api/admin/stats', (req, res) => {
     const { sessionId } = req.body;
@@ -1317,25 +1461,1134 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
     res.json({ success: true, message: `Монеты выданы ${users.length - 1} игрокам!` });
 });
 
-// ==================== ИГРОВОЙ СЕРВЕР ====================
-const gameRooms = new Map();
+        // ==================== ИГРОВОЙ СЕРВЕР ====================
+        const gameRooms = new Map();
 
-function createBot(difficulty, side) {
-    return {
-        id: 'bot_' + uuidv4().substring(0, 8),
-        username: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + Math.floor(Math.random() * 100),
-        side: side,
-        isBot: true,
-        difficulty: difficulty,
-        _id: 'bot_' + Date.now()
-    };
-}
+        function createBot(difficulty, side) {
+            return {
+                id: 'bot_' + uuidv4().substring(0, 8),
+                username: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + Math.floor(Math.random() * 100),
+                side: side,
+                isBot: true,
+                difficulty: difficulty,
+                _id: 'bot_' + Date.now()
+            };
+        }
 
-io.on('connection', (socket) => {
-    console.log('Игрок подключился:', socket.id);
-    
-    let currentRoom = null;
-    let currentUser = null;
+        // === СИСТЕМА BATTLE PASS ===
+        // Импортируем систему Battle Pass
+        const battlePassSystem = require('./battle-pass-system');
+
+        // API для получения статуса Battle Pass
+        app.post('/api/battle-pass/status', async (req, res) => {
+            const { sessionId } = req.body;
+            const battlePass = await battlePassSystem.getBattlePassStatus(sessionId);
+            if (!battlePass) return res.json({ success: false, message: 'Сессия недействительна' });
+            res.json({ success: true, battlePass });
+        });
+
+        // API для получения награды за уровень Battle Pass
+        app.post('/api/battle-pass/claim-reward', async (req, res) => {
+            const { sessionId, tier, isPremium = false } = req.body;
+            const result = await battlePassSystem.claimBattlePassReward(sessionId, tier, isPremium);
+            res.json(result);
+        });
+
+        // API для выполнения квеста Battle Pass
+        app.post('/api/battle-pass/complete-quest', async (req, res) => {
+            const { sessionId, questId } = req.body;
+            const result = await battlePassSystem.completeBattlePassQuest(sessionId, questId);
+            res.json(result);
+        });
+
+        // API для получения ежедневных квестов Battle Pass
+        app.post('/api/battle-pass/quests', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Инициализируем Battle Pass если нет
+            if (!user.battlePass) {
+                user.battlePass = await battlePassSystem.initializeBattlePass(user.username);
+            }
+
+            // Проверяем, нужно ли обновить квесты
+            const today = new Date().toDateString();
+            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
+                user.battlePass.quests = battlePassSystem.generateBattlePassQuests();
+                user.battlePass.questsDate = today;
+                await db.updateUser(user.username, { battlePass: user.battlePass });
+            }
+
+            res.json({ success: true, quests: user.battlePass.quests, date: user.battlePass.questsDate });
+        });
+
+        // === ИНТЕГРАЦИЯ С ИГРОВЫМИ СОБЫТИЯМИ ===
+        // Добавляем XP к Battle Pass за победы
+        function addBattlePassXpForWin(username, xpAmount) {
+            return battlePassSystem.addBattlePassXp(username, xpAmount);
+        }
+
+        // Добавляем XP к Battle Pass за игры
+        function addBattlePassXpForGame(username, xpAmount) {
+            return battlePassSystem.addBattlePassXp(username, xpAmount);
+        }
+
+        // Обновляем прогресс квестов при игровых событиях
+        async function updateBattlePassQuestProgressOnEvent(username, eventType, amount = 1) {
+            const user = await db.findUserByUsername(username);
+            if (!user || !user.battlePass || !user.battlePass.quests) return;
+
+            for (const quest of user.battlePass.quests) {
+                if (quest.type === eventType && !quest.completed) {
+                    quest.progress = Math.min(quest.progress + amount, quest.target);
+                    if (quest.progress >= quest.target) {
+                        quest.completed = true;
+                        // Добавляем XP к Battle Pass за выполнение квеста
+                        await battlePassSystem.addBattlePassXp(username, quest.reward);
+                    }
+                }
+            }
+
+            await db.updateUser(username, { battlePass: user.battlePass });
+        }
+
+        // Обновляем прогресс квестов при победах
+        app.post('/api/game/win', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Добавляем XP к Battle Pass за победу
+            await addBattlePassXpForWin(user.username, 50);
+            // Обновляем прогресс квестов на победу
+            await updateBattlePassQuestProgressOnEvent(user.username, 'wins', 1);
+
+            res.json({ success: true, message: 'Прогресс обновлён за победу' });
+        });
+
+        // Обновляем прогресс квестов при играх
+        app.post('/api/game/play', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Добавляем XP к Battle Pass за игру
+            await addBattlePassXpForGame(user.username, 20);
+            // Обновляем прогресс квестов на игры
+            await updateBattlePassQuestProgressOnEvent(user.username, 'games', 1);
+
+            res.json({ success: true, message: 'Прогресс обновлён за игру' });
+        });
+
+        // === СИСТЕМА НАГРАД ===
+        // Удаляем дубликат BATTLE_PASS_REWARDS - он уже объявлен выше в файле
+        // Оставляем только функции для работы с наградами
+
+        // Система квестов для Battle Pass
+        function generateBattlePassQuests() {
+            const availableQuests = BATTLE_PASS_QUESTS;
+            const dailyQuests = [];
+            for (let i = 0; i < 3; i++) {
+                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
+                dailyQuests.push({
+                    ...randomQuest,
+                    id: `${randomQuest.id}_${Date.now()}_${i}`,
+                    progress: 0,
+                    completed: false
+                });
+            }
+            return dailyQuests;
+        }
+
+        // Обновляем пользователя с Battle Pass данными
+        app.post('/api/battle-pass/status', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Инициализируем Battle Pass если нет
+            if (!user.battlePass) {
+                user.battlePass = {
+                    season: 1,
+                    level: 0,
+                    xp: 0,
+                    totalXp: 0,
+                    claimedRewards: [],
+                    questsDate: null,
+                    currentTier: 1,
+                    tierXp: 0,
+                    maxTierXp: 1000,
+                    freeRewardsClaimed: [],
+                    premiumRewardsClaimed: []
+                };
+            }
+
+            // Проверяем, нужно ли обновить квесты
+            const today = new Date().toDateString();
+            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
+                user.battlePass.quests = generateBattlePassQuests();
+                user.battlePass.questsDate = today;
+                await db.updateUser(user.username, { battlePass: user.battlePass });
+            }
+
+            res.json({ success: true, battlePass: user.battlePass });
+        });
+
+        app.post('/api/battle-pass/claim-reward', async (req, res) => {
+            const { sessionId, tier, isPremium = false } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass) {
+                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
+            }
+
+            const battlePass = user.battlePass;
+            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
+            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
+
+            if (claimedList.includes(rewardId)) {
+                return res.json({ success: false, message: 'Награда уже получена' });
+            }
+
+            // Проверяем, достиг ли игрок нужного уровня
+            if (battlePass.level < tier) {
+                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
+            }
+
+            // Добавляем в список полученных наград
+            if (isPremium) {
+                claimedList.push(rewardId);
+            } else {
+                claimedList.push(rewardId);
+            }
+
+            // Выдаём награду
+            const rewardType = isPremium ? 'premium' : 'free';
+            const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
+
+            let updateData = { battlePass };
+            if (reward.type === 'coins') {
+                updateData.coins = (user.coins || 0) + reward.amount;
+            } else if (reward.type === 'xp') {
+                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
+                updateData.xp = newXP;
+                if (newLevel > (user.level || 1)) updateData.level = newLevel;
+            } else if (reward.type === 'rare_unit') {
+                // Добавляем редкий юнит в инвентарь
+                const inventory = user.inventory || {};
+                inventory[reward.name] = { level: 1, type: 'rare', purchased: new Date().toISOString() };
+                updateData.inventory = inventory;
+            }
+
+            await db.updateUser(user.username, updateData);
+
+            res.json({ success: true, reward, battlePass, userData: updateData });
+        });
+
+        app.post('/api/battle-pass/complete-quest', async (req, res) => {
+            const { sessionId, questId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass || !user.battlePass.quests) {
+                return res.json({ success: false, message: 'Нет активных квестов' });
+            }
+
+            const quest = user.battlePass.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) {
+                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
+            }
+
+            // Отмечаем квест как выполненный
+            quest.completed = true;
+            quest.progress = quest.target;
+
+            // Добавляем XP к Battle Pass
+            user.battlePass.xp += quest.reward;
+            user.battlePass.totalXp += quest.reward;
+
+            // Проверяем повышение уровня
+            let levelsGained = 0;
+            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
+                user.battlePass.xp -= 1000;
+                user.battlePass.level += 1;
+                levelsGained += 1;
+            }
+
+            await db.updateUser(user.username, { battlePass: user.battlePass });
+
+            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained });
+        });
+
+        // Функция для добавления XP к Battle Pass за игровые действия
+        function addBattlePassXp(username, xpAmount) {
+            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
+        }
+
+        // === СИСТЕМА КВЕСТОВ ===
+        const GAME_QUESTS = [
+            { id: 'win_1_game', name: 'Первая победа', desc: 'Выиграйте 1 матч', reward: 100, type: 'wins', target: 1, category: 'battlepass' },
+            { id: 'win_3_games', name: 'Готов к битве', desc: 'Выиграйте 3 матча', reward: 250, type: 'wins', target: 3, category: 'battlepass' },
+            { id: 'play_5_games', name: 'Игроман', desc: 'Сыграйте 5 матчей', reward: 150, type: 'games', target: 5, category: 'battlepass' },
+            { id: 'earn_200_coins', name: 'Копилка', desc: 'Заработайте 200 монет', reward: 100, type: 'coins', target: 200, category: 'battlepass' },
+            { id: 'place_10_units', name: 'Командир', desc: 'Разместите 10 юнитов', reward: 120, type: 'units', target: 10, category: 'battlepass' },
+            { id: 'destroy_5_units', name: 'Разрушитель', desc: 'Уничтожьте 5 вражеских юнитов', reward: 180, type: 'destroy', target: 5, category: 'battlepass' },
+            { id: 'survive_10_minutes', name: 'Выживальщик', desc: 'Проведите в игре 10 минут', reward: 150, type: 'time', target: 10, category: 'battlepass' },
+            { id: 'use_different_plants', name: 'Коллекционер', desc: 'Используйте 5 разных растений', reward: 200, type: 'variety', target: 5, category: 'battlepass' }
+        ];
+
+        // Генерация ежедневных квестов для Battle Pass
+        function generateDailyBattlePassQuests() {
+            const availableQuests = GAME_QUESTS.filter(q => q.category === 'battlepass');
+            const dailyQuests = [];
+            for (let i = 0; i < 3; i++) {
+                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
+                dailyQuests.push({
+                    ...randomQuest,
+                    id: `${randomQuest.id}_${Date.now()}_${i}`,
+                    progress: 0,
+                    completed: false
+                });
+            }
+            return dailyQuests;
+        }
+
+        // API для получения ежедневных квестов Battle Pass
+        app.post('/api/battle-pass/quests', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Инициализируем Battle Pass если нет
+            if (!user.battlePass) {
+                user.battlePass = {
+                    season: 1,
+                    level: 0,
+                    xp: 0,
+                    totalXp: 0,
+                    claimedRewards: [],
+                    quests: [],
+                    questsDate: null,
+                    currentTier: 1,
+                    tierXp: 0,
+                    maxTierXp: 1000,
+                    freeRewardsClaimed: [],
+                    premiumRewardsClaimed: []
+                };
+            }
+
+            // Проверяем, нужно ли обновить квесты
+            const today = new Date().toDateString();
+            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
+                user.battlePass.quests = generateDailyBattlePassQuests();
+                user.battlePass.questsDate = today;
+                await db.updateUser(user.username, { battlePass: user.battlePass });
+            }
+
+            res.json({ success: true, quests: user.battlePass.quests, date: user.battlePass.questsDate });
+        });
+
+        // API для выполнения квеста Battle Pass
+        app.post('/api/battle-pass/complete-quest', async (req, res) => {
+            const { sessionId, questId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass || !user.battlePass.quests) {
+                return res.json({ success: false, message: 'Нет активных квестов Battle Pass' });
+            }
+
+            const quest = user.battlePass.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) {
+                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
+            }
+
+            // Отмечаем квест как выполненный
+            quest.completed = true;
+            quest.progress = quest.target;
+
+            // Добавляем XP к Battle Pass
+            user.battlePass.xp += quest.reward;
+            user.battlePass.totalXp += quest.reward;
+
+            // Проверяем повышение уровня
+            let levelsGained = 0;
+            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
+                user.battlePass.xp -= 1000;
+                user.battlePass.level += 1;
+                levelsGained += 1;
+            }
+
+            await db.updateUser(user.username, { battlePass: user.battlePass });
+
+            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained, message: `Квест "${quest.name}" выполнен! Получено ${quest.reward} XP к Battle Pass!` });
+        });
+
+        // Функция для обновления прогресса квеста
+        async function updateBattlePassQuestProgress(username, questId, progressIncrement) {
+            const user = await db.findUserByUsername(username);
+            if (!user || !user.battlePass || !user.battlePass.quests) return null;
+
+            const quest = user.battlePass.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) return null;
+
+            quest.progress = Math.min(quest.progress + progressIncrement, quest.target);
+            if (quest.progress >= quest.target) {
+                quest.completed = true;
+                // Добавляем XP к Battle Pass за выполнение квеста
+                user.battlePass.xp += quest.reward;
+                user.battlePass.totalXp += quest.reward;
+            }
+
+            await db.updateUser(username, { battlePass: user.battlePass });
+            return { battlePass: user.battlePass, quest };
+        }
+
+        // === СИСТЕМА НАГРАД ===
+        // Удаляем дубликат BATTLE_PASS_REWARDS - он уже объявлен выше в файле
+        // Оставляем только функции для работы с наградами
+
+        // API для получения наград за уровень Battle Pass
+        app.post('/api/battle-pass/rewards', async (req, res) => {
+            const { sessionId, tier, isPremium = false } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass) {
+                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
+            }
+
+            const battlePass = user.battlePass;
+            const rewardType = isPremium ? 'premium' : 'free';
+            const reward = BATTLE_PASS_REWARDS[rewardType][tier];
+
+            if (!reward) {
+                return res.json({ success: false, message: 'Награда не найдена' });
+            }
+
+            // Проверяем, достиг ли игрок нужного уровня
+            if (battlePass.level < tier) {
+                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
+            }
+
+            // Проверяем, не получал ли уже эту награду
+            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
+            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
+
+            if (claimedList.includes(rewardId)) {
+                return res.json({ success: false, message: 'Награда уже получена' });
+            }
+
+            // Добавляем в список полученных наград
+            claimedList.push(rewardId);
+
+            // Выдаём награду
+            let updateData = { battlePass };
+            if (reward.type === 'coins') {
+                updateData.coins = (user.coins || 0) + reward.amount;
+            } else if (reward.type === 'xp') {
+                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
+                updateData.xp = newXP;
+                if (newLevel > (user.level || 1)) updateData.level = newLevel;
+            } else if (reward.type === 'rare_unit' || reward.type === 'legendary_unit') {
+                // Добавляем редкий юнит в инвентарь
+                const inventory = user.inventory || {};
+                inventory[reward.name] = { level: reward.amount, type: reward.type.replace('_unit', ''), purchased: new Date().toISOString() };
+                updateData.inventory = inventory;
+            }
+
+            await db.updateUser(user.username, updateData);
+
+            res.json({ success: true, reward, userData: updateData, message: `Получена награда за ${tier} уровень Battle Pass!` });
+        });
+
+        // === ИНТЕГРАЦИЯ С ИГРОВЫМИ СОБЫТИЯМИ ===
+        // Добавляем XP к Battle Pass за победы
+        function addBattlePassXpForWin(username, xpAmount) {
+            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
+        }
+
+        // Добавляем XP к Battle Pass за игры
+        function addBattlePassXpForGame(username, xpAmount) {
+            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
+        }
+
+        // Обновляем прогресс квестов при игровых событиях
+        async function updateQuestProgressOnEvent(username, eventType, amount = 1) {
+            const user = await db.findUserByUsername(username);
+            if (!user || !user.battlePass || !user.battlePass.quests) return;
+
+            for (const quest of user.battlePass.quests) {
+                if (quest.type === eventType && !quest.completed) {
+                    quest.progress = Math.min(quest.progress + amount, quest.target);
+                    if (quest.progress >= quest.target) {
+                        quest.completed = true;
+                        // Добавляем XP к Battle Pass за выполнение квеста
+                        user.battlePass.xp += quest.reward;
+                        user.battlePass.totalXp += quest.reward;
+                    }
+                }
+            }
+
+            await db.updateUser(username, { battlePass: user.battlePass });
+        }
+
+        // Обновляем прогресс квестов при победах
+        app.post('/api/game/win', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Добавляем XP к Battle Pass за победу
+            await addBattlePassXpForWin(user.username, 50);
+            // Обновляем прогресс квестов на победу
+            await updateQuestProgressOnEvent(user.username, 'wins', 1);
+
+            res.json({ success: true, message: 'Прогресс обновлён за победу' });
+        });
+
+        // Обновляем прогресс квестов при играх
+        app.post('/api/game/play', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Добавляем XP к Battle Pass за игру
+            await addBattlePassXpForGame(user.username, 20);
+            // Обновляем прогресс квестов на игры
+            await updateQuestProgressOnEvent(user.username, 'games', 1);
+
+            res.json({ success: true, message: 'Прогресс обновлён за игру' });
+        });
+
+        // Система квестов для Battle Pass
+        function generateBattlePassQuests() {
+            const availableQuests = BATTLE_PASS_QUESTS;
+            const dailyQuests = [];
+            for (let i = 0; i < 3; i++) {
+                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
+                dailyQuests.push({
+                    ...randomQuest,
+                    id: `${randomQuest.id}_${Date.now()}_${i}`,
+                    progress: 0,
+                    completed: false
+                });
+            }
+            return dailyQuests;
+        }
+
+        // Обновляем пользователя с Battle Pass данными
+        app.post('/api/battle-pass/status', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Инициализируем Battle Pass если нет
+            if (!user.battlePass) {
+                user.battlePass = {
+                    season: 1,
+                    level: 0,
+                    xp: 0,
+                    totalXp: 0,
+                    claimedRewards: [],
+                    questsDate: null,
+                    currentTier: 1,
+                    tierXp: 0,
+                    maxTierXp: 1000,
+                    freeRewardsClaimed: [],
+                    premiumRewardsClaimed: []
+                };
+            }
+
+            // Проверяем, нужно ли обновить квесты
+            const today = new Date().toDateString();
+            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
+                user.battlePass.quests = generateBattlePassQuests();
+                user.battlePass.questsDate = today;
+                await db.updateUser(user.username, { battlePass: user.battlePass });
+            }
+
+            res.json({ success: true, battlePass: user.battlePass });
+        });
+
+        app.post('/api/battle-pass/claim-reward', async (req, res) => {
+            const { sessionId, tier, isPremium = false } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass) {
+                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
+            }
+
+            const battlePass = user.battlePass;
+            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
+            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
+
+            if (claimedList.includes(rewardId)) {
+                return res.json({ success: false, message: 'Награда уже получена' });
+            }
+
+            // Проверяем, достиг ли игрок нужного уровня
+            if (battlePass.level < tier) {
+                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
+            }
+
+            // Добавляем в список полученных наград
+            if (isPremium) {
+                claimedList.push(rewardId);
+            } else {
+                claimedList.push(rewardId);
+            }
+
+            // Выдаём награду
+            const rewardType = isPremium ? 'premium' : 'free';
+            const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
+
+            let updateData = { battlePass };
+            if (reward.type === 'coins') {
+                updateData.coins = (user.coins || 0) + reward.amount;
+            } else if (reward.type === 'xp') {
+                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
+                updateData.xp = newXP;
+                if (newLevel > (user.level || 1)) updateData.level = newLevel;
+            } else if (reward.type === 'rare_unit') {
+                // Добавляем редкий юнит в инвентарь
+                const inventory = user.inventory || {};
+                inventory[reward.name] = { level: 1, type: 'rare', purchased: new Date().toISOString() };
+                updateData.inventory = inventory;
+            }
+
+            await db.updateUser(user.username, updateData);
+
+            res.json({ success: true, reward, battlePass, userData: updateData });
+        });
+
+        app.post('/api/battle-pass/complete-quest', async (req, res) => {
+            const { sessionId, questId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass || !user.battlePass.quests) {
+                return res.json({ success: false, message: 'Нет активных квестов' });
+            }
+
+            const quest = user.battlePass.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) {
+                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
+            }
+
+            // Отмечаем квест как выполненный
+            quest.completed = true;
+            quest.progress = quest.target;
+
+            // Добавляем XP к Battle Pass
+            user.battlePass.xp += quest.reward;
+            user.battlePass.totalXp += quest.reward;
+
+            // Проверяем повышение уровня
+            let levelsGained = 0;
+            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
+                user.battlePass.xp -= 1000;
+                user.battlePass.level += 1;
+                levelsGained += 1;
+            }
+
+            await db.updateUser(user.username, { battlePass: user.battlePass });
+
+            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained });
+        });
+
+        // Функция для добавления XP к Battle Pass за игровые действия
+        function addBattlePassXp(username, xpAmount) {
+            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
+        }
+
+        // Функция для получения статуса Battle Pass
+        async function getBattlePassStatus(username) {
+            const user = await db.findUserByUsername(username);
+            if (!user) return null;
+            
+            if (!user.battlePass) {
+                user.battlePass = {
+                    season: 1,
+                    level: 0,
+                    xp: 0,
+                    totalXp: 0,
+                    claimedRewards: [],
+                    quests: [],
+                    questsDate: null,
+                    currentTier: 1,
+                    tierXp: 0,
+                    maxTierXp: 1000,
+                    freeRewardsClaimed: [],
+                    premiumRewardsClaimed: []
+                };
+            }
+            
+            return user.battlePass;
+        }
+
+        // Функция для обновления прогресса квеста Battle Pass
+        async function updateBattlePassQuestProgress(username, questId, progressIncrement) {
+            const user = await db.findUserByUsername(username);
+            if (!user || !user.battlePass || !user.battlePass.quests) return null;
+            
+            const quest = user.battlePass.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) return null;
+            
+            quest.progress = Math.min(quest.progress + progressIncrement, quest.target);
+            if (quest.progress >= quest.target) {
+                quest.completed = true;
+                // Добавляем XP к Battle Pass за выполнение квеста
+                user.battlePass.xp += quest.reward;
+                user.battlePass.totalXp += quest.reward;
+            }
+            
+            await db.updateUser(username, { battlePass: user.battlePass });
+            return { battlePass: user.battlePass, quest };
+        }
+
+        // Функция для получения награды за уровень Battle Pass
+        async function claimBattlePassReward(username, tier, isPremium) {
+            const user = await db.findUserByUsername(username);
+            if (!user || !user.battlePass) return null;
+            
+            const battlePass = user.battlePass;
+            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
+            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
+            
+            if (claimedList.includes(rewardId)) {
+                return { success: false, message: 'Награда уже получена' };
+            }
+            
+            if (battlePass.level < tier) {
+                return { success: false, message: 'Недостаточный уровень для получения этой награды' };
+            }
+            
+            claimedList.push(rewardId);
+            await db.updateUser(username, { battlePass });
+            return { success: true, battlePass };
+        }
+
+        // Исправляем функцию calculateLevel для корректного повышения уровня
+        function calculateLevel(totalXP) {
+            const xpPerLevel = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450];
+            let level = 1;
+            let remainingXP = totalXP;
+            
+            for (let i = xpPerLevel.length - 1; i >= 0; i--) {
+                if (totalXP >= xpPerLevel[i]) {
+                    level = i + 1;
+                    remainingXP = totalXP - xpPerLevel[i];
+                    break;
+                }
+            }
+            
+            return { level, xp: remainingXP };
+        }
+
+        // Исправляем функцию endRound для корректного начисления XP к Battle Pass
+        function endRound(roomId, result) {
+            const room = gameRooms.get(roomId);
+            if (!room) return;
+            
+            if (room.timer) clearInterval(room.timer);
+            
+            if (result !== 'draw') {
+                const winner = room.players.find(p => p.side === result);
+                const loser = room.players.find(p => p.side !== result);
+                
+                if (winner && loser) {
+                    const giveRewards = !room.isBotGame;
+                    
+                    if (!winner.user.isBot) {
+                        // Обновляем прогресс Battle Pass для победителя
+                        db.updateUser(winner.user.username, { wins: (winner.user.wins || 0) + 1, totalGames: (winner.user.totalGames || 0) + 1, coins: winner.user.coins + (giveRewards ? 50 : 0) });
+                        // Добавляем XP к Battle Pass за победу
+                        addBattlePassXp(winner.user.username, 50);
+                    }
+                    if (!loser.user.isBot) {
+                        db.updateUser(loser.user.username, { losses: (loser.user.losses || 0) + 1, totalGames: (loser.user.totalGames || 0) + 1, coins: loser.user.coins + (giveRewards ? 10 : 0) });
+                        // Добавляем XP к Battle Pass за игру (даже за поражение)
+                        addBattlePassXp(loser.user.username, 20);
+                    }
+                    
+                    if (!room.isBotGame || (winner.user.isBot === false && loser.user.isBot === false)) {
+                        db.createMatch({ winner: winner.user.username, loser: loser.user.username, winnerSide: winner.side });
+                    }
+                    
+                    io.to(roomId).emit('gameEnd', { winner: winner.user.username, winnerSide: winner.side, rewards: { winner: 50, loser: 10 }, isBotGame: room.isBotGame });
+                }
+            } else {
+                const giveRewards = room.isBotGame && !room.players.find(p => p.user.isBot);
+                
+                for (const p of room.players) {
+                    if (!p.user.isBot) {
+                        db.updateUser(p.user.username, { totalGames: (p.user.totalGames || 0) + 1, coins: p.user.coins + (giveRewards ? 20 : 0) });
+                        // Добавляем XP к Battle Pass за ничью
+                        addBattlePassXp(p.user.username, 30);
+                    }
+                }
+                
+                io.to(roomId).emit('gameEnd', { winner: 'draw', rewards: { winner: giveRewards ? 20 : 0, loser: giveRewards ? 20 : 0 }, isBotGame: room.isBotGame });
+            }
+            
+            gameRooms.delete(roomId);
+        }
+
+        // Система квестов для Battle Pass
+        function generateBattlePassQuests() {
+            const availableQuests = BATTLE_PASS_QUESTS;
+            const dailyQuests = [];
+            for (let i = 0; i < 3; i++) {
+                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
+                dailyQuests.push({
+                    ...randomQuest,
+                    id: `${randomQuest.id}_${Date.now()}_${i}`,
+                    progress: 0,
+                    completed: false
+                });
+            }
+            return dailyQuests;
+        }
+
+        // Обновляем пользователя с Battle Pass данными
+        app.post('/api/battle-pass/status', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Инициализируем Battle Pass если нет
+            if (!user.battlePass) {
+                user.battlePass = {
+                    season: 1,
+                    level: 0,
+                    xp: 0,
+                    totalXp: 0,
+                    claimedRewards: [],
+                    quests: [],
+                    questsDate: null,
+                    currentTier: 1,
+                    tierXp: 0,
+                    maxTierXp: 1000,
+                    freeRewardsClaimed: [],
+                    premiumRewardsClaimed: []
+                };
+            }
+
+            // Проверяем, нужно ли обновить квесты
+            const today = new Date().toDateString();
+            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
+                user.battlePass.quests = generateBattlePassQuests();
+                user.battlePass.questsDate = today;
+                await db.updateUser(user.username, { battlePass: user.battlePass });
+            }
+
+            res.json({ success: true, battlePass: user.battlePass });
+        });
+
+        app.post('/api/battle-pass/claim-reward', async (req, res) => {
+            const { sessionId, tier, isPremium = false } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass) {
+                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
+            }
+
+            const battlePass = user.battlePass;
+            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
+            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
+
+            if (claimedList.includes(rewardId)) {
+                return res.json({ success: false, message: 'Награда уже получена' });
+            }
+
+            // Проверяем, достиг ли игрок нужного уровня
+            if (battlePass.level < tier) {
+                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
+            }
+
+            // Добавляем в список полученных наград
+            if (isPremium) {
+                claimedList.push(rewardId);
+            } else {
+                claimedList.push(rewardId);
+            }
+
+            // Выдаём награду
+            const rewardType = isPremium ? 'premium' : 'free';
+            const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
+
+            let updateData = { battlePass };
+            if (reward.type === 'coins') {
+                updateData.coins = (user.coins || 0) + reward.amount;
+            } else if (reward.type === 'xp') {
+                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
+                updateData.xp = newXP;
+                if (newLevel > (user.level || 1)) updateData.level = newLevel;
+            } else if (reward.type === 'rare_unit') {
+                // Добавляем редкий юнит в инвентарь
+                const inventory = user.inventory || {};
+                inventory[reward.name] = { level: 1, type: 'rare', purchased: new Date().toISOString() };
+                updateData.inventory = inventory;
+            }
+
+            await db.updateUser(user.username, updateData);
+
+            res.json({ success: true, reward, battlePass, userData: updateData });
+        });
+
+        app.post('/api/battle-pass/complete-quest', async (req, res) => {
+            const { sessionId, questId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass || !user.battlePass.quests) {
+                return res.json({ success: false, message: 'Нет активных квестов' });
+            }
+
+            const quest = user.battlePass.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) {
+                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
+            }
+
+            // Отмечаем квест как выполненный
+            quest.completed = true;
+            quest.progress = quest.target;
+
+            // Добавляем XP к Battle Pass
+            user.battlePass.xp += quest.reward;
+            user.battlePass.totalXp += quest.reward;
+
+            // Проверяем повышение уровня
+            let levelsGained = 0;
+            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
+                user.battlePass.xp -= 1000;
+                user.battlePass.level += 1;
+                levelsGained += 1;
+            }
+
+            await db.updateUser(user.username, { battlePass: user.battlePass });
+
+            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained });
+        });
+
+        // Функция для добавления XP к Battle Pass за игровые действия
+        function addBattlePassXp(username, xpAmount) {
+            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
+        }
+
+        // Система квестов для Battle Pass
+        function generateBattlePassQuests() {
+            const availableQuests = BATTLE_PASS_QUESTS;
+            const dailyQuests = [];
+            for (let i = 0; i < 3; i++) {
+                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
+                dailyQuests.push({
+                    ...randomQuest,
+                    id: `${randomQuest.id}_${Date.now()}_${i}`,
+                    progress: 0,
+                    completed: false
+                });
+            }
+            return dailyQuests;
+        }
+
+        // Обновляем пользователя с Battle Pass данными
+        app.post('/api/battle-pass/status', async (req, res) => {
+            const { sessionId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            // Инициализируем Battle Pass если нет
+            if (!user.battlePass) {
+                user.battlePass = {
+                    season: 1,
+                    level: 0,
+                    xp: 0,
+                    totalXp: 0,
+                    claimedRewards: [],
+                    quests: [],
+                    questsDate: null,
+                    currentTier: 1,
+                    tierXp: 0,
+                    maxTierXp: 1000,
+                    freeRewardsClaimed: [],
+                    premiumRewardsClaimed: []
+                };
+            }
+
+            // Проверяем, нужно ли обновить квесты
+            const today = new Date().toDateString();
+            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
+                user.battlePass.quests = generateBattlePassQuests();
+                user.battlePass.questsDate = today;
+                await db.updateUser(user.username, { battlePass: user.battlePass });
+            }
+
+            res.json({ success: true, battlePass: user.battlePass });
+        });
+
+        app.post('/api/battle-pass/claim-reward', async (req, res) => {
+            const { sessionId, tier, isPremium = false } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass) {
+                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
+            }
+
+            const battlePass = user.battlePass;
+            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
+            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
+
+            if (claimedList.includes(rewardId)) {
+                return res.json({ success: false, message: 'Награда уже получена' });
+            }
+
+            // Проверяем, достиг ли игрок нужного уровня
+            if (battlePass.level < tier) {
+                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
+            }
+
+            // Добавляем в список полученных наград
+            if (isPremium) {
+                claimedList.push(rewardId);
+            } else {
+                claimedList.push(rewardId);
+            }
+
+            // Выдаём награду
+            const rewardType = isPremium ? 'premium' : 'free';
+            const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
+
+            let updateData = { battlePass };
+            if (reward.type === 'coins') {
+                updateData.coins = (user.coins || 0) + reward.amount;
+            } else if (reward.type === 'xp') {
+                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
+                updateData.xp = newXP;
+                if (newLevel > (user.level || 1)) updateData.level = newLevel;
+            } else if (reward.type === 'rare_unit') {
+                // Добавляем редкий юнит в инвентарь
+                const inventory = user.inventory || {};
+                inventory[reward.name] = { level: 1, type: 'rare', purchased: new Date().toISOString() };
+                updateData.inventory = inventory;
+            }
+
+            await db.updateUser(user.username, updateData);
+
+            res.json({ success: true, reward, battlePass, userData: updateData });
+        });
+
+        app.post('/api/battle-pass/complete-quest', async (req, res) => {
+            const { sessionId, questId } = req.body;
+            const session = await db.findSession(sessionId);
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+            const user = await db.findUser({ _id: session.userId });
+            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+            if (!user.battlePass || !user.battlePass.quests) {
+                return res.json({ success: false, message: 'Нет активных квестов' });
+            }
+
+            const quest = user.battlePass.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) {
+                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
+            }
+
+            // Отмечаем квест как выполненный
+            quest.completed = true;
+            quest.progress = quest.target;
+
+            // Добавляем XP к Battle Pass
+            user.battlePass.xp += quest.reward;
+            user.battlePass.totalXp += quest.reward;
+
+            // Проверяем повышение уровня
+            let levelsGained = 0;
+            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
+                user.battlePass.xp -= 1000;
+                user.battlePass.level += 1;
+                levelsGained += 1;
+            }
+
+            await db.updateUser(user.username, { battlePass: user.battlePass });
+
+            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained });
+        });
+
+        // Функция для добавления XP к Battle Pass за игровые действия
+        function addBattlePassXp(username, xpAmount) {
+            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
+        }
+
+        io.on('connection', (socket) => {
+            console.log('Игрок подключился:', socket.id);
+            
+            let currentRoom = null;
+            let currentUser = null;
     
     socket.on('sendMessage', (data) => {
         if (currentRoom && currentUser && !currentUser.isBot) {
@@ -1563,10 +2816,15 @@ function endRound(roomId, result) {
             const giveRewards = !room.isBotGame;
             
             if (!winner.user.isBot) {
+                // Обновляем прогресс Battle Pass для победителя
                 db.updateUser(winner.user.username, { wins: (winner.user.wins || 0) + 1, totalGames: (winner.user.totalGames || 0) + 1, coins: winner.user.coins + (giveRewards ? 50 : 0) });
+                // Добавляем XP к Battle Pass за победу
+                db.addBattlePassXp(winner.user.username, 50);
             }
             if (!loser.user.isBot) {
                 db.updateUser(loser.user.username, { losses: (loser.user.losses || 0) + 1, totalGames: (loser.user.totalGames || 0) + 1, coins: loser.user.coins + (giveRewards ? 10 : 0) });
+                // Добавляем XP к Battle Pass за игру (даже за поражение)
+                db.addBattlePassXp(loser.user.username, 20);
             }
             
             if (!room.isBotGame || (winner.user.isBot === false && loser.user.isBot === false)) {
@@ -1581,6 +2839,8 @@ function endRound(roomId, result) {
         for (const p of room.players) {
             if (!p.user.isBot) {
                 db.updateUser(p.user.username, { totalGames: (p.user.totalGames || 0) + 1, coins: p.user.coins + (giveRewards ? 20 : 0) });
+                // Добавляем XP к Battle Pass за ничью
+                db.addBattlePassXp(p.user.username, 30);
             }
         }
         

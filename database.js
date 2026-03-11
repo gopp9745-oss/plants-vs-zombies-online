@@ -1,7 +1,7 @@
 // MongoDB база данных
 const { MongoClient, ObjectId } = require('mongodb');
 
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb://localhost:27017';
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017';
 const DB_NAME = process.env.DB_NAME || 'pvz_online';
 
 let client = null;
@@ -63,6 +63,21 @@ async function createAdminIfNotExists() {
             dailyQuestsCoins: 0,
             dailyQuestsUnits: 0,
             dailyQuestsChat: 0,
+            battlePass: {
+                season: 1,
+                level: 0,
+                xp: 0,
+                totalXp: 0,
+                claimedRewards: [],
+                quests: [],
+                questsDate: null,
+                // Добавляем новые поля для Battle Pass
+                currentTier: 1,
+                tierXp: 0,
+                maxTierXp: 1000,
+                freeRewardsClaimed: [],
+                premiumRewardsClaimed: []
+            },
             inventory: {}
         });
         console.log('✓ Создан админ (admin / admin123)');
@@ -70,7 +85,10 @@ async function createAdminIfNotExists() {
 }
 
 function getDb() {
-    if (!db) throw new Error('База данных не подключена');
+    if (!db) {
+        console.warn('Предупреждение: База данных не подключена');
+        return null;
+    }
     return db;
 }
 
@@ -105,6 +123,20 @@ class MongoDB {
     async createUser(userData) {
         const user = {
             ...userData,
+            battlePass: {
+                season: 1,
+                level: 0,
+                xp: 0,
+                totalXp: 0,
+                claimedRewards: [],
+                quests: [],
+                questsDate: null,
+                currentTier: 1,
+                tierXp: 0,
+                maxTierXp: 1000,
+                freeRewardsClaimed: [],
+                premiumRewardsClaimed: []
+            },
             createdAt: new Date()
         };
         const result = await getDb().collection('users').insertOne(user);
@@ -343,6 +375,127 @@ class MongoDB {
                     dailyQuestsCoins: 0,
                     dailyQuestsUnits: 0,
                     dailyQuestsChat: 0
+                }
+            }
+        );
+    }
+
+    // Battle Pass functions
+    async updateBattlePass(username, battlePassData) {
+        return await this.updateUser(username, { battlePass: battlePassData });
+    }
+
+    async resetBattlePassQuests() {
+        return await getDb().collection('users').updateMany(
+            {},
+            { 
+                $set: { 
+                    'battlePass.quests': [],
+                    'battlePass.questsDate': null
+                }
+            }
+        );
+    }
+
+    // Новые методы для Battle Pass
+    async addBattlePassXp(username, xpAmount) {
+        const user = await this.findUserByUsername(username);
+        if (!user) return null;
+        
+        const battlePass = user.battlePass || {
+            season: 1,
+            level: 0,
+            xp: 0,
+            totalXp: 0,
+            claimedRewards: [],
+            quests: [],
+            questsDate: null,
+            currentTier: 1,
+            tierXp: 0,
+            maxTierXp: 100,
+            freeRewardsClaimed: [],
+            premiumRewardsClaimed: []
+        };
+        
+        // Добавляем XP
+        battlePass.xp += xpAmount;
+        battlePass.totalXp += xpAmount;
+        battlePass.tierXp += xpAmount;
+        
+        // Проверяем, набрал ли Tier XP нужное количество
+        let levelsGained = 0;
+        while (battlePass.tierXp >= battlePass.maxTierXp) {
+            battlePass.tierXp -= battlePass.maxTierXp;
+            battlePass.currentTier += 1;
+            battlePass.level += 1;
+            levelsGained += 1;
+            // Увеличиваем требования к XP за каждый уровень
+            battlePass.maxTierXp = 1000 + (battlePass.currentTier - 1) * 100;
+        }
+        
+        await this.updateUser(username, { battlePass });
+        return { battlePass, levelsGained };
+    }
+
+    async claimBattlePassReward(username, tier, isPremium = false) {
+        const user = await this.findUserByUsername(username);
+        if (!user) return null;
+        
+        const battlePass = user.battlePass;
+        const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
+        
+        // Проверяем, не получал ли пользователь эту награду
+        const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
+        if (claimedList.includes(rewardId)) {
+            return { success: false, message: 'Награда уже получена' };
+        }
+        
+        // Добавляем в список полученных наград
+        if (isPremium) {
+            battlePass.premiumRewardsClaimed.push(rewardId);
+        } else {
+            battlePass.freeRewardsClaimed.push(rewardId);
+        }
+        
+        await this.updateUser(username, { battlePass });
+        return { success: true, battlePass };
+    }
+
+    async updateBattlePassQuestProgress(username, questId, progressIncrement) {
+        const user = await this.findUserByUsername(username);
+        if (!user) return null;
+        
+        const battlePass = user.battlePass;
+        const quest = battlePass.quests.find(q => q.id === questId);
+        if (!quest || quest.completed) return null;
+        
+        quest.progress = Math.min(quest.progress + progressIncrement, quest.target);
+        if (quest.progress >= quest.target) {
+            quest.completed = true;
+            // Добавляем XP за выполнение квеста
+            await this.addBattlePassXp(username, quest.reward);
+        }
+        
+        await this.updateUser(username, { battlePass });
+        return { battlePass, quest };
+    }
+
+    async resetBattlePassSeason() {
+        return await getDb().collection('users').updateMany(
+            {},
+            { 
+                $set: { 
+                    'battlePass.season': { $add: ['$battlePass.season', 1] },
+                    'battlePass.level': 0,
+                    'battlePass.xp': 0,
+                    'battlePass.totalXp': 0,
+                    'battlePass.currentTier': 1,
+                    'battlePass.tierXp': 0,
+                    'battlePass.claimedRewards': [],
+                    'battlePass.quests': [],
+                    'battlePass.questsDate': null,
+                    'battlePass.freeRewardsClaimed': [],
+                    'battlePass.premiumRewardsClaimed': []
                 }
             }
         );
