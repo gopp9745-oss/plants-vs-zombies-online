@@ -931,6 +931,30 @@
             <div style="font-size:0.8rem;color:#fbbf24" id="chestInfo">Загружаем...</div>
             <button class="btn btn-primary" style="margin-top:10px;padding:8px 20px;font-size:0.85rem" onclick="openChest()">🎁 Открыть сундук</button>
         </div>
+
+            <!-- ШКАЛА BATTLE PASS В МЕНЮ -->
+            <div id="battlePassBar" style="margin-top:15px;padding:12px;background:rgba(15,23,42,0.9);border-radius:12px;backdrop-filter:blur(12px);border:2px solid rgba(251,191,36,0.5);text-align:left;width:100%;max-width:300px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,0.4);position:relative;overflow:hidden" onclick="showBattlePass()">
+                <div style="position:absolute;top:-20px;right:-10px;font-size:3rem;opacity:0.08">🎖️</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:1.6rem">🎖️</span>
+                        <div>
+                            <div style="font-size:0.9rem;color:#e5e7eb;font-weight:bold">Battle Pass</div>
+                            <div style="font-size:0.75rem;color:#94a3b8">Сезон <span id="bpSmallSeason">1</span></div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;font-size:0.8rem">
+                        <div style="color:#fbbf24;font-weight:bold">Уровень <span id="bpSmallLevel">0</span></div>
+                        <div style="font-size:0.75rem;color:#94a3b8"><span id="bpSmallXp">0</span>/<span id="bpSmallXpMax">1000</span> XP</div>
+                    </div>
+                </div>
+                <div style="background:rgba(148,163,184,0.3);border-radius:999px;height:8px;overflow:hidden">
+                    <div id="bpSmallProgress" style="background:linear-gradient(90deg,#fbbf24,#22c55e);height:100%;width:0%;transition:width 0.3s"></div>
+                </div>
+                <div id="bpNextRewardInfo" style="margin-top:6px;font-size:0.75rem;color:#94a3b8">
+                    Следующая награда: данные загружаются...
+                </div>
+            </div>
     </div>
         
         <!-- ПРАВАЯ СТОРОНА - Статистика и другое -->
@@ -1081,6 +1105,17 @@
                 </div>
             </div>
 
+            <!-- Premium Battle Pass статус -->
+            <div style="margin-bottom:20px;padding:12px;border-radius:12px;background:rgba(15,23,42,0.9);border:1px solid rgba(168,85,247,0.6);display:flex;align-items:center;justify-content:space-between;gap:10px">
+                <div>
+                    <div style="font-size:0.9rem;color:#e5e7eb;font-weight:bold">Premium Battle Pass</div>
+                    <div id="bpPremiumStatus" style="font-size:0.8rem;color:#a5b4fc">Статус: загружается...</div>
+                </div>
+                <button id="bpGetPremiumBtn" class="btn btn-secondary" style="font-size:0.8rem;padding:8px 12px" onclick="requestBattlePassPremium()">
+                    Получить через Telegram
+                </button>
+            </div>
+
             <!-- Квесты Battle Pass -->
             <div style="margin-bottom:20px">
                 <h3 style="margin-bottom:8px;color:#22c55e">📋 Квесты Battle Pass</h3>
@@ -1090,11 +1125,12 @@
 
             <!-- Награды Battle Pass -->
             <div>
-                <h3 style="margin-bottom:8px;color:#fbbf24">🎁 Награды за уровни</h3>
+                <h3 style="margin-bottom:8px;color:#fbbf24">🎁 Путь наград Battle Pass</h3>
                 <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:8px">
-                    Зелёные награды — бесплатные, фиолетовые — премиум. Получайте уровни, чтобы открывать новые награды.
+                    Листайте путь вправо-влево. Каждая карточка — уровень Battle Pass с бесплатной и премиум наградой. Под ней показано, сколько XP нужно.
                 </div>
-                <div id="battlePassRewards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px"></div>
+                <div id="battlePassRewards" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory">
+                </div>
             </div>
         </div>
         <button class="btn btn-secondary" style="margin-top:20px" onclick="backToProfile()">Назад</button>
@@ -1809,8 +1845,29 @@
         let battlePassQuestTimerInterval = null;
 
         function showBattlePass() {
+            if (!sessionId) {
+                alert('Сначала войдите в аккаунт!');
+                return;
+            }
             showScreen('battlePassScreen');
             loadBattlePass();
+        }
+
+        async function loadBattlePassPreview() {
+            if (!sessionId) return;
+            try {
+                const res = await fetch('/api/battle-pass/status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                const data = await res.json();
+                if (!data.success || !data.battlePass) return;
+                battlePassData = data.battlePass;
+                updateBattlePassSmallBar();
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         async function loadBattlePass() {
@@ -1832,6 +1889,27 @@
             } catch (e) {
                 console.error(e);
                 alert('Ошибка загрузки Battle Pass');
+            }
+        }
+
+        async function requestBattlePassPremium() {
+            if (!sessionId) {
+                alert('Сначала войдите в аккаунт!');
+                return;
+            }
+            try {
+                const res = await fetch('/api/battle-pass/request-premium', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId })
+                });
+                const data = await res.json();
+                alert(data.message || 'Запрос отправлен.');
+                // Обновляем статус Battle Pass, чтобы отобразить новое состояние
+                loadBattlePass();
+            } catch (e) {
+                console.error(e);
+                alert('Ошибка отправки запроса на Premium Battle Pass');
             }
         }
 
@@ -1891,6 +1969,8 @@
             const tierXpCurrentEl = document.getElementById('bpTierXpCurrent');
             const tierXpMaxEl = document.getElementById('bpTierXpMax');
             const tierProgress = document.getElementById('bpTierProgress');
+            const premiumStatusEl = document.getElementById('bpPremiumStatus');
+            const premiumBtn = document.getElementById('bpGetPremiumBtn');
 
             const level = battlePassData.level || 0;
             const xp = battlePassData.xp || 0;
@@ -1913,6 +1993,68 @@
             tierXpCurrentEl.textContent = tierXp;
             tierXpMaxEl.textContent = tierMax;
             tierProgress.style.width = Math.min(100, (tierXp / tierMax) * 100) + '%';
+
+            if (premiumStatusEl) {
+                if (battlePassData.isPremium) {
+                    premiumStatusEl.textContent = 'Статус: активен 🎉';
+                    premiumStatusEl.style.color = '#4ade80';
+                    if (premiumBtn) premiumBtn.style.display = 'none';
+                } else if (battlePassData.premiumRequestedAt) {
+                    premiumStatusEl.textContent = 'Статус: заявка отправлена, ожидает подтверждения в Telegram';
+                    premiumStatusEl.style.color = '#fbbf24';
+                    if (premiumBtn) premiumBtn.disabled = true;
+                } else {
+                    premiumStatusEl.textContent = 'Статус: не активирован';
+                    premiumStatusEl.style.color = '#a5b4fc';
+                    if (premiumBtn) {
+                        premiumBtn.disabled = false;
+                        premiumBtn.style.display = 'inline-flex';
+                    }
+                }
+            }
+
+            updateBattlePassSmallBar();
+        }
+
+        function updateBattlePassSmallBar() {
+            if (!battlePassData) return;
+            const season = battlePassData.season || 1;
+            const level = battlePassData.level || 0;
+            const xp = battlePassData.xp || 0;
+            const totalXp = battlePassData.totalXp || 0;
+            const xpPerLevel = BATTLE_PASS_CLIENT_CONFIG.xpPerLevel;
+
+            const seasonEl = document.getElementById('bpSmallSeason');
+            const levelEl = document.getElementById('bpSmallLevel');
+            const xpEl = document.getElementById('bpSmallXp');
+            const xpMaxEl = document.getElementById('bpSmallXpMax');
+            const progressEl = document.getElementById('bpSmallProgress');
+            const nextRewardEl = document.getElementById('bpNextRewardInfo');
+
+            if (!seasonEl || !levelEl || !xpEl || !xpMaxEl || !progressEl) return;
+
+            seasonEl.textContent = season;
+            levelEl.textContent = level;
+            xpEl.textContent = xp;
+            xpMaxEl.textContent = xpPerLevel;
+            progressEl.style.width = Math.min(100, (xp / xpPerLevel) * 100) + '%';
+
+            if (nextRewardEl) {
+                const tiers = BATTLE_PASS_CLIENT_CONFIG.displayTiers;
+                const rewardsCfg = BATTLE_PASS_CLIENT_CONFIG.rewards;
+                const nextTier = tiers.find(t => t > level);
+                if (!nextTier) {
+                    nextRewardEl.textContent = 'Вы достигли максимального уровня Battle Pass!';
+                } else {
+                    const free = rewardsCfg.free[nextTier];
+                    const premium = rewardsCfg.premium[nextTier];
+                    const neededXp = Math.max(0, nextTier * xpPerLevel - totalXp);
+                    const parts = [];
+                    if (free) parts.push(`🆓 ${free.name} x${free.amount}`);
+                    if (premium) parts.push(`💎 ${premium.name} x${premium.amount}`);
+                    nextRewardEl.textContent = `Следующая награда на уровне ${nextTier}: ${parts.join(' + ')} (ещё примерно ${neededXp.toLocaleString('ru-RU')} XP)`;
+                }
+            }
         }
 
         function renderBattlePassRewards() {
@@ -1944,23 +2086,39 @@
 
                 const freeColor = freeIsClaimed ? '#4ade80' : (freeAvailable ? '#fbbf24' : '#64748b');
                 const premiumColor = premiumIsClaimed ? '#a855f7' : (premiumAvailable ? '#f97316' : '#64748b');
+                const xpPerLevel = BATTLE_PASS_CLIENT_CONFIG.xpPerLevel;
+                const requiredTotalXp = tier * xpPerLevel;
 
-                return `<div style="background:rgba(15,23,42,0.8);padding:10px;border-radius:10px;border:1px solid rgba(148,163,184,0.4)">
-                    <div style="font-weight:bold;margin-bottom:4px">Уровень ${tier}</div>
-                    <div style="font-size:0.8rem;margin-bottom:6px;color:#94a3b8">Достигается при уровне Battle Pass ≥ ${tier}</div>
-                    <div style="font-size:0.8rem;margin-bottom:4px">
+                return `<div style="min-width:190px;scroll-snap-align:start;background:radial-gradient(circle at top, rgba(251,191,36,0.3), transparent 55%),rgba(15,23,42,0.95);padding:10px 10px 12px;border-radius:14px;border:2px solid rgba(148,163,184,0.6);box-shadow:0 10px 25px rgba(0,0,0,0.6);position:relative;overflow:hidden">
+                    <div style="position:absolute;top:-20px;right:-10px;font-size:3rem;opacity:0.15">⭐</div>
+                    <div style="font-weight:bold;margin-bottom:6px;font-size:0.9rem;color:#e5e7eb">Уровень ${tier}</div>
+                    <div style="height:80px;border-radius:10px;background:linear-gradient(135deg,rgba(56,189,248,0.18),rgba(168,85,247,0.25));display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px">
+                        <div style="text-align:center">
+                            <div style="font-size:1.6rem;margin-bottom:2px">🆓</div>
+                            <div style="font-size:0.7rem;color:${freeColor}">${free ? free.name : '—'}</div>
+                        </div>
+                        <div style="width:1px;height:55px;background:rgba(148,163,184,0.5)"></div>
+                        <div style="text-align:center">
+                            <div style="font-size:1.6rem;margin-bottom:2px">💎</div>
+                            <div style="font-size:0.7rem;color:${premiumColor}">${premium ? premium.name : '—'}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.7rem;color:#94a3b8;margin-bottom:4px">
+                        Нужно XP: ≈ ${requiredTotalXp.toLocaleString('ru-RU')} (уровень ${tier})
+                    </div>
+                    <div style="font-size:0.75rem;margin-bottom:4px">
                         <div style="color:${freeColor};margin-bottom:2px">
-                            <span>Бесплатно: ${free ? `${free.name} x${free.amount}` : '—'}</span><br>
-                            <span style="font-size:0.75rem">${freeStatus}</span>
+                            <span>Бесплатно: ${free ? `x${free.amount}` : '—'}</span>
+                            <span style="font-size:0.7rem;opacity:0.9;display:block">${freeStatus}</span>
                         </div>
                         <div style="color:${premiumColor}">
-                            <span>Премиум: ${premium ? `${premium.name} x${premium.amount}` : '—'}</span><br>
-                            <span style="font-size:0.75rem">${premiumStatus}</span>
+                            <span>Премиум: ${premium ? `x${premium.amount}` : '—'}</span>
+                            <span style="font-size:0.7rem;opacity:0.9;display:block">${premiumStatus}</span>
                         </div>
                     </div>
                     <div style="display:flex;gap:6px;margin-top:4px">
-                        ${free && freeAvailable && !freeIsClaimed ? `<button class="btn btn-primary" style="flex:1;padding:6px 8px;font-size:0.75rem" onclick="claimBattlePassReward(${tier}, false)">Забрать бесплатно</button>` : ''}
-                        ${premium && premiumAvailable && !premiumIsClaimed ? `<button class="btn btn-secondary" style="flex:1;padding:6px 8px;font-size:0.75rem" onclick="claimBattlePassReward(${tier}, true)">Премиум награда</button>` : ''}
+                        ${free && freeAvailable && !freeIsClaimed ? `<button class="btn btn-primary" style="flex:1;padding:4px 6px;font-size:0.7rem" onclick="claimBattlePassReward(${tier}, false)">Забрать</button>` : ''}
+                        ${premium && premiumAvailable && !premiumIsClaimed ? `<button class="btn btn-secondary" style="flex:1;padding:4px 6px;font-size:0.7rem" onclick="claimBattlePassReward(${tier}, true)">Премиум</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -2151,6 +2309,9 @@
             
             // Загружаем сундуки
             loadChests();
+
+            // Загружаем превью Battle Pass (шкала в меню)
+            loadBattlePassPreview();
         }
         
         async function handleAuth(e) {

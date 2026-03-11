@@ -76,7 +76,9 @@ async function createAdminIfNotExists() {
                 tierXp: 0,
                 maxTierXp: 1000,
                 freeRewardsClaimed: [],
-                premiumRewardsClaimed: []
+                premiumRewardsClaimed: [],
+                isPremium: false,
+                premiumRequestedAt: null
             },
             inventory: {}
         });
@@ -135,7 +137,9 @@ class MongoDB {
                 tierXp: 0,
                 maxTierXp: 1000,
                 freeRewardsClaimed: [],
-                premiumRewardsClaimed: []
+                premiumRewardsClaimed: [],
+                isPremium: false,
+                premiumRequestedAt: null
             },
             createdAt: new Date()
         };
@@ -414,7 +418,9 @@ class MongoDB {
             tierXp: 0,
             maxTierXp: 100,
             freeRewardsClaimed: [],
-            premiumRewardsClaimed: []
+            premiumRewardsClaimed: [],
+            isPremium: false,
+            premiumRequestedAt: null
         };
         
         // Добавляем XP
@@ -442,6 +448,11 @@ class MongoDB {
         if (!user) return null;
         
         const battlePass = user.battlePass;
+        if (!battlePass) return { success: false, message: 'Battle Pass не инициализирован' };
+
+        if (isPremium && !battlePass.isPremium) {
+            return { success: false, message: 'Для этой награды нужен Premium Battle Pass' };
+        }
         const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
         
         // Проверяем, не получал ли пользователь эту награду

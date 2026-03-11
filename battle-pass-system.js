@@ -96,7 +96,9 @@ async function initializeBattlePass(username) {
             tierXp: 0,
             maxTierXp: 1000,
             freeRewardsClaimed: [],
-            premiumRewardsClaimed: []
+            premiumRewardsClaimed: [],
+            isPremium: false,
+            premiumRequestedAt: null
         };
         await db.updateUser(username, { battlePass: user.battlePass });
     }

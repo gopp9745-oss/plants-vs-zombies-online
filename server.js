@@ -408,6 +408,7 @@ app.post('/api/login', async (req, res) => {
     
     res.json({ 
         success: true, 
+        sessionId,
         user: { 
             username: user.username, role: user.role, coins: user.coins, wins: user.wins, losses: user.losses,
             xp: user.xp, level: user.level, totalGames: user.totalGames,
@@ -1071,6 +1072,46 @@ app.post('/api/battle-pass/complete-quest', async (req, res) => {
     if (!result) return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
     
     res.json({ success: true, battlePass: result.battlePass, quest: result.quest });
+});
+
+// Запрос на Premium Battle Pass (через Telegram-бота, логика будет реализована позже)
+app.post('/api/battle-pass/request-premium', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+
+    const battlePass = user.battlePass || {
+        season: 1,
+        level: 0,
+        xp: 0,
+        totalXp: 0,
+        claimedRewards: [],
+        quests: [],
+        questsDate: null,
+        currentTier: 1,
+        tierXp: 0,
+        maxTierXp: 1000,
+        freeRewardsClaimed: [],
+        premiumRewardsClaimed: [],
+        isPremium: false,
+        premiumRequestedAt: null
+    };
+
+    if (battlePass.isPremium) {
+        return res.json({ success: true, message: 'У вас уже есть Premium Battle Pass!' });
+    }
+
+    battlePass.premiumRequestedAt = new Date();
+    await db.updateUser(user.username, { battlePass });
+
+    // Здесь позже можно будет связать проверочный код / Telegram ID с вашим ботом
+    res.json({
+        success: true,
+        message: 'Заявка на Premium Battle Pass через Telegram сохранена. Свяжитесь с нашим Telegram-ботом, чтобы завершить активацию.'
+    });
 });
 
 // ==================== ADMIN API ====================
