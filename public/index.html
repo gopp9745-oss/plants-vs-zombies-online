@@ -2218,7 +2218,16 @@
                 const res = await fetch('/api/chests', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
                 const data = await res.json();
                 if (data.success) {
-                    userChests = data.chests || { common: 0, rare: 0, epic: 0, legendary: 0 };
+                    userChests = data.chests || { 
+                        common: 0, 
+                        rare: 0, 
+                        epic: 0, 
+                        legendary: 0,
+                        plant_chest_rare: 0,
+                        plant_chest_epic: 0,
+                        plant_chest_mythic: 0,
+                        plant_chest_legendary: 0
+                    };
                     updateChestBar();
                 }
             } catch(e) {}
@@ -2232,32 +2241,61 @@
             if (!chestBar || !chestIcons || !chestInfo) return;
             
             const totalChests = userChests.common + userChests.rare + userChests.epic + userChests.legendary;
+            const totalPlantChests = (userChests.mythic || 0) + (userChests.plant_chest_mythic || 0) + (userChests.plant_chest_legendary || 0) + (userChests.plant_chest_epic || 0) + (userChests.plant_chest_rare || 0);
             
-            if (totalChests > 0) {
+            if (totalChests > 0 || totalPlantChests > 0) {
                 chestBar.style.display = 'block';
                 
                 // Иконки сундуков
                 let iconsHtml = '';
+                
+                // Сначала показываем plant chests (сундуки растений) - они важнее!
+                if (userChests.plant_chest_legendary && userChests.plant_chest_legendary > 0) {
+                    iconsHtml += `<div style="position:relative" title="Сундук растений (Легендарный)">
+                        <span style="font-size:2rem">🌱👑</span>
+                        <span style="position:absolute;top:-5px;right:-5px;background:#ef4444;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.plant_chest_legendary}</span>
+                    </div>`;
+                }
+                if (userChests.plant_chest_mythic && userChests.plant_chest_mythic > 0) {
+                    iconsHtml += `<div style="position:relative" title="Сундук растений (Мифический)">
+                        <span style="font-size:2rem">🌱🟧</span>
+                        <span style="position:absolute;top:-5px;right:-5px;background:#f59e0b;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.plant_chest_mythic}</span>
+                    </div>`;
+                }
+                if (userChests.plant_chest_epic && userChests.plant_chest_epic > 0) {
+                    iconsHtml += `<div style="position:relative" title="Сундук растений (Эпический)">
+                        <span style="font-size:2rem">🌱🟣</span>
+                        <span style="position:absolute;top:-5px;right:-5px;background:#a855f7;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.plant_chest_epic}</span>
+                    </div>`;
+                }
+                if (userChests.plant_chest_rare && userChests.plant_chest_rare > 0) {
+                    iconsHtml += `<div style="position:relative" title="Сундук растений (Редкий)">
+                        <span style="font-size:2rem">🌱🔵</span>
+                        <span style="position:absolute;top:-5px;right:-5px;background:#3b82f6;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.plant_chest_rare}</span>
+                    </div>`;
+                }
+                
+                // Обычные сундуки
                 if (userChests.legendary > 0) {
-                    iconsHtml += `<div style="position:relative">
+                    iconsHtml += `<div style="position:relative" title="Легендарный сундук">
                         <span style="font-size:2rem">👑</span>
                         <span style="position:absolute;top:-5px;right:-5px;background:#fbbf24;color:#1a1a2e;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.legendary}</span>
                     </div>`;
                 }
                 if (userChests.epic > 0) {
-                    iconsHtml += `<div style="position:relative">
+                    iconsHtml += `<div style="position:relative" title="Эпический сундук">
                         <span style="font-size:2rem">🟣</span>
                         <span style="position:absolute;top:-5px;right:-5px;background:#a855f7;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.epic}</span>
                     </div>`;
                 }
                 if (userChests.rare > 0) {
-                    iconsHtml += `<div style="position:relative">
+                    iconsHtml += `<div style="position:relative" title="Редкий сундук">
                         <span style="font-size:2rem">🔵</span>
                         <span style="position:absolute;top:-5px;right:-5px;background:#3b82f6;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.rare}</span>
                     </div>`;
                 }
                 if (userChests.common > 0) {
-                    iconsHtml += `<div style="position:relative">
+                    iconsHtml += `<div style="position:relative" title="Обычный сундук">
                         <span style="font-size:2rem">🟤</span>
                         <span style="position:absolute;top:-5px;right:-5px;background:#92400e;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.common}</span>
                     </div>`;
@@ -2269,13 +2307,34 @@
                     legendary: { min: 500, max: 2000, name: 'Легендарный' },
                     epic: { min: 200, max: 800, name: 'Эпический' },
                     rare: { min: 100, max: 400, name: 'Редкий' },
-                    common: { min: 30, max: 150, name: 'Обычный' }
+                    common: { min: 30, max: 150, name: 'Обычный' },
+                    plant_chest_legendary: { min: 1000, max: 3000, name: 'Сундук растений (Легендарный)' },
+                    plant_chest_mythic: { min: 800, max: 2000, name: 'Сундук растений (Мифический)' },
+                    plant_chest_epic: { min: 500, max: 1200, name: 'Сундук растений (Эпический)' },
+                    plant_chest_rare: { min: 200, max: 600, name: 'Сундук растений (Редкий)' }
                 };
                 
-                // Показываем информацию о самом ценном сундуке
+                // Показываем информацию о самом ценном сундуке (приоритет: plant chests)
                 let bestChest = 'common';
                 let bestValue = chestValues.common.min;
-                if (userChests.legendary > 0) { bestChest = 'legendary'; bestValue = chestValues.legendary.min; }
+                
+                if (userChests.plant_chest_legendary && userChests.plant_chest_legendary > 0) { 
+                    bestChest = 'plant_chest_legendary'; 
+                    bestValue = chestValues.plant_chest_legendary.min; 
+                }
+                else if (userChests.plant_chest_mythic && userChests.plant_chest_mythic > 0) { 
+                    bestChest = 'plant_chest_mythic'; 
+                    bestValue = chestValues.plant_chest_mythic.min; 
+                }
+                else if (userChests.plant_chest_epic && userChests.plant_chest_epic > 0) { 
+                    bestChest = 'plant_chest_epic'; 
+                    bestValue = chestValues.plant_chest_epic.min; 
+                }
+                else if (userChests.plant_chest_rare && userChests.plant_chest_rare > 0) { 
+                    bestChest = 'plant_chest_rare'; 
+                    bestValue = chestValues.plant_chest_rare.min; 
+                }
+                else if (userChests.legendary > 0) { bestChest = 'legendary'; bestValue = chestValues.legendary.min; }
                 else if (userChests.epic > 0) { bestChest = 'epic'; bestValue = chestValues.epic.min; }
                 else if (userChests.rare > 0) { bestChest = 'rare'; bestValue = chestValues.rare.min; }
                 
@@ -2288,22 +2347,36 @@
         async function openChest() {
             // Показываем выбор сундука
             const totalChests = userChests.common + userChests.rare + userChests.epic + userChests.legendary;
-            if (totalChests === 0) {
+            const totalPlantChests = (userChests.plant_chest_rare || 0) + (userChests.plant_chest_epic || 0) + (userChests.plant_chest_mythic || 0) + (userChests.plant_chest_legendary || 0);
+            
+            if (totalChests === 0 && totalPlantChests === 0) {
                 alert('У вас нет сундуков! Играйте, чтобы получить сундуки!');
                 return;
             }
             
             // Показываем доступные сундуки для открытия
             let message = 'Выберите сундук для открытия:\n\n';
-            if (userChests.common > 0) message += `🟤 Обычный: ${userChests.common} шт.\n`;
-            if (userChests.rare > 0) message += `🔵 Редкий: ${userChests.rare} шт.\n`;
-            if (userChests.epic > 0) message += `🟣 Эпический: ${userChests.epic} шт.\n`;
-            if (userChests.legendary > 0) message += `👑 Легендарный: ${userChests.legendary} шт.\n`;
             
-            const choice = prompt(message + '\nВведите тип (common/rare/epic/legendary):');
+            // Сначала plant chests (сундуки растений) - они ценнее!
+            if (userChests.plant_chest_legendary && userChests.plant_chest_legendary > 0) message += `🌱👑 Сундук растений (Легендарный): ${userChests.plant_chest_legendary} шт.\n`;
+            if (userChests.plant_chest_mythic && userChests.plant_chest_mythic > 0) message += `🌱🟧 Сундук растений (Мифический): ${userChests.plant_chest_mythic} шт.\n`;
+            if (userChests.plant_chest_epic && userChests.plant_chest_epic > 0) message += `🌱🟣 Сундук растений (Эпический): ${userChests.plant_chest_epic} шт.\n`;
+            if (userChests.plant_chest_rare && userChests.plant_chest_rare > 0) message += `🌱🔵 Сундук растений (Редкий): ${userChests.plant_chest_rare} шт.\n`;
+            
+            // Обычные сундуки
+            if (userChests.legendary > 0) message += `👑 Легендарный: ${userChests.legendary} шт.\n`;
+            if (userChests.epic > 0) message += `🟣 Эпический: ${userChests.epic} шт.\n`;
+            if (userChests.rare > 0) message += `🔵 Редкий: ${userChests.rare} шт.\n`;
+            if (userChests.common > 0) message += `🟤 Обычный: ${userChests.common} шт.\n`;
+            
+            message += '\nВведите тип сундука:\n';
+            message += 'plant_chest_legendary, plant_chest_mythic, plant_chest_epic, plant_chest_rare,\n';
+            message += 'legendary, epic, rare, common';
+            
+            const choice = prompt(message);
             if (!choice) return;
             
-            const chestType = choice.toLowerCase();
+            const chestType = choice.toLowerCase().trim();
             if (!userChests[chestType] || userChests[chestType] <= 0) {
                 alert('У вас нет такого сундука!');
                 return;
@@ -2315,7 +2388,15 @@
                 
                 if (data.success) {
                     const rewards = data.rewards || 0;
-                    alert(`🎁 Поздравляем! Вы получили ${rewards} монет! 💰`);
+                    let chestName = '';
+                    switch(chestType) {
+                        case 'plant_chest_legendary': chestName = 'Сундук растений (Легендарный)'; break;
+                        case 'plant_chest_mythic': chestName = 'Сундук растений (Мифический)'; break;
+                        case 'plant_chest_epic': chestName = 'Сундук растений (Эпический)'; break;
+                        case 'plant_chest_rare': chestName = 'Сундук растений (Редкий)'; break;
+                        default: chestName = 'Сундук';
+                    }
+                    alert(`🎁 Поздравляем! Вы открыли ${chestName} и получили ${rewards} монет! 💰`);
                     
                     // Обновляем данные
                     currentUser.coins = data.coins;

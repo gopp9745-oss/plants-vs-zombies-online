@@ -52,6 +52,7 @@ async function createAdminIfNotExists() {
             seasonElo: 1000,
             totalCoins: 0,
             createdAt: new Date(),
+            lastLogin: new Date(),
             lastDaily: null,
             totalGames: 0,
             longestWinStreak: 0,
@@ -160,7 +161,8 @@ class MongoDB {
                 isPremium: false,
                 premiumRequestedAt: null
             },
-            createdAt: new Date()
+            createdAt: new Date(),
+            lastLogin: new Date()
         };
         const result = await getDb().collection('users').insertOne(user);
         return { ...user, _id: result.insertedId };
@@ -269,6 +271,10 @@ class MongoDB {
     
     async getSessionsCount() {
         return await getDb().collection('sessions').countDocuments();
+    }
+    
+    async getAllSessions() {
+        return await getDb().collection('sessions').find({}).toArray();
     }
     
     // Matches
@@ -427,116 +433,118 @@ class MongoDB {
         );
     }
 
-    // Новые методы для Battle Pass
-    async addBattlePassXp(username, xpAmount) {
-        const user = await this.findUserByUsername(username);
-        if (!user) return null;
-        
-        const battlePass = user.battlePass || {
-            season: 1,
-            level: 0,
-            xp: 0,
-            totalXp: 0,
-            claimedRewards: [],
-            quests: [],
-            questsDate: null,
-            currentTier: 1,
-            tierXp: 0,
-            maxTierXp: 100,
-            freeRewardsClaimed: [],
-            premiumRewardsClaimed: [],
-            isPremium: false,
-            premiumRequestedAt: null
-        };
-        
-        // Добавляем XP
-        battlePass.xp += xpAmount;
-        battlePass.totalXp += xpAmount;
-        battlePass.tierXp += xpAmount;
-        
-        // Проверяем, набрал ли Tier XP нужное количество
-        let levelsGained = 0;
-        while (battlePass.tierXp >= battlePass.maxTierXp) {
-            battlePass.tierXp -= battlePass.maxTierXp;
-            battlePass.currentTier += 1;
-            battlePass.level += 1;
-            levelsGained += 1;
-            // Увеличиваем требования к XP за каждый уровень
-            battlePass.maxTierXp = 1000 + (battlePass.currentTier - 1) * 100;
-        }
-        
-        await this.updateUser(username, { battlePass });
-        return { battlePass, levelsGained };
-    }
-
-    async claimBattlePassReward(username, tier, isPremium = false) {
-        const user = await this.findUserByUsername(username);
-        if (!user) return null;
-        
-        const battlePass = user.battlePass;
-        if (!battlePass) return { success: false, message: 'Battle Pass не инициализирован' };
-
-        if (isPremium && !battlePass.isPremium) {
-            return { success: false, message: 'Для этой награды нужен Premium Battle Pass' };
-        }
-        const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
-        
-        // Проверяем, не получал ли пользователь эту награду
-        const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
-        if (claimedList.includes(rewardId)) {
-            return { success: false, message: 'Награда уже получена' };
-        }
-        
-        // Добавляем в список полученных наград
-        if (isPremium) {
-            battlePass.premiumRewardsClaimed.push(rewardId);
-        } else {
-            battlePass.freeRewardsClaimed.push(rewardId);
-        }
-        
-        await this.updateUser(username, { battlePass });
-        return { success: true, battlePass };
-    }
-
-    async updateBattlePassQuestProgress(username, questId, progressIncrement) {
-        const user = await this.findUserByUsername(username);
-        if (!user) return null;
-        
-        const battlePass = user.battlePass;
-        const quest = battlePass.quests.find(q => q.id === questId);
-        if (!quest || quest.completed) return null;
-        
-        quest.progress = Math.min(quest.progress + progressIncrement, quest.target);
-        if (quest.progress >= quest.target) {
-            quest.completed = true;
-            // Добавляем XP за выполнение квеста
-            await this.addBattlePassXp(username, quest.reward);
-        }
-        
-        await this.updateUser(username, { battlePass });
-        return { battlePass, quest };
-    }
-
-    async resetBattlePassSeason() {
-        return await getDb().collection('users').updateMany(
-            {},
-            { 
-                $set: { 
-                    'battlePass.season': { $add: ['$battlePass.season', 1] },
-                    'battlePass.level': 0,
-                    'battlePass.xp': 0,
-                    'battlePass.totalXp': 0,
-                    'battlePass.currentTier': 1,
-                    'battlePass.tierXp': 0,
-                    'battlePass.claimedRewards': [],
-                    'battlePass.quests': [],
-                    'battlePass.questsDate': null,
-                    'battlePass.freeRewardsClaimed': [],
-                    'battlePass.premiumRewardsClaimed': []
-                }
+        // Новые методы для Battle Pass
+        async addBattlePassXp(username, xpAmount) {
+            const user = await this.findUserByUsername(username);
+            if (!user) return null;
+            
+            const battlePass = user.battlePass || {
+                season: 1,
+                level: 0,
+                xp: 0,
+                totalXp: 0,
+                claimedRewards: [],
+                quests: [],
+                questsDate: null,
+                currentTier: 1,
+                tierXp: 0,
+                maxTierXp: 1000, // Исправлено значение по умолчанию
+                freeRewardsClaimed: [],
+                premiumRewardsClaimed: [],
+                isPremium: false,
+                premiumRequestedAt: null
+            };
+            
+            // Добавляем XP
+            battlePass.xp += xpAmount;
+            battlePass.totalXp += xpAmount;
+            battlePass.tierXp += xpAmount;
+            
+            // Проверяем, набрал ли Tier XP нужное количество
+            let levelsGained = 0;
+            while (battlePass.tierXp >= battlePass.maxTierXp) {
+                battlePass.tierXp -= battlePass.maxTierXp;
+                battlePass.currentTier += 1;
+                battlePass.level += 1;
+                levelsGained += 1;
+                // Увеличиваем требования к XP за каждый уровень
+                battlePass.maxTierXp = 1000 + (battlePass.currentTier - 1) * 50;
             }
-        );
-    }
+            
+            await this.updateUser(username, { battlePass });
+            return { battlePass, levelsGained };
+        }
+
+        async claimBattlePassReward(username, tier, isPremium = false) {
+            const user = await this.findUserByUsername(username);
+            if (!user) return null;
+            
+            const battlePass = user.battlePass;
+            if (!battlePass) return { success: false, message: 'Battle Pass не инициализирован' };
+
+            if (isPremium && !battlePass.isPremium) {
+                return { success: false, message: 'Для этой награды нужен Premium Battle Pass' };
+            }
+            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
+            
+            // Проверяем, не получал ли пользователь эту награду
+            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
+            if (claimedList.includes(rewardId)) {
+                return { success: false, message: 'Награда уже получена' };
+            }
+            
+            // Добавляем в список полученных наград
+            if (isPremium) {
+                battlePass.premiumRewardsClaimed.push(rewardId);
+            } else {
+                battlePass.freeRewardsClaimed.push(rewardId);
+            }
+            
+            await this.updateUser(username, { battlePass });
+            return { success: true, battlePass };
+        }
+
+        async updateBattlePassQuestProgress(username, questId, progressIncrement) {
+            const user = await this.findUserByUsername(username);
+            if (!user) return null;
+            
+            const battlePass = user.battlePass;
+            if (!battlePass || !battlePass.quests) return null; // Добавлена проверка на существование battlePass и quests
+            
+            const quest = battlePass.quests.find(q => q.id === questId);
+            if (!quest || quest.completed) return null;
+            
+            quest.progress = Math.min(quest.progress + progressIncrement, quest.target);
+            if (quest.progress >= quest.target) {
+                quest.completed = true;
+                // Добавляем XP за выполнение квеста
+                await this.addBattlePassXp(username, quest.reward);
+            }
+            
+            await this.updateUser(username, { battlePass });
+            return { battlePass, quest };
+        }
+
+        async resetBattlePassSeason() {
+            return await getDb().collection('users').updateMany(
+                {},
+                { 
+                    $set: { 
+                        'battlePass.season': { $add: ['$battlePass.season', 1] },
+                        'battlePass.level': 0,
+                        'battlePass.xp': 0,
+                        'battlePass.totalXp': 0,
+                        'battlePass.currentTier': 1,
+                        'battlePass.tierXp': 0,
+                        'battlePass.claimedRewards': [],
+                        'battlePass.quests': [],
+                        'battlePass.questsDate': null,
+                        'battlePass.freeRewardsClaimed': [],
+                        'battlePass.premiumRewardsClaimed': []
+                    }
+                }
+            );
+        }
     
     // Закрытие соединения
     async close() {

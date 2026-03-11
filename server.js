@@ -6,6 +6,11 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const db = require('./database');
 
+// Кэш для сессий и пользователей
+const sessionCache = new Map();
+const userCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -163,7 +168,7 @@ setInterval(() => generateShopItems(), 5 * 60 * 1000);
 app.post('/api/friends', async (req, res) => {
     const { sessionId } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     let user;
     try {
@@ -195,7 +200,7 @@ app.post('/api/friends', async (req, res) => {
 app.post('/api/friends/add', async (req, res) => {
     const { sessionId, friendUsername } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -228,7 +233,7 @@ app.post('/api/friends/add', async (req, res) => {
 app.post('/api/friends/remove', async (req, res) => {
     const { sessionId, friendUsername } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -244,7 +249,7 @@ app.post('/api/friends/remove', async (req, res) => {
 app.post('/api/elo', async (req, res) => {
     const { sessionId } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -304,7 +309,7 @@ app.get('/api/sales', async (req, res) => {
 app.post('/api/inventory', async (req, res) => {
     const { sessionId } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -316,7 +321,7 @@ app.post('/api/inventory', async (req, res) => {
 app.post('/api/buy-unit', async (req, res) => {
     const { sessionId, unitId, unitType } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -342,7 +347,7 @@ app.post('/api/buy-unit', async (req, res) => {
 app.post('/api/upgrade-unit', async (req, res) => {
     const { sessionId, unitId } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -412,6 +417,9 @@ app.post('/api/login', async (req, res) => {
     
     if (user.role === 'banned') return res.json({ success: false, message: 'Ваш аккаунт заблокирован' });
     
+    // Обновляем время последнего входа
+    await db.updateUser(user.username, { lastLogin: new Date() });
+    
     const sessionId = uuidv4();
     await db.createSession({ sessionId, userId: user._id });
     
@@ -437,14 +445,17 @@ app.post('/api/login', async (req, res) => {
 // Проверка сессии
 app.post('/api/check-session', async (req, res) => {
     const { sessionId } = req.body;
-    const session = await db.findSession(sessionId);
+    const session = await getCachedSession(sessionId);
     if (!session) return res.json({ success: false });
     
-    const user = await db.findUser({ _id: session.userId });
+    const user = await getCachedUser(session.userId);
     if (!user) return res.json({ success: false });
     
     if (user.role === 'banned') {
         await db.deleteSession(sessionId);
+        // Удаляем из кэша
+        sessionCache.delete(sessionId);
+        userCache.delete(session.userId);
         return res.json({ success: false, message: 'Ваш аккаунт заблокирован' });
     }
     
@@ -496,18 +507,7 @@ app.get('/api/leaderboard-elo', async (req, res) => {
     res.json({ success: true, leaders: users.map(u => ({ username: u.username, elo: u.elo || 1000, wins: u.wins, level: u.level })) });
 });
 
-// ELO
-app.post('/api/elo', async (req, res) => {
-    const { sessionId } = req.body;
-    const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-    
-    const user = await db.findUser({ _id: session.userId });
-    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-    
-    const elo = user.elo || ELO_CONFIG.initial;
-    res.json({ success: true, elo, seasonElo: user.seasonElo || ELO_CONFIG.initial, rank: getEloRank(elo) });
-});
+
 
 function getEloRank(elo) {
     if (elo >= 2500) return 'Алмаз';
@@ -541,7 +541,7 @@ app.get('/api/profile/:username', (req, res) => {
 app.post('/api/daily-reward', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -629,7 +629,7 @@ const BASE_CHEST_REWARDS = [
 app.post('/api/chest', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -737,13 +737,25 @@ app.post('/api/chests', (req, res) => {
     let currentRarity = user.chestRarity || 1;
     if (currentRarity > 5) currentRarity = 5;
     
+    // Получаем plant chests
+    const plantChests = user.plantChests || {
+        common: 0,
+        rare: 0,
+        epic: 0,
+        mythic: 0,
+        legendary: 0
+    };
+    
     res.json({
         success: true,
         chests: {
+            // Обычные сундуки (за победы)
             common: Math.max(0, maxChestsToday - chestsToday),
             rare: 0,
             epic: 0,
-            legendary: 0
+            legendary: 0,
+            // Plant chests (покупаются за кристаллы)
+            ...plantChests
         }
     });
 });
@@ -751,61 +763,118 @@ app.post('/api/chests', (req, res) => {
 app.post('/api/open-chest', (req, res) => {
     const { sessionId, chestType } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
-    const today = new Date().toDateString();
-    let chestsToday = user.chestsToday || 0;
-    let winsToday = user.winsToday || 0;
+    // Проверяем тип сундука
+    const isPlantChest = chestType.startsWith('plant_chest_');
+    let plantChests = user.plantChests || { common: 0, rare: 0, epic: 0, mythic: 0, legendary: 0 };
     
-    if (user.lastChestDay !== today) {
-        chestsToday = 0;
-        winsToday = 0;
+    if (isPlantChest) {
+        // Обработка plant chests
+        const rarity = chestType.replace('plant_chest_', '');
+        if (!plantChests[rarity] || plantChests[rarity] <= 0) {
+            return res.json({ success: false, message: 'У вас нет такого сундука растений!' });
+        }
+        
+        // Уменьшаем количество сундуков
+        plantChests[rarity]--;
+        
+        // Награды за plant chests (растения и монеты)
+        const plantChestRewards = {
+            rare: { coins: { min: 200, max: 600 }, plants: ['peashooter', 'sunflower', 'wallnut'] },
+            epic: { coins: { min: 500, max: 1200 }, plants: ['cherrybomb', 'snowpea', 'chomper'] },
+            mythic: { coins: { min: 800, max: 2000 }, plants: ['repeater', 'squash', 'twinsunflower'] },
+            legendary: { coins: { min: 1000, max: 3000 }, plants: ['melonpult', 'cattail', 'iceshroom'] }
+        };
+        
+        const reward = plantChestRewards[rarity];
+        const coinAmount = Math.floor(Math.random() * (reward.coins.max - reward.coins.min + 1)) + reward.coins.min;
+        const randomPlant = reward.plants[Math.floor(Math.random() * reward.plants.length)];
+        
+        // Добавляем монеты
+        const newCoins = user.coins + coinAmount;
+        
+        // Добавляем растение в инвентарь (если его еще нет)
+        const inventory = user.inventory || {};
+        if (!inventory[randomPlant]) {
+            inventory[randomPlant] = { 
+                level: 1, 
+                type: 'plant', 
+                purchased: new Date().toISOString() 
+            };
+        }
+        
+        db.updateUser(user.username, {
+            plantChests: plantChests,
+            coins: newCoins,
+            inventory: inventory
+        });
+        
+        res.json({
+            success: true,
+            message: `🎁 Вы открыли сундук растений (${rarity}) и получили ${coinAmount} монет + растение ${randomPlant}!`,
+            coins: newCoins,
+            plant: randomPlant,
+            chestType: chestType,
+            remainingChests: plantChests
+        });
+        
+    } else {
+        // Обработка обычных сундуков (за победы)
+        const today = new Date().toDateString();
+        let chestsToday = user.chestsToday || 0;
+        let winsToday = user.winsToday || 0;
+        
+        if (user.lastChestDay !== today) {
+            chestsToday = 0;
+            winsToday = 0;
+        }
+        
+        const maxChestsToday = Math.min(4, winsToday);
+        
+        if (chestsToday >= maxChestsToday) {
+            return res.json({ success: false, message: 'Нет доступных сундуков! Выиграйте больше игр.' });
+        }
+        
+        let currentRarity = user.chestRarity || 1;
+        let newRarity = currentRarity;
+        const upgradeChance = CHEST_RARITIES[currentRarity].chance;
+        
+        if (upgradeChance > 0 && Math.random() * 100 < upgradeChance) {
+            newRarity = Math.min(5, currentRarity + 1);
+        }
+        
+        const baseReward = BASE_CHEST_REWARDS[Math.floor(Math.random() * BASE_CHEST_REWARDS.length)];
+        const baseAmount = Math.floor(Math.random() * (baseReward.max - baseReward.min + 1)) + baseReward.min;
+        
+        const rarityData = CHEST_RARITIES[newRarity];
+        const multiplier = rarityData.minMult + Math.random() * (rarityData.maxMult - rarityData.minMult);
+        const rewardAmount = Math.floor(baseAmount * multiplier);
+        
+        const xpReward = Math.floor(rewardAmount * 0.3);
+        const newCoins = user.coins + rewardAmount;
+        const newXP = user.xp + xpReward;
+        const { level: newLevel, xp: newXPAfterLevel } = calculateLevel(newXP);
+        
+        db.updateUser(user.username, {
+            chestsToday: chestsToday + 1,
+            chestRarity: newRarity,
+            coins: newCoins,
+            xp: newXPAfterLevel
+        });
+        
+        res.json({
+            success: true,
+            rewards: rewardAmount,
+            coins: newCoins,
+            xp: newXPAfterLevel,
+            level: newLevel,
+            message: `Вы получили ${rewardAmount} монет!`
+        });
     }
-    
-    const maxChestsToday = Math.min(4, winsToday);
-    
-    if (chestsToday >= maxChestsToday) {
-        return res.json({ success: false, message: 'Нет доступных сундуков! Выиграйте больше игр.' });
-    }
-    
-    let currentRarity = user.chestRarity || 1;
-    let newRarity = currentRarity;
-    const upgradeChance = CHEST_RARITIES[currentRarity].chance;
-    
-    if (upgradeChance > 0 && Math.random() * 100 < upgradeChance) {
-        newRarity = Math.min(5, currentRarity + 1);
-    }
-    
-    const baseReward = BASE_CHEST_REWARDS[Math.floor(Math.random() * BASE_CHEST_REWARDS.length)];
-    const baseAmount = Math.floor(Math.random() * (baseReward.max - baseReward.min + 1)) + baseReward.min;
-    
-    const rarityData = CHEST_RARITIES[newRarity];
-    const multiplier = rarityData.minMult + Math.random() * (rarityData.maxMult - rarityData.minMult);
-    const rewardAmount = Math.floor(baseAmount * multiplier);
-    
-    const xpReward = Math.floor(rewardAmount * 0.3);
-    const newCoins = user.coins + rewardAmount;
-    const newXP = user.xp + xpReward;
-    const { level: newLevel, xp: newXPAfterLevel } = calculateLevel(newXP);
-    
-    db.updateUser(user.username, {
-        chestsToday: chestsToday + 1,
-        chestRarity: newRarity,
-        coins: newCoins,
-        xp: newXPAfterLevel
-    });
-    
-    res.json({
-        success: true,
-        rewards: rewardAmount,
-        coins: newCoins,
-        xp: newXPAfterLevel,
-        level: newLevel,
-        message: `Вы получили ${rewardAmount} монет!`
-    });
 });
 
 // API для получения информации о сундуке
@@ -870,7 +939,7 @@ app.post('/api/chest-status', (req, res) => {
 app.post('/api/plant-chests', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
 
     const user = db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -885,7 +954,7 @@ app.post('/api/plant-chests', (req, res) => {
 app.post('/api/buy-plant-chest', (req, res) => {
     const { sessionId, rarity } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
 
     const user = db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -951,16 +1020,21 @@ app.post('/api/add-win', async (req, res) => {
     });
 });
 
-function calculateLevel(xp) {
+function calculateLevel(totalXP) {
     const xpPerLevel = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450];
     let level = 1;
-    for (let i = xpPerLevel.length - 1; i >= 0; i--) {
-        if (xp >= xpPerLevel[i]) {
+    let remainingXP = 0;
+    
+    for (let i = 0; i < xpPerLevel.length; i++) {
+        if (totalXP >= xpPerLevel[i]) {
             level = i + 1;
+            remainingXP = totalXP - xpPerLevel[i];
+        } else {
             break;
         }
     }
-    return { level, xp };
+    
+    return { level, xp: remainingXP };
 }
 
 // API для получения информации о серии
@@ -1007,7 +1081,7 @@ app.post('/api/streak', (req, res) => {
 app.post('/api/promocode', (req, res) => {
     const { sessionId, code } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const promo = db.findPromo(code);
     if (!promo) return res.json({ success: false, message: 'Неверный промокод' });
@@ -1064,7 +1138,7 @@ app.get('/api/maps', (req, res) => res.json({ success: true, maps: MAPS }));
 app.post('/api/battle-pass/status', async (req, res) => {
     const { sessionId } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -1110,7 +1184,7 @@ app.post('/api/battle-pass/status', async (req, res) => {
 app.post('/api/battle-pass/claim-reward', async (req, res) => {
     const { sessionId, tier, isPremium = false } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -1142,7 +1216,7 @@ app.post('/api/battle-pass/claim-reward', async (req, res) => {
 app.post('/api/battle-pass/complete-quest', async (req, res) => {
     const { sessionId, questId } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -1157,7 +1231,7 @@ app.post('/api/battle-pass/complete-quest', async (req, res) => {
 app.post('/api/battle-pass/request-premium', async (req, res) => {
     const { sessionId } = req.body;
     const session = await db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
 
     const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -1220,7 +1294,7 @@ function pushNotificationToUser(username, notification) {
 app.post('/api/notifications/poll', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -1234,7 +1308,7 @@ app.post('/api/notifications/poll', (req, res) => {
 app.post('/api/admin/stats', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = db.findUser({ _id: session.userId });
     if (!user || user.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1254,7 +1328,7 @@ app.post('/api/admin/stats', (req, res) => {
 app.post('/api/admin/users', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = db.findUser({ _id: session.userId });
     if (!user || user.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1265,7 +1339,7 @@ app.post('/api/admin/users', (req, res) => {
 app.post('/api/admin/create-promo', (req, res) => {
     const { sessionId, code, reward, maxUses } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const user = db.findUser({ _id: session.userId });
     if (!user || user.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1277,7 +1351,7 @@ app.post('/api/admin/create-promo', (req, res) => {
 app.post('/api/admin/give-coins', (req, res) => {
     const { sessionId, username, coins } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1299,19 +1373,25 @@ app.post('/api/admin/give-coins', (req, res) => {
 app.post('/api/admin/set-level', (req, res) => {
     const { sessionId, username, level } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    db.updateUser(username, { level: parseInt(level), xp: 0 });
-    res.json({ success: true, message: `Уровень игрока ${username} изменён на ${level}!` });
+    // Проверяем, что уровень является допустимым числом
+    const newLevel = parseInt(level);
+    if (isNaN(newLevel) || newLevel < 1 || newLevel > 100) {
+        return res.json({ success: false, message: 'Недопустимый уровень (1-100)' });
+    }
+    
+    db.updateUser(username, { level: newLevel, xp: 0 });
+    res.json({ success: true, message: `Уровень игрока ${username} изменён на ${newLevel}!` });
 });
 
 app.post('/api/admin/ban', (req, res) => {
     const { sessionId, username } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1323,7 +1403,7 @@ app.post('/api/admin/ban', (req, res) => {
 app.post('/api/admin/unban', (req, res) => {
     const { sessionId, username } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1335,7 +1415,7 @@ app.post('/api/admin/unban', (req, res) => {
 app.post('/api/admin/reset-progress', (req, res) => {
     const { sessionId, username } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1347,7 +1427,7 @@ app.post('/api/admin/reset-progress', (req, res) => {
 app.post('/api/admin/clear-matches', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1359,7 +1439,7 @@ app.post('/api/admin/clear-matches', (req, res) => {
 app.post('/api/admin/clear-promos', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1372,46 +1452,64 @@ app.post('/api/admin/clear-promos', (req, res) => {
 app.post('/api/admin/set-elo', (req, res) => {
     const { sessionId, username, elo } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    db.updateUser(username, { elo: parseInt(elo), seasonElo: parseInt(elo) });
-    res.json({ success: true, message: `ELO игрока ${username} изменён на ${elo}!` });
+    // Проверяем, что ELO является допустимым числом в разумном диапазоне
+    const newElo = parseInt(elo);
+    if (isNaN(newElo) || newElo < 100 || newElo > 5000) {
+        return res.json({ success: false, message: 'Недопустимое значение ELO (100-5000)' });
+    }
+    
+    db.updateUser(username, { elo: newElo, seasonElo: newElo });
+    res.json({ success: true, message: `ELO игрока ${username} изменён на ${newElo}!` });
 });
 
 // Управление победами
 app.post('/api/admin/set-wins', (req, res) => {
     const { sessionId, username, wins } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    db.updateUser(username, { wins: parseInt(wins) });
-    res.json({ success: true, message: `Победы игрока ${username} изменены на ${wins}!` });
+    // Проверяем, что количество побед является допустимым неотрицательным числом
+    const newWins = parseInt(wins);
+    if (isNaN(newWins) || newWins < 0) {
+        return res.json({ success: false, message: 'Недопустимое значение побед (неотрицательное число)' });
+    }
+    
+    db.updateUser(username, { wins: newWins });
+    res.json({ success: true, message: `Победы игрока ${username} изменены на ${newWins}!` });
 });
 
 // Управление XP
 app.post('/api/admin/set-xp', (req, res) => {
     const { sessionId, username, xp } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    db.updateUser(username, { xp: parseInt(xp) });
-    res.json({ success: true, message: `XP игрока ${username} изменено на ${xp}!` });
+    // Проверяем, что XP является допустимым неотрицательным числом
+    const newXp = parseInt(xp);
+    if (isNaN(newXp) || newXp < 0) {
+        return res.json({ success: false, message: 'Недопустимое значение XP (неотрицательное число)' });
+    }
+    
+    db.updateUser(username, { xp: newXp });
+    res.json({ success: true, message: `XP игрока ${username} изменено на ${newXp}!` });
 });
 
 // Забрать монеты
 app.post('/api/admin/take-coins', (req, res) => {
     const { sessionId, username, coins } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1428,7 +1526,7 @@ app.post('/api/admin/take-coins', (req, res) => {
 app.post('/api/admin/give-crystals', (req, res) => {
     const { sessionId, username, crystals } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1452,7 +1550,7 @@ app.post('/api/admin/give-crystals', (req, res) => {
 app.post('/api/admin/give-plant-chest', (req, res) => {
     const { sessionId, username, rarity, amount } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1480,7 +1578,7 @@ app.post('/api/admin/give-plant-chest', (req, res) => {
 app.post('/api/admin/set-battlepass-level', (req, res) => {
     const { sessionId, username, level } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1516,7 +1614,7 @@ app.post('/api/admin/set-battlepass-level', (req, res) => {
 app.post('/api/admin/set-battlepass-premium', (req, res) => {
     const { sessionId, username, isPremium } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1561,7 +1659,7 @@ app.post('/api/admin/set-battlepass-premium', (req, res) => {
 app.post('/api/admin/reset-quests', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1574,7 +1672,7 @@ app.post('/api/admin/reset-quests', (req, res) => {
 app.post('/api/admin/export-users', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1600,7 +1698,7 @@ app.post('/api/admin/export-users', (req, res) => {
 app.post('/api/admin/db-stats', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1626,7 +1724,7 @@ let serverSettings = {
 app.post('/api/admin/server-settings', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1637,7 +1735,7 @@ app.post('/api/admin/server-settings', (req, res) => {
 app.post('/api/admin/update-settings', (req, res) => {
     const { sessionId, settings } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1650,7 +1748,7 @@ app.post('/api/admin/update-settings', (req, res) => {
 app.post('/api/admin/level-stats', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1666,7 +1764,7 @@ app.post('/api/admin/level-stats', (req, res) => {
 app.post('/api/admin/top-coins', (req, res) => {
     const { sessionId } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1682,7 +1780,7 @@ app.post('/api/admin/top-coins', (req, res) => {
 app.post('/api/admin/set-role', (req, res) => {
     const { sessionId, username, role } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1695,7 +1793,7 @@ app.post('/api/admin/set-role', (req, res) => {
 app.post('/api/admin/create-sale', (req, res) => {
     const { sessionId, plantId, discount, duration } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1708,7 +1806,7 @@ app.post('/api/admin/create-sale', (req, res) => {
 app.post('/api/admin/delete-user', (req, res) => {
     const { sessionId, username } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1721,7 +1819,7 @@ app.post('/api/admin/delete-user', (req, res) => {
 app.post('/api/admin/search-user', (req, res) => {
     const { sessionId, query } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1733,7 +1831,7 @@ app.post('/api/admin/search-user', (req, res) => {
 app.post('/api/admin/give-unit', (req, res) => {
     const { sessionId, username, unitId, unitType } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1751,7 +1849,7 @@ app.post('/api/admin/give-unit', (req, res) => {
 app.post('/api/admin/broadcast-coins', (req, res) => {
     const { sessionId, coins } = req.body;
     const session = db.findSession(sessionId);
-    if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
     const admin = db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
@@ -1782,7 +1880,7 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
 
         // === СИСТЕМА BATTLE PASS ===
         // Импортируем систему Battle Pass
-        const battlePassSystem = require('./battle-pass-system');
+        const battlePassSystem = require('./battle-pass-system-fixed');
 
         // API для получения статуса Battle Pass
         app.post('/api/battle-pass/status', async (req, res) => {
@@ -1810,7 +1908,7 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
         app.post('/api/battle-pass/quests', async (req, res) => {
             const { sessionId } = req.body;
             const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
+            if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
 
             const user = await db.findUser({ _id: session.userId });
             if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
@@ -1842,1052 +1940,6 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
             return battlePassSystem.addBattlePassXp(username, xpAmount);
         }
 
-        // Обновляем прогресс квестов при игровых событиях
-        async function updateBattlePassQuestProgressOnEvent(username, eventType, amount = 1) {
-            const user = await db.findUserByUsername(username);
-            if (!user || !user.battlePass || !user.battlePass.quests) return;
-
-            for (const quest of user.battlePass.quests) {
-                if (quest.type === eventType && !quest.completed) {
-                    quest.progress = Math.min(quest.progress + amount, quest.target);
-                    if (quest.progress >= quest.target) {
-                        quest.completed = true;
-                        // Добавляем XP к Battle Pass за выполнение квеста
-                        await battlePassSystem.addBattlePassXp(username, quest.reward);
-                    }
-                }
-            }
-
-            await db.updateUser(username, { battlePass: user.battlePass });
-        }
-
-        // Обновляем прогресс квестов при победах
-        app.post('/api/game/win', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Добавляем XP к Battle Pass за победу
-            await addBattlePassXpForWin(user.username, 50);
-            // Обновляем прогресс квестов на победу
-            await updateBattlePassQuestProgressOnEvent(user.username, 'wins', 1);
-
-            res.json({ success: true, message: 'Прогресс обновлён за победу' });
-        });
-
-        // Обновляем прогресс квестов при играх
-        app.post('/api/game/play', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Добавляем XP к Battle Pass за игру
-            await addBattlePassXpForGame(user.username, 20);
-            // Обновляем прогресс квестов на игры
-            await updateBattlePassQuestProgressOnEvent(user.username, 'games', 1);
-
-            res.json({ success: true, message: 'Прогресс обновлён за игру' });
-        });
-
-        // === СИСТЕМА НАГРАД ===
-        // Удаляем дубликат BATTLE_PASS_REWARDS - он уже объявлен выше в файле
-        // Оставляем только функции для работы с наградами
-
-        // Система квестов для Battle Pass
-        function generateBattlePassQuests() {
-            const availableQuests = BATTLE_PASS_QUESTS;
-            const dailyQuests = [];
-            for (let i = 0; i < 3; i++) {
-                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
-                dailyQuests.push({
-                    ...randomQuest,
-                    id: `${randomQuest.id}_${Date.now()}_${i}`,
-                    progress: 0,
-                    completed: false
-                });
-            }
-            return dailyQuests;
-        }
-
-        // Обновляем пользователя с Battle Pass данными
-        app.post('/api/battle-pass/status', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Инициализируем Battle Pass если нет
-            if (!user.battlePass) {
-                user.battlePass = {
-                    season: 1,
-                    level: 0,
-                    xp: 0,
-                    totalXp: 0,
-                    claimedRewards: [],
-                    questsDate: null,
-                    currentTier: 1,
-                    tierXp: 0,
-                    maxTierXp: 1000,
-                    freeRewardsClaimed: [],
-                    premiumRewardsClaimed: []
-                };
-            }
-
-            // Проверяем, нужно ли обновить квесты
-            const today = new Date().toDateString();
-            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
-                user.battlePass.quests = generateBattlePassQuests();
-                user.battlePass.questsDate = today;
-                await db.updateUser(user.username, { battlePass: user.battlePass });
-            }
-
-            res.json({ success: true, battlePass: user.battlePass });
-        });
-
-        app.post('/api/battle-pass/claim-reward', async (req, res) => {
-            const { sessionId, tier, isPremium = false } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass) {
-                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
-            }
-
-            const battlePass = user.battlePass;
-            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
-            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
-
-            if (claimedList.includes(rewardId)) {
-                return res.json({ success: false, message: 'Награда уже получена' });
-            }
-
-            // Проверяем, достиг ли игрок нужного уровня
-            if (battlePass.level < tier) {
-                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
-            }
-
-            // Добавляем в список полученных наград
-            if (isPremium) {
-                claimedList.push(rewardId);
-            } else {
-                claimedList.push(rewardId);
-            }
-
-            // Выдаём награду
-            const rewardType = isPremium ? 'premium' : 'free';
-            const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
-
-            let updateData = { battlePass };
-            if (reward.type === 'coins') {
-                updateData.coins = (user.coins || 0) + reward.amount;
-            } else if (reward.type === 'xp') {
-                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
-                updateData.xp = newXP;
-                if (newLevel > (user.level || 1)) updateData.level = newLevel;
-            } else if (reward.type === 'rare_unit') {
-                // Добавляем редкий юнит в инвентарь
-                const inventory = user.inventory || {};
-                inventory[reward.name] = { level: 1, type: 'rare', purchased: new Date().toISOString() };
-                updateData.inventory = inventory;
-            }
-
-            await db.updateUser(user.username, updateData);
-
-            res.json({ success: true, reward, battlePass, userData: updateData });
-        });
-
-        app.post('/api/battle-pass/complete-quest', async (req, res) => {
-            const { sessionId, questId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass || !user.battlePass.quests) {
-                return res.json({ success: false, message: 'Нет активных квестов' });
-            }
-
-            const quest = user.battlePass.quests.find(q => q.id === questId);
-            if (!quest || quest.completed) {
-                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
-            }
-
-            // Отмечаем квест как выполненный
-            quest.completed = true;
-            quest.progress = quest.target;
-
-            // Добавляем XP к Battle Pass
-            user.battlePass.xp += quest.reward;
-            user.battlePass.totalXp += quest.reward;
-
-            // Проверяем повышение уровня
-            let levelsGained = 0;
-            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
-                user.battlePass.xp -= 1000;
-                user.battlePass.level += 1;
-                levelsGained += 1;
-            }
-
-            await db.updateUser(user.username, { battlePass: user.battlePass });
-
-            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained });
-        });
-
-        // Функция для добавления XP к Battle Pass за игровые действия
-        function addBattlePassXp(username, xpAmount) {
-            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
-        }
-
-        // === СИСТЕМА КВЕСТОВ ===
-        const GAME_QUESTS = [
-            { id: 'win_1_game', name: 'Первая победа', desc: 'Выиграйте 1 матч', reward: 100, type: 'wins', target: 1, category: 'battlepass' },
-            { id: 'win_3_games', name: 'Готов к битве', desc: 'Выиграйте 3 матча', reward: 250, type: 'wins', target: 3, category: 'battlepass' },
-            { id: 'play_5_games', name: 'Игроман', desc: 'Сыграйте 5 матчей', reward: 150, type: 'games', target: 5, category: 'battlepass' },
-            { id: 'earn_200_coins', name: 'Копилка', desc: 'Заработайте 200 монет', reward: 100, type: 'coins', target: 200, category: 'battlepass' },
-            { id: 'place_10_units', name: 'Командир', desc: 'Разместите 10 юнитов', reward: 120, type: 'units', target: 10, category: 'battlepass' },
-            { id: 'destroy_5_units', name: 'Разрушитель', desc: 'Уничтожьте 5 вражеских юнитов', reward: 180, type: 'destroy', target: 5, category: 'battlepass' },
-            { id: 'survive_10_minutes', name: 'Выживальщик', desc: 'Проведите в игре 10 минут', reward: 150, type: 'time', target: 10, category: 'battlepass' },
-            { id: 'use_different_plants', name: 'Коллекционер', desc: 'Используйте 5 разных растений', reward: 200, type: 'variety', target: 5, category: 'battlepass' }
-        ];
-
-        // Генерация ежедневных квестов для Battle Pass
-        function generateDailyBattlePassQuests() {
-            const availableQuests = GAME_QUESTS.filter(q => q.category === 'battlepass');
-            const dailyQuests = [];
-            for (let i = 0; i < 3; i++) {
-                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
-                dailyQuests.push({
-                    ...randomQuest,
-                    id: `${randomQuest.id}_${Date.now()}_${i}`,
-                    progress: 0,
-                    completed: false
-                });
-            }
-            return dailyQuests;
-        }
-
-        // API для получения ежедневных квестов Battle Pass
-        app.post('/api/battle-pass/quests', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Инициализируем Battle Pass если нет
-            if (!user.battlePass) {
-                user.battlePass = {
-                    season: 1,
-                    level: 0,
-                    xp: 0,
-                    totalXp: 0,
-                    claimedRewards: [],
-                    quests: [],
-                    questsDate: null,
-                    currentTier: 1,
-                    tierXp: 0,
-                    maxTierXp: 1000,
-                    freeRewardsClaimed: [],
-                    premiumRewardsClaimed: []
-                };
-            }
-
-            // Проверяем, нужно ли обновить квесты
-            const today = new Date().toDateString();
-            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
-                user.battlePass.quests = generateDailyBattlePassQuests();
-                user.battlePass.questsDate = today;
-                await db.updateUser(user.username, { battlePass: user.battlePass });
-            }
-
-            res.json({ success: true, quests: user.battlePass.quests, date: user.battlePass.questsDate });
-        });
-
-        // API для выполнения квеста Battle Pass
-        app.post('/api/battle-pass/complete-quest', async (req, res) => {
-            const { sessionId, questId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass || !user.battlePass.quests) {
-                return res.json({ success: false, message: 'Нет активных квестов Battle Pass' });
-            }
-
-            const quest = user.battlePass.quests.find(q => q.id === questId);
-            if (!quest || quest.completed) {
-                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
-            }
-
-            // Отмечаем квест как выполненный
-            quest.completed = true;
-            quest.progress = quest.target;
-
-            // Добавляем XP к Battle Pass
-            user.battlePass.xp += quest.reward;
-            user.battlePass.totalXp += quest.reward;
-
-            // Проверяем повышение уровня
-            let levelsGained = 0;
-            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
-                user.battlePass.xp -= 1000;
-                user.battlePass.level += 1;
-                levelsGained += 1;
-            }
-
-            await db.updateUser(user.username, { battlePass: user.battlePass });
-
-            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained, message: `Квест "${quest.name}" выполнен! Получено ${quest.reward} XP к Battle Pass!` });
-        });
-
-        // Функция для обновления прогресса квеста
-        async function updateBattlePassQuestProgress(username, questId, progressIncrement) {
-            const user = await db.findUserByUsername(username);
-            if (!user || !user.battlePass || !user.battlePass.quests) return null;
-
-            const quest = user.battlePass.quests.find(q => q.id === questId);
-            if (!quest || quest.completed) return null;
-
-            quest.progress = Math.min(quest.progress + progressIncrement, quest.target);
-            if (quest.progress >= quest.target) {
-                quest.completed = true;
-                // Добавляем XP к Battle Pass за выполнение квеста
-                user.battlePass.xp += quest.reward;
-                user.battlePass.totalXp += quest.reward;
-            }
-
-            await db.updateUser(username, { battlePass: user.battlePass });
-            return { battlePass: user.battlePass, quest };
-        }
-
-        // === СИСТЕМА НАГРАД ===
-        // Удаляем дубликат BATTLE_PASS_REWARDS - он уже объявлен выше в файле
-        // Оставляем только функции для работы с наградами
-
-        // API для получения наград за уровень Battle Pass
-        app.post('/api/battle-pass/rewards', async (req, res) => {
-            const { sessionId, tier, isPremium = false } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass) {
-                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
-            }
-
-            const battlePass = user.battlePass;
-            const rewardType = isPremium ? 'premium' : 'free';
-            const reward = BATTLE_PASS_REWARDS[rewardType][tier];
-
-            if (!reward) {
-                return res.json({ success: false, message: 'Награда не найдена' });
-            }
-
-            // Проверяем, достиг ли игрок нужного уровня
-            if (battlePass.level < tier) {
-                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
-            }
-
-            // Проверяем, не получал ли уже эту награду
-            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
-            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
-
-            if (claimedList.includes(rewardId)) {
-                return res.json({ success: false, message: 'Награда уже получена' });
-            }
-
-            // Добавляем в список полученных наград
-            claimedList.push(rewardId);
-
-            // Выдаём награду
-            let updateData = { battlePass };
-            if (reward.type === 'coins') {
-                updateData.coins = (user.coins || 0) + reward.amount;
-            } else if (reward.type === 'xp') {
-                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
-                updateData.xp = newXP;
-                if (newLevel > (user.level || 1)) updateData.level = newLevel;
-            } else if (reward.type === 'rare_unit' || reward.type === 'legendary_unit') {
-                // Добавляем редкий юнит в инвентарь
-                const inventory = user.inventory || {};
-                inventory[reward.name] = { level: reward.amount, type: reward.type.replace('_unit', ''), purchased: new Date().toISOString() };
-                updateData.inventory = inventory;
-            }
-
-            await db.updateUser(user.username, updateData);
-
-            res.json({ success: true, reward, userData: updateData, message: `Получена награда за ${tier} уровень Battle Pass!` });
-        });
-
-        // === ИНТЕГРАЦИЯ С ИГРОВЫМИ СОБЫТИЯМИ ===
-        // Добавляем XP к Battle Pass за победы
-        function addBattlePassXpForWin(username, xpAmount) {
-            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
-        }
-
-        // Добавляем XP к Battle Pass за игры
-        function addBattlePassXpForGame(username, xpAmount) {
-            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
-        }
-
-        // Обновляем прогресс квестов при игровых событиях
-        async function updateQuestProgressOnEvent(username, eventType, amount = 1) {
-            const user = await db.findUserByUsername(username);
-            if (!user || !user.battlePass || !user.battlePass.quests) return;
-
-            for (const quest of user.battlePass.quests) {
-                if (quest.type === eventType && !quest.completed) {
-                    quest.progress = Math.min(quest.progress + amount, quest.target);
-                    if (quest.progress >= quest.target) {
-                        quest.completed = true;
-                        // Добавляем XP к Battle Pass за выполнение квеста
-                        user.battlePass.xp += quest.reward;
-                        user.battlePass.totalXp += quest.reward;
-                    }
-                }
-            }
-
-            await db.updateUser(username, { battlePass: user.battlePass });
-        }
-
-        // Обновляем прогресс квестов при победах
-        app.post('/api/game/win', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Добавляем XP к Battle Pass за победу
-            await addBattlePassXpForWin(user.username, 50);
-            // Обновляем прогресс квестов на победу
-            await updateQuestProgressOnEvent(user.username, 'wins', 1);
-
-            res.json({ success: true, message: 'Прогресс обновлён за победу' });
-        });
-
-        // Обновляем прогресс квестов при играх
-        app.post('/api/game/play', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Добавляем XP к Battle Pass за игру
-            await addBattlePassXpForGame(user.username, 20);
-            // Обновляем прогресс квестов на игры
-            await updateQuestProgressOnEvent(user.username, 'games', 1);
-
-            res.json({ success: true, message: 'Прогресс обновлён за игру' });
-        });
-
-        // Система квестов для Battle Pass
-        function generateBattlePassQuests() {
-            const availableQuests = BATTLE_PASS_QUESTS;
-            const dailyQuests = [];
-            for (let i = 0; i < 3; i++) {
-                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
-                dailyQuests.push({
-                    ...randomQuest,
-                    id: `${randomQuest.id}_${Date.now()}_${i}`,
-                    progress: 0,
-                    completed: false
-                });
-            }
-            return dailyQuests;
-        }
-
-        // Обновляем пользователя с Battle Pass данными
-        app.post('/api/battle-pass/status', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Инициализируем Battle Pass если нет
-            if (!user.battlePass) {
-                user.battlePass = {
-                    season: 1,
-                    level: 0,
-                    xp: 0,
-                    totalXp: 0,
-                    claimedRewards: [],
-                    questsDate: null,
-                    currentTier: 1,
-                    tierXp: 0,
-                    maxTierXp: 1000,
-                    freeRewardsClaimed: [],
-                    premiumRewardsClaimed: []
-                };
-            }
-
-            // Проверяем, нужно ли обновить квесты
-            const today = new Date().toDateString();
-            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
-                user.battlePass.quests = generateBattlePassQuests();
-                user.battlePass.questsDate = today;
-                await db.updateUser(user.username, { battlePass: user.battlePass });
-            }
-
-            res.json({ success: true, battlePass: user.battlePass });
-        });
-
-        app.post('/api/battle-pass/claim-reward', async (req, res) => {
-            const { sessionId, tier, isPremium = false } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass) {
-                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
-            }
-
-            const battlePass = user.battlePass;
-            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
-            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
-
-            if (claimedList.includes(rewardId)) {
-                return res.json({ success: false, message: 'Награда уже получена' });
-            }
-
-            // Проверяем, достиг ли игрок нужного уровня
-            if (battlePass.level < tier) {
-                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
-            }
-
-            // Добавляем в список полученных наград
-            if (isPremium) {
-                claimedList.push(rewardId);
-            } else {
-                claimedList.push(rewardId);
-            }
-
-            // Выдаём награду
-            const rewardType = isPremium ? 'premium' : 'free';
-            const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
-
-            let updateData = { battlePass };
-            if (reward.type === 'coins') {
-                updateData.coins = (user.coins || 0) + reward.amount;
-            } else if (reward.type === 'xp') {
-                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
-                updateData.xp = newXP;
-                if (newLevel > (user.level || 1)) updateData.level = newLevel;
-            } else if (reward.type === 'rare_unit') {
-                // Добавляем редкий юнит в инвентарь
-                const inventory = user.inventory || {};
-                inventory[reward.name] = { level: 1, type: 'rare', purchased: new Date().toISOString() };
-                updateData.inventory = inventory;
-            }
-
-            await db.updateUser(user.username, updateData);
-
-            res.json({ success: true, reward, battlePass, userData: updateData });
-        });
-
-        app.post('/api/battle-pass/complete-quest', async (req, res) => {
-            const { sessionId, questId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass || !user.battlePass.quests) {
-                return res.json({ success: false, message: 'Нет активных квестов' });
-            }
-
-            const quest = user.battlePass.quests.find(q => q.id === questId);
-            if (!quest || quest.completed) {
-                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
-            }
-
-            // Отмечаем квест как выполненный
-            quest.completed = true;
-            quest.progress = quest.target;
-
-            // Добавляем XP к Battle Pass
-            user.battlePass.xp += quest.reward;
-            user.battlePass.totalXp += quest.reward;
-
-            // Проверяем повышение уровня
-            let levelsGained = 0;
-            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
-                user.battlePass.xp -= 1000;
-                user.battlePass.level += 1;
-                levelsGained += 1;
-            }
-
-            await db.updateUser(user.username, { battlePass: user.battlePass });
-
-            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained });
-        });
-
-        // Функция для добавления XP к Battle Pass за игровые действия
-        function addBattlePassXp(username, xpAmount) {
-            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
-        }
-
-        // Функция для получения статуса Battle Pass
-        async function getBattlePassStatus(username) {
-            const user = await db.findUserByUsername(username);
-            if (!user) return null;
-            
-            if (!user.battlePass) {
-                user.battlePass = {
-                    season: 1,
-                    level: 0,
-                    xp: 0,
-                    totalXp: 0,
-                    claimedRewards: [],
-                    quests: [],
-                    questsDate: null,
-                    currentTier: 1,
-                    tierXp: 0,
-                    maxTierXp: 1000,
-                    freeRewardsClaimed: [],
-                    premiumRewardsClaimed: []
-                };
-            }
-            
-            return user.battlePass;
-        }
-
-        // Функция для обновления прогресса квеста Battle Pass
-        async function updateBattlePassQuestProgress(username, questId, progressIncrement) {
-            const user = await db.findUserByUsername(username);
-            if (!user || !user.battlePass || !user.battlePass.quests) return null;
-            
-            const quest = user.battlePass.quests.find(q => q.id === questId);
-            if (!quest || quest.completed) return null;
-            
-            quest.progress = Math.min(quest.progress + progressIncrement, quest.target);
-            if (quest.progress >= quest.target) {
-                quest.completed = true;
-                // Добавляем XP к Battle Pass за выполнение квеста
-                user.battlePass.xp += quest.reward;
-                user.battlePass.totalXp += quest.reward;
-            }
-            
-            await db.updateUser(username, { battlePass: user.battlePass });
-            return { battlePass: user.battlePass, quest };
-        }
-
-        // Функция для получения награды за уровень Battle Pass
-        async function claimBattlePassReward(username, tier, isPremium) {
-            const user = await db.findUserByUsername(username);
-            if (!user || !user.battlePass) return null;
-            
-            const battlePass = user.battlePass;
-            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
-            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
-            
-            if (claimedList.includes(rewardId)) {
-                return { success: false, message: 'Награда уже получена' };
-            }
-            
-            if (battlePass.level < tier) {
-                return { success: false, message: 'Недостаточный уровень для получения этой награды' };
-            }
-            
-            claimedList.push(rewardId);
-            await db.updateUser(username, { battlePass });
-            return { success: true, battlePass };
-        }
-
-        // Исправляем функцию calculateLevel для корректного повышения уровня
-        function calculateLevel(totalXP) {
-            const xpPerLevel = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450];
-            let level = 1;
-            let remainingXP = totalXP;
-            
-            for (let i = xpPerLevel.length - 1; i >= 0; i--) {
-                if (totalXP >= xpPerLevel[i]) {
-                    level = i + 1;
-                    remainingXP = totalXP - xpPerLevel[i];
-                    break;
-                }
-            }
-            
-            return { level, xp: remainingXP };
-        }
-
-        // Исправляем функцию endRound для корректного начисления XP к Battle Pass
-        function endRound(roomId, result) {
-            const room = gameRooms.get(roomId);
-            if (!room) return;
-            
-            if (room.timer) clearInterval(room.timer);
-            
-            if (result !== 'draw') {
-                const winner = room.players.find(p => p.side === result);
-                const loser = room.players.find(p => p.side !== result);
-                
-                if (winner && loser) {
-                    const giveRewards = !room.isBotGame;
-                    
-                    if (!winner.user.isBot) {
-                        // Обновляем прогресс Battle Pass для победителя
-                        db.updateUser(winner.user.username, { wins: (winner.user.wins || 0) + 1, totalGames: (winner.user.totalGames || 0) + 1, coins: winner.user.coins + (giveRewards ? 50 : 0) });
-                        // Добавляем XP к Battle Pass за победу
-                        addBattlePassXp(winner.user.username, 50);
-                    }
-                    if (!loser.user.isBot) {
-                        db.updateUser(loser.user.username, { losses: (loser.user.losses || 0) + 1, totalGames: (loser.user.totalGames || 0) + 1, coins: loser.user.coins + (giveRewards ? 10 : 0) });
-                        // Добавляем XP к Battle Pass за игру (даже за поражение)
-                        addBattlePassXp(loser.user.username, 20);
-                    }
-                    
-                    if (!room.isBotGame || (winner.user.isBot === false && loser.user.isBot === false)) {
-                        db.createMatch({ winner: winner.user.username, loser: loser.user.username, winnerSide: winner.side });
-                    }
-                    
-                    io.to(roomId).emit('gameEnd', { winner: winner.user.username, winnerSide: winner.side, rewards: { winner: 50, loser: 10 }, isBotGame: room.isBotGame });
-                }
-            } else {
-                const giveRewards = room.isBotGame && !room.players.find(p => p.user.isBot);
-                
-                for (const p of room.players) {
-                    if (!p.user.isBot) {
-                        db.updateUser(p.user.username, { totalGames: (p.user.totalGames || 0) + 1, coins: p.user.coins + (giveRewards ? 20 : 0) });
-                        // Добавляем XP к Battle Pass за ничью
-                        addBattlePassXp(p.user.username, 30);
-                    }
-                }
-                
-                io.to(roomId).emit('gameEnd', { winner: 'draw', rewards: { winner: giveRewards ? 20 : 0, loser: giveRewards ? 20 : 0 }, isBotGame: room.isBotGame });
-            }
-            
-            gameRooms.delete(roomId);
-        }
-
-        // Система квестов для Battle Pass
-        function generateBattlePassQuests() {
-            const availableQuests = BATTLE_PASS_QUESTS;
-            const dailyQuests = [];
-            for (let i = 0; i < 3; i++) {
-                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
-                dailyQuests.push({
-                    ...randomQuest,
-                    id: `${randomQuest.id}_${Date.now()}_${i}`,
-                    progress: 0,
-                    completed: false
-                });
-            }
-            return dailyQuests;
-        }
-
-        // Обновляем пользователя с Battle Pass данными
-        app.post('/api/battle-pass/status', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Инициализируем Battle Pass если нет
-            if (!user.battlePass) {
-                user.battlePass = {
-                    season: 1,
-                    level: 0,
-                    xp: 0,
-                    totalXp: 0,
-                    claimedRewards: [],
-                    quests: [],
-                    questsDate: null,
-                    currentTier: 1,
-                    tierXp: 0,
-                    maxTierXp: 1000,
-                    freeRewardsClaimed: [],
-                    premiumRewardsClaimed: []
-                };
-            }
-
-            // Проверяем, нужно ли обновить квесты
-            const today = new Date().toDateString();
-            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
-                user.battlePass.quests = generateBattlePassQuests();
-                user.battlePass.questsDate = today;
-                await db.updateUser(user.username, { battlePass: user.battlePass });
-            }
-
-            res.json({ success: true, battlePass: user.battlePass });
-        });
-
-        app.post('/api/battle-pass/claim-reward', async (req, res) => {
-            const { sessionId, tier, isPremium = false } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass) {
-                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
-            }
-
-            const battlePass = user.battlePass;
-            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
-            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
-
-            if (claimedList.includes(rewardId)) {
-                return res.json({ success: false, message: 'Награда уже получена' });
-            }
-
-            // Проверяем, достиг ли игрок нужного уровня
-            if (battlePass.level < tier) {
-                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
-            }
-
-            // Добавляем в список полученных наград
-            if (isPremium) {
-                claimedList.push(rewardId);
-            } else {
-                claimedList.push(rewardId);
-            }
-
-            // Выдаём награду
-            const rewardType = isPremium ? 'premium' : 'free';
-            const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
-
-            let updateData = { battlePass };
-            if (reward.type === 'coins') {
-                updateData.coins = (user.coins || 0) + reward.amount;
-            } else if (reward.type === 'xp') {
-                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
-                updateData.xp = newXP;
-                if (newLevel > (user.level || 1)) updateData.level = newLevel;
-            } else if (reward.type === 'rare_unit') {
-                // Добавляем редкий юнит в инвентарь
-                const inventory = user.inventory || {};
-                inventory[reward.name] = { level: 1, type: 'rare', purchased: new Date().toISOString() };
-                updateData.inventory = inventory;
-            }
-
-            await db.updateUser(user.username, updateData);
-
-            res.json({ success: true, reward, battlePass, userData: updateData });
-        });
-
-        app.post('/api/battle-pass/complete-quest', async (req, res) => {
-            const { sessionId, questId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass || !user.battlePass.quests) {
-                return res.json({ success: false, message: 'Нет активных квестов' });
-            }
-
-            const quest = user.battlePass.quests.find(q => q.id === questId);
-            if (!quest || quest.completed) {
-                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
-            }
-
-            // Отмечаем квест как выполненный
-            quest.completed = true;
-            quest.progress = quest.target;
-
-            // Добавляем XP к Battle Pass
-            user.battlePass.xp += quest.reward;
-            user.battlePass.totalXp += quest.reward;
-
-            // Проверяем повышение уровня
-            let levelsGained = 0;
-            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
-                user.battlePass.xp -= 1000;
-                user.battlePass.level += 1;
-                levelsGained += 1;
-            }
-
-            await db.updateUser(user.username, { battlePass: user.battlePass });
-
-            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained });
-        });
-
-        // Функция для добавления XP к Battle Pass за игровые действия
-        function addBattlePassXp(username, xpAmount) {
-            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
-        }
-
-        // Система квестов для Battle Pass
-        function generateBattlePassQuests() {
-            const availableQuests = BATTLE_PASS_QUESTS;
-            const dailyQuests = [];
-            for (let i = 0; i < 3; i++) {
-                const randomQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
-                dailyQuests.push({
-                    ...randomQuest,
-                    id: `${randomQuest.id}_${Date.now()}_${i}`,
-                    progress: 0,
-                    completed: false
-                });
-            }
-            return dailyQuests;
-        }
-
-        // Обновляем пользователя с Battle Pass данными
-        app.post('/api/battle-pass/status', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Инициализируем Battle Pass если нет
-            if (!user.battlePass) {
-                user.battlePass = {
-                    season: 1,
-                    level: 0,
-                    xp: 0,
-                    totalXp: 0,
-                    claimedRewards: [],
-                    quests: [],
-                    questsDate: null,
-                    currentTier: 1,
-                    tierXp: 0,
-                    maxTierXp: 1000,
-                    freeRewardsClaimed: [],
-                    premiumRewardsClaimed: []
-                };
-            }
-
-            // Проверяем, нужно ли обновить квесты
-            const today = new Date().toDateString();
-            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
-                user.battlePass.quests = generateBattlePassQuests();
-                user.battlePass.questsDate = today;
-                await db.updateUser(user.username, { battlePass: user.battlePass });
-            }
-
-            res.json({ success: true, battlePass: user.battlePass });
-        });
-
-        app.post('/api/battle-pass/claim-reward', async (req, res) => {
-            const { sessionId, tier, isPremium = false } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass) {
-                return res.json({ success: false, message: 'Battle Pass не инициализирован' });
-            }
-
-            const battlePass = user.battlePass;
-            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
-            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
-
-            if (claimedList.includes(rewardId)) {
-                return res.json({ success: false, message: 'Награда уже получена' });
-            }
-
-            // Проверяем, достиг ли игрок нужного уровня
-            if (battlePass.level < tier) {
-                return res.json({ success: false, message: 'Недостаточный уровень для получения этой награды' });
-            }
-
-            // Добавляем в список полученных наград
-            if (isPremium) {
-                claimedList.push(rewardId);
-            } else {
-                claimedList.push(rewardId);
-            }
-
-            // Выдаём награду
-            const rewardType = isPremium ? 'premium' : 'free';
-            const reward = BATTLE_PASS_REWARDS[rewardType][tier] || { type: 'coins', amount: 50 };
-
-            let updateData = { battlePass };
-            if (reward.type === 'coins') {
-                updateData.coins = (user.coins || 0) + reward.amount;
-            } else if (reward.type === 'xp') {
-                const { level: newLevel, xp: newXP } = calculateLevel((user.xp || 0) + reward.amount);
-                updateData.xp = newXP;
-                if (newLevel > (user.level || 1)) updateData.level = newLevel;
-            } else if (reward.type === 'rare_unit') {
-                // Добавляем редкий юнит в инвентарь
-                const inventory = user.inventory || {};
-                inventory[reward.name] = { level: 1, type: 'rare', purchased: new Date().toISOString() };
-                updateData.inventory = inventory;
-            }
-
-            await db.updateUser(user.username, updateData);
-
-            res.json({ success: true, reward, battlePass, userData: updateData });
-        });
-
-        app.post('/api/battle-pass/complete-quest', async (req, res) => {
-            const { sessionId, questId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            if (!user.battlePass || !user.battlePass.quests) {
-                return res.json({ success: false, message: 'Нет активных квестов' });
-            }
-
-            const quest = user.battlePass.quests.find(q => q.id === questId);
-            if (!quest || quest.completed) {
-                return res.json({ success: false, message: 'Квест не найден или уже выполнен' });
-            }
-
-            // Отмечаем квест как выполненный
-            quest.completed = true;
-            quest.progress = quest.target;
-
-            // Добавляем XP к Battle Pass
-            user.battlePass.xp += quest.reward;
-            user.battlePass.totalXp += quest.reward;
-
-            // Проверяем повышение уровня
-            let levelsGained = 0;
-            while (user.battlePass.xp >= 1000) { // 1000 XP за уровень
-                user.battlePass.xp -= 1000;
-                user.battlePass.level += 1;
-                levelsGained += 1;
-            }
-
-            await db.updateUser(user.username, { battlePass: user.battlePass });
-
-            res.json({ success: true, battlePass: user.battlePass, quest, levelsGained });
-        });
-
-        // Функция для добавления XP к Battle Pass за игровые действия
-        function addBattlePassXp(username, xpAmount) {
-            return db.updateUser(username, { $inc: { 'battlePass.xp': xpAmount, 'battlePass.totalXp': xpAmount } });
-        }
 
         io.on('connection', (socket) => {
             console.log('Игрок подключился:', socket.id);
@@ -2922,7 +1974,8 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
             state: 'playing',
             timer: null,
             isBotGame: true,
-            difficulty: difficulty
+            difficulty: difficulty,
+            timestamp: Date.now()
         });
         
         currentRoom = roomId;
@@ -2979,6 +2032,7 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
                 socket.join(roomId);
                 
                 room.state = 'playing';
+                room.timestamp = Date.now();
                 if (room.botTimer) { clearTimeout(room.botTimer); room.botTimer = null; }
                 
                 io.to(roomId).emit('gameStart', {
@@ -3008,7 +2062,8 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
             timer: null,
             botTimer: null,
             isBotGame: false,
-            difficulty: difficulty
+            difficulty: difficulty,
+            timestamp: Date.now()
         });
         
         currentRoom = roomId;
@@ -3025,6 +2080,7 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
         if (!room || room.state !== 'waiting') return;
         
         room.isBotGame = true;
+        room.timestamp = Date.now();
         
         const playerSide = room.players[0].side;
         const botSide = playerSide === 'plant' ? 'zombie' : 'plant';
@@ -3184,6 +2240,513 @@ app.post('/api/admin/become-admin', async (req, res) => {
 });
 
 // ==================== ЗАПУСК ====================
+// Функции для работы с кэшем
+async function getCachedSession(sessionId) {
+    const cached = sessionCache.get(sessionId);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data;
+    }
+    const session = await db.findSession(sessionId);
+    if (session) {
+        sessionCache.set(sessionId, { data: session, timestamp: Date.now() });
+    }
+    return session;
+}
+
+async function getCachedUser(userId) {
+    const cached = userCache.get(userId);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data;
+    }
+    const user = await db.findUser({ _id: userId });
+    if (user) {
+        userCache.set(userId, { data: user, timestamp: Date.now() });
+    }
+    return user;
+}
+
+// Очистка кэша по истечении TTL
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of sessionCache.entries()) {
+        if (now - value.timestamp >= CACHE_TTL) {
+            sessionCache.delete(key);
+        }
+    }
+    for (const [key, value] of userCache.entries()) {
+        if (now - value.timestamp >= CACHE_TTL) {
+            userCache.delete(key);
+        }
+    }
+    
+    // Очистка устаревших игровых комнат
+    for (const [roomId, room] of gameRooms) {
+        // Удаляем комнаты, которые существуют более 10 минут
+        if (room.timestamp && (now - room.timestamp > 10 * 60 * 1000)) {
+            if (room.timer) clearInterval(room.timer);
+            if (room.botTimer) clearTimeout(room.botTimer);
+            gameRooms.delete(roomId);
+        }
+    }
+    }, 60000); // Очищать каждую минуту
+
+// ==================== РАСШИРЕННЫЕ АДМИН-ФУНКЦИИ ====================
+
+// Система логирования действий администратора
+const adminLogs = [];
+
+function logAdminAction(adminUsername, action, targetUsername, details = {}) {
+    const logEntry = {
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        timestamp: new Date().toISOString(),
+        admin: adminUsername,
+        action,
+        target: targetUsername,
+        details,
+        ip: details.ip || 'unknown'
+    };
+    adminLogs.push(logEntry);
+    
+    // Ограничиваем логи до 1000 записей
+    if (adminLogs.length > 1000) {
+        adminLogs.shift();
+    }
+    
+    console.log(`[ADMIN LOG] ${adminUsername} выполнил действие: ${action} на ${targetUsername}`);
+    return logEntry;
+}
+
+// API для получения логов администратора
+app.post('/api/admin/logs', async (req, res) => {
+    const { sessionId, limit = 100, offset = 0 } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const limitNum = parseInt(limit);
+    const offsetNum = parseInt(offset);
+    
+    const logs = adminLogs.slice(offsetNum, offsetNum + limitNum);
+    res.json({ 
+        success: true, 
+        logs,
+        total: adminLogs.length,
+        hasMore: offsetNum + limitNum < adminLogs.length
+    });
+});
+
+// API для очистки логов
+app.post('/api/admin/clear-logs', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    adminLogs.length = 0;
+    res.json({ success: true, message: 'Логи администратора очищены!' });
+});
+
+// Статистика по активности игроков
+app.post('/api/admin/player-activity', async (req, res) => {
+    const { sessionId, days = 7 } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const users = await db.getAllUsers();
+    const daysNum = parseInt(days);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+    
+    const activityStats = users.map(user => {
+        const lastLogin = user.lastLogin ? new Date(user.lastLogin) : null;
+        const isActive = lastLogin && lastLogin >= cutoffDate;
+        
+        return {
+            username: user.username,
+            level: user.level || 1,
+            totalGames: user.totalGames || 0,
+            wins: user.wins || 0,
+            losses: user.losses || 0,
+            lastLogin: user.lastLogin || null,
+            isActive: isActive,
+            daysInactive: lastLogin ? Math.floor((cutoffDate - lastLogin) / (1000 * 60 * 60 * 24)) : null
+        };
+    }).sort((a, b) => {
+        // Сначала активные, потом по последнему логину
+        if (a.isActive && !b.isActive) return -1;
+        if (!a.isActive && b.isActive) return 1;
+        return new Date(b.lastLogin || 0) - new Date(a.lastLogin || 0);
+    });
+    
+    const activeCount = activityStats.filter(u => u.isActive).length;
+    const inactiveCount = activityStats.filter(u => !u.isActive).length;
+    
+    res.json({ 
+        success: true, 
+        stats: {
+            totalUsers: users.length,
+            activeUsers: activeCount,
+            inactiveUsers: inactiveCount,
+            activityRate: users.length > 0 ? ((activeCount / users.length) * 100).toFixed(1) + '%' : '0%',
+            periodDays: daysNum
+        },
+        players: activityStats
+    });
+});
+
+// Управление инвентарем игрока
+app.post('/api/admin/get-inventory', async (req, res) => {
+    const { sessionId, username } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = await db.findUserByUsername(username);
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const inventory = target.inventory || {};
+    const plantChests = target.plantChests || { common: 0, rare: 0, epic: 0, mythic: 0, legendary: 0 };
+    
+    res.json({ 
+        success: true, 
+        inventory: inventory,
+        plantChests: plantChests,
+        totalUnits: Object.keys(inventory).length
+    });
+});
+
+app.post('/api/admin/set-inventory-item', async (req, res) => {
+    const { sessionId, username, unitId, unitType, level = 1, remove = false } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const target = await db.findUserByUsername(username);
+    if (!target) return res.json({ success: false, message: 'Игрок не найден' });
+    
+    const inventory = target.inventory || {};
+    
+    if (remove) {
+        delete inventory[unitId];
+        logAdminAction(admin.username, 'remove_inventory_item', username, { unitId, unitType });
+    } else {
+        inventory[unitId] = { 
+            level: parseInt(level), 
+            type: unitType, 
+            purchased: new Date().toISOString() 
+        };
+        logAdminAction(admin.username, 'set_inventory_item', username, { unitId, unitType, level });
+    }
+    
+    await db.updateUser(username, { inventory });
+    res.json({ success: true, message: remove ? `Юнит ${unitId} удалён из инвентаря` : `Юнит ${unitId} добавлен в инвентарь`, inventory });
+});
+
+// Массовая рассылка уведомлений
+app.post('/api/admin/broadcast-notification', async (req, res) => {
+    const { sessionId, title, message, rarityColor = '#fbbf24', target = 'all' } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const notification = {
+        id: 'broadcast_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        type: 'broadcast',
+        title,
+        message,
+        rarityColor,
+        createdAt: new Date().toISOString(),
+        fromAdmin: admin.username
+    };
+    
+    let usersCount = 0;
+    if (target === 'all') {
+        const users = await db.getAllUsers();
+        usersCount = users.length;
+        for (const user of users) {
+            if (user.role !== 'admin') { // Не отправляем админам
+                const notifications = user.notifications || [];
+                notifications.push(notification);
+                await db.updateUser(user.username, { notifications });
+            }
+        }
+    } else if (target === 'online') {
+        // Можно добавить логику определения онлайн пользователей через socket.io
+        return res.json({ success: false, message: 'Функция онлайн-рассылки в разработке' });
+    }
+    
+    logAdminAction(admin.username, 'broadcast_notification', 'all_users', { title, message, target });
+    res.json({ success: true, message: `Уведомление отправлено ${usersCount} пользователям!` });
+});
+
+// Экспорт данных в CSV
+app.post('/api/admin/export-csv', async (req, res) => {
+    const { sessionId, type = 'users' } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    let csv = '';
+    const typeStr = type.toLowerCase();
+    
+    if (typeStr === 'users') {
+        const users = await db.getAllUsers();
+        csv = 'Username,Role,Level,ELO,Wins,Losses,Coins,Crystals,XP,TotalGames,CreatedAt\n';
+        users.forEach(user => {
+            csv += `${user.username},${user.role},${user.level || 1},${user.elo || 1000},${user.wins || 0},${user.losses || 0},${user.coins || 0},${user.crystals || 0},${user.xp || 0},${user.totalGames || 0},${user.createdAt || ''}\n`;
+        });
+    } else if (typeStr === 'matches') {
+        const matches = await db.getMatches(1000);
+        csv = 'Winner,Loser,WinnerSide,Timestamp\n';
+        matches.forEach(match => {
+            csv += `${match.winner},${match.loser},${match.winnerSide || 'unknown'},${match.timestamp || ''}\n`;
+        });
+    } else if (typeStr === 'promos') {
+        // Нужно добавить метод getAllPromos в database.js
+        res.json({ success: false, message: 'Экспорт промокодов требует доработки базы данных' });
+        return;
+    }
+    
+    logAdminAction(admin.username, 'export_csv', typeStr, { rows: csv.split('\n').length - 1 });
+    res.json({ 
+        success: true, 
+        csv: csv,
+        filename: `${typeStr}_export_${new Date().toISOString().split('T')[0]}.csv`
+    });
+});
+
+// Управление ценами магазина
+app.post('/api/admin/update-shop-prices', async (req, res) => {
+    const { sessionId, plantPrices, zombiePrices } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    // Валидация цен
+    const validatePrices = (prices, type) => {
+        for (const [item, price] of Object.entries(prices)) {
+            if (typeof price !== 'number' || price < 0 || price > 10000) {
+                throw new Error(`Недопустимая цена для ${type}.${item}: ${price}`);
+            }
+        }
+    };
+    
+    try {
+        if (plantPrices) validatePrices(plantPrices, 'plants');
+        if (zombiePrices) validatePrices(zombiePrices, 'zombies');
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+    
+    // Сохраняем настройки в serverSettings
+    if (plantPrices) {
+        serverSettings.plantPrices = { ...serverSettings.plantPrices, ...plantPrices };
+    }
+    if (zombiePrices) {
+        serverSettings.zombiePrices = { ...serverSettings.zombiePrices, ...zombiePrices };
+    }
+    
+    logAdminAction(admin.username, 'update_shop_prices', 'global', { plantPrices, zombiePrices });
+    res.json({ success: true, message: 'Цены магазина обновлены!', settings: serverSettings });
+});
+
+// Получение расширенной статистики
+app.post('/api/admin/detailed-stats', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const users = await db.getAllUsers();
+    const matches = await db.getMatches(1000);
+    
+    // Расчет статистики
+    const totalUsers = users.length;
+    const activeUsers = users.filter(u => {
+        const lastLogin = u.lastLogin ? new Date(u.lastLogin) : null;
+        return lastLogin && (Date.now() - lastLogin.getTime()) < 7 * 24 * 60 * 60 * 1000;
+    }).length;
+    
+    const totalGamesPlayed = users.reduce((sum, u) => sum + (u.totalGames || 0), 0);
+    const totalWins = users.reduce((sum, u) => sum + (u.wins || 0), 0);
+    const totalLosses = users.reduce((sum, u) => sum + (u.losses || 0), 0);
+    
+    const avgLevel = totalUsers > 0 ? (users.reduce((sum, u) => sum + (u.level || 1), 0) / totalUsers).toFixed(1) : 0;
+    const avgWinRate = totalGamesPlayed > 0 ? ((totalWins / totalGamesPlayed) * 100).toFixed(1) + '%' : '0%';
+    
+    // Распределение по уровням
+    const levelDistribution = {};
+    users.forEach(u => {
+        const level = u.level || 1;
+        levelDistribution[level] = (levelDistribution[level] || 0) + 1;
+    });
+    
+    // Топ по монетам
+    const topCoins = users
+        .sort((a, b) => (b.coins || 0) - (a.coins || 0))
+        .slice(0, 10)
+        .map(u => ({ username: u.username, coins: u.coins || 0, level: u.level || 1 }));
+    
+    // Топ по ELO
+    const topElo = users
+        .filter(u => u.role !== 'banned')
+        .sort((a, b) => (b.elo || 1000) - (a.elo || 1000))
+        .slice(0, 10)
+        .map(u => ({ username: u.username, elo: u.elo || 1000, wins: u.wins || 0 }));
+    
+    res.json({ 
+        success: true, 
+        stats: {
+            totalUsers,
+            activeUsers,
+            inactiveUsers: totalUsers - activeUsers,
+            totalGamesPlayed,
+            totalWins,
+            totalLosses,
+            avgLevel,
+            avgWinRate,
+            levelDistribution,
+            topCoins,
+            topElo,
+            recentMatches: matches.slice(0, 20)
+        }
+    });
+});
+
+// Поиск пользователей по расширенным критериям
+app.post('/api/admin/advanced-search', async (req, res) => {
+    const { sessionId, query, filters = {} } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    let users = await db.getAllUsers();
+    
+    // Поиск по имени
+    if (query) {
+        const queryLower = query.toLowerCase();
+        users = users.filter(u => 
+            u.username.toLowerCase().includes(queryLower) ||
+            (u.usernameLower && u.usernameLower.includes(queryLower))
+        );
+    }
+    
+    // Фильтры
+    if (filters.role) {
+        users = users.filter(u => u.role === filters.role);
+    }
+    if (filters.minLevel) {
+        users = users.filter(u => (u.level || 1) >= parseInt(filters.minLevel));
+    }
+    if (filters.maxLevel) {
+        users = users.filter(u => (u.level || 1) <= parseInt(filters.maxLevel));
+    }
+    if (filters.minWins) {
+        users = users.filter(u => (u.wins || 0) >= parseInt(filters.minWins));
+    }
+    if (filters.hasBattlePassPremium !== undefined) {
+        users = users.filter(u => u.battlePass?.isPremium === filters.hasBattlePassPremium);
+    }
+    if (filters.inactiveDays) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - parseInt(filters.inactiveDays));
+        users = users.filter(u => {
+            const lastLogin = u.lastLogin ? new Date(u.lastLogin) : null;
+            return !lastLogin || lastLogin < cutoffDate;
+        });
+    }
+    
+    res.json({ 
+        success: true, 
+        users: users.map(u => ({
+            username: u.username,
+            role: u.role,
+            level: u.level || 1,
+            elo: u.elo || 1000,
+            wins: u.wins || 0,
+            losses: u.losses || 0,
+            coins: u.coins || 0,
+            crystals: u.crystals || 0,
+            totalGames: u.totalGames || 0,
+            lastLogin: u.lastLogin || null,
+            battlePassPremium: !!u.battlePass?.isPremium,
+            createdAt: u.createdAt || null
+        })),
+        total: users.length
+    });
+});
+
+// Управление бот-сложностью (глобально)
+app.post('/api/admin/set-global-bot-difficulty', async (req, res) => {
+    const { sessionId, difficulty } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    if (!['easy', 'medium', 'hard'].includes(difficulty)) {
+        return res.json({ success: false, message: 'Недопустимая сложность. Используйте: easy, medium, hard' });
+    }
+    
+    serverSettings.defaultBotDifficulty = difficulty;
+    logAdminAction(admin.username, 'set_global_bot_difficulty', 'global', { difficulty });
+    res.json({ success: true, message: `Глобальная сложность ботов изменена на: ${difficulty}` });
+});
+
+// Получение онлайн-статистики
+app.post('/api/admin/online-stats', async (req, res) => {
+    const { sessionId } = req.body;
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const admin = await db.findUser({ _id: session.userId });
+    if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
+    
+    const sessions = await db.getAllSessions();
+    const now = Date.now();
+    const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 минут
+    
+    const activeSessions = sessions.filter(s => {
+        const createdAt = new Date(s.createdAt).getTime();
+        return (now - createdAt) < SESSION_TIMEOUT;
+    });
+    
+    // Группируем по пользователям
+    const onlineUsers = new Set(activeSessions.map(s => s.userId.toString()));
+    
+    res.json({ 
+        success: true, 
+        stats: {
+            totalSessions: sessions.length,
+            activeSessions: activeSessions.length,
+            onlineUsers: onlineUsers.size,
+            sessionTimeoutMinutes: SESSION_TIMEOUT / (60 * 1000)
+        }
+    });
+});
+
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {

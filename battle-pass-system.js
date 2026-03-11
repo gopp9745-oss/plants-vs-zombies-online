@@ -287,16 +287,17 @@ async function updateBattlePassQuestProgress(username, questId, progressIncremen
     return { battlePass: user.battlePass, quest };
 }
 
-// Функция для расчета уровня (переиспользуем существующую)
+// Функция для расчета уровня (исправленная)
 function calculateLevel(totalXP) {
     const xpPerLevel = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450];
     let level = 1;
-    let remainingXP = totalXP;
+    let remainingXP = 0;
     
-    for (let i = xpPerLevel.length - 1; i >= 0; i--) {
+    for (let i = 0; i < xpPerLevel.length; i++) {
         if (totalXP >= xpPerLevel[i]) {
             level = i + 1;
             remainingXP = totalXP - xpPerLevel[i];
+        } else {
             break;
         }
     }
@@ -315,5 +316,6 @@ module.exports = {
     completeBattlePassQuest,
     updateBattlePassQuestProgress,
     generateBattlePassQuests,
-    initializeBattlePass
+    initializeBattlePass,
+    calculateLevel
 };
