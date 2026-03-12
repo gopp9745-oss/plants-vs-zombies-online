@@ -587,8 +587,9 @@ app.get('/api/match-history', (req, res) => {
 });
 
 // Профиль
-app.get('/api/profile/:username', (req, res) => {
-    const user = db.findUserByUsername(req.params.username);
+app.get('/api/profile/:username', async (req, res) => {
+    const username = req.params.username;
+    const user = await db.findUserByUsername(username);
     if (!user) return res.json({ success: false, message: 'Игрок не найден' });
     
     res.json({ success: true, profile: {
@@ -609,12 +610,10 @@ app.get('/api/profile/:username', (req, res) => {
 app.post('/api/profile/update', async (req, res) => {
     const { sessionId, displayName, description } = req.body;
     
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    // Преобразуем ObjectId в строку для findUser
-    const userIdStr = session.userId.toString ? session.userId.toString() : session.userId;
-    const user = db.findUser({ _id: userIdStr });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     // Обновляем только предоставленные поля
@@ -627,13 +626,10 @@ app.post('/api/profile/update', async (req, res) => {
     }
     
     try {
-        await db.getDb().collection('users').updateOne(
-            { _id: session.userId },
-            { $set: updates }
-        );
+        await db.updateUser(user.username, updates);
         
-        // Получаем обновленного пользователя (преобразуем в строку)
-        const updatedUser = await db.findUser({ _id: userIdStr });
+        // Получаем обновленного пользователя
+        const updatedUser = await db.findUser({ _id: session.userId });
         // Возвращаем полного пользователя (как в login/check-session)
         res.json({
             success: true,
