@@ -2435,6 +2435,11 @@
         }
         
         function showProfile() {
+            if (!currentUser) {
+                alert('Сначала войдите в аккаунт!');
+                showMainMenu();
+                return;
+            }
             showScreen('profileScreen');
             const level = currentUser.level || 1;
             // Отображаем аватар с эмодзи или первой буквой
