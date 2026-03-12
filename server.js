@@ -1880,7 +1880,7 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
 
         // === СИСТЕМА BATTLE PASS ===
         // Импортируем систему Battle Pass
-        const battlePassSystem = require('./battle-pass-system-fixed');
+        const battlePassSystem = require('./battle-pass-system');
 
         // API для получения статуса Battle Pass
         app.post('/api/battle-pass/status', async (req, res) => {
