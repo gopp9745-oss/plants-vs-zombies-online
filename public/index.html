@@ -1787,7 +1787,7 @@
         }
         
         function hideAllScreens() {
-            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen','friendsScreen','profileViewScreen','inventoryScreen','eloScreen','seasonScreen'].forEach(id => document.getElementById(id).style.display = 'none');
+            ['mainMenu','authScreen','profileScreen','leaderboardScreen','shopScreen','adminScreen','waitingScreen','gameScreen','gameEndScreen','matchHistoryScreen','hallOfFameScreen','tutorialScreen','achievementsScreen','questsScreen','friendsScreen','profileViewScreen','inventoryScreen','eloScreen','seasonScreen','battlePassScreen'].forEach(id => document.getElementById(id).style.display = 'none');
         }
         
         async function viewPlayerProfile(username) {
@@ -1829,6 +1829,8 @@
             screen.classList.remove('animate-in');
             void screen.offsetWidth; // Trigger reflow
             screen.classList.add('animate-in');
+            // Сбрасываем прокрутку страницы при открытии любого экрана
+            window.scrollTo({ top: 0, behavior: 'instant' });
         }
         
         function showMainMenu() { showScreen('mainMenu'); }
