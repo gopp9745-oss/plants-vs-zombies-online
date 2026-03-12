@@ -17,6 +17,25 @@ const io = new Server(server);
 
 app.use(express.json());
 
+// Middleware для логирования всех запросов
+app.use((req, res, next) => {
+    console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.url}`);
+    next();
+});
+
+// Middleware для логирования ответов
+app.use((req, res, next) => {
+    const oldSend = res.send;
+    res.send = function(body) {
+        console.log(`[RES] ${req.method} ${req.url} -> ${res.statusCode}`);
+        oldSend.call(this, body);
+    };
+    next();
+});
+
+// Глобальный обработчик ошибок (должен быть ПОСЛЕ всех маршрутов)
+// Его добавим позже, после определения всех маршрутов
+
 // Инициализация MongoDB
 async function initDatabase() {
     try {
@@ -2866,6 +2885,23 @@ app.post('/api/admin/online-stats', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Глобальный обработчик ошибок (должен быть после всех маршрутов)
+app.use((err, req, res, next) => {
+    console.error('[ERROR]', req.method, req.url, err.stack);
+    if (!res.headersSent) {
+        res.status(500).json({ success: false, message: 'Internal Server Error', error: err.message });
+    }
+});
+
+// Глобальные обработчики для непойманных промисов и исключений
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
 
 async function startServer() {
     // Инициализируем базу данных MongoDB
