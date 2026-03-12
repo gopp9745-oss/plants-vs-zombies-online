@@ -429,8 +429,6 @@ app.post('/api/register', async (req, res) => {
         dailyQuestsDate: null,
         // Поля профиля
         displayName: null,
-        avatar: null,
-        avatarColor: null,
         description: ''
     });
     
@@ -445,8 +443,6 @@ app.post('/api/register', async (req, res) => {
         user: {
             username: user.username,
             displayName: user.displayName || user.username,
-            avatar: user.avatar,
-            avatarColor: user.avatarColor,
             description: user.description || '',
             role: user.role,
             coins: user.coins,
@@ -486,8 +482,6 @@ app.post('/api/login', async (req, res) => {
         user: {
             username: user.username,
             displayName: user.displayName || user.username,
-            avatar: user.avatar,
-            avatarColor: user.avatarColor,
             description: user.description || '',
             role: user.role,
             coins: user.coins,
@@ -525,8 +519,6 @@ app.post('/api/check-session', async (req, res) => {
         user: {
             username: user.username,
             displayName: user.displayName || user.username,
-            avatar: user.avatar,
-            avatarColor: user.avatarColor,
             description: user.description || '',
             role: user.role,
             coins: user.coins,
@@ -602,8 +594,6 @@ app.get('/api/profile/:username', (req, res) => {
     res.json({ success: true, profile: {
         username: user.username,
         displayName: user.displayName || user.username,
-        avatar: user.avatar,
-        avatarColor: user.avatarColor,
         description: user.description || '',
         wins: user.wins,
         losses: user.losses,
@@ -617,7 +607,7 @@ app.get('/api/profile/:username', (req, res) => {
 
 // Обновление профиля
 app.post('/api/profile/update', async (req, res) => {
-    const { sessionId, displayName, avatar, avatarColor, description } = req.body;
+    const { sessionId, displayName, description } = req.body;
     
     const session = db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
@@ -630,8 +620,6 @@ app.post('/api/profile/update', async (req, res) => {
     // Обновляем только предоставленные поля
     const updates = {};
     if (displayName !== undefined) updates.displayName = displayName.trim() || null;
-    if (avatar !== undefined) updates.avatar = avatar;
-    if (avatarColor !== undefined) updates.avatarColor = avatarColor;
     if (description !== undefined) updates.description = description || '';
     
     if (Object.keys(updates).length === 0) {
@@ -652,8 +640,6 @@ app.post('/api/profile/update', async (req, res) => {
             user: {
                 username: updatedUser.username,
                 displayName: updatedUser.displayName || updatedUser.username,
-                avatar: updatedUser.avatar,
-                avatarColor: updatedUser.avatarColor,
                 description: updatedUser.description || '',
                 role: updatedUser.role,
                 coins: updatedUser.coins,

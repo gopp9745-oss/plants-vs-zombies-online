@@ -93,8 +93,6 @@ async function createAdminIfNotExists() {
             inventory: {},
             // Поля профиля
             displayName: null,
-            avatar: null,
-            avatarColor: null,
             description: ''
         });
         console.log('✓ Создан админ (admin / admin123)');
@@ -171,6 +169,9 @@ class MongoDB {
                 isPremium: false,
                 premiumRequestedAt: null
             },
+            // Поля профиля
+            displayName: null,
+            description: '',
             createdAt: new Date(),
             lastLogin: new Date()
         };
