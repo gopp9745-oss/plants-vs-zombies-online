@@ -620,21 +620,25 @@ app.post('/api/profile/update', async (req, res) => {
         
         // Получаем обновленного пользователя (преобразуем в строку)
         const updatedUser = await db.findUser({ _id: userIdStr });
+        // Возвращаем полного пользователя (как в login/check-session)
         res.json({
             success: true,
-            profile: {
+            user: {
                 username: updatedUser.username,
                 displayName: updatedUser.displayName || updatedUser.username,
                 avatar: updatedUser.avatar,
                 avatarColor: updatedUser.avatarColor,
                 description: updatedUser.description || '',
+                role: updatedUser.role,
+                coins: updatedUser.coins,
+                crystals: updatedUser.crystals || 0,
                 wins: updatedUser.wins,
                 losses: updatedUser.losses,
-                level: updatedUser.level,
                 xp: updatedUser.xp,
+                level: updatedUser.level,
                 totalGames: updatedUser.totalGames,
-                longestWinStreak: updatedUser.longestWinStreak,
-                createdAt: updatedUser.createdAt
+                elo: updatedUser.elo || ELO_CONFIG.initial,
+                seasonElo: updatedUser.seasonElo || ELO_CONFIG.initial
             },
             message: 'Профиль успешно обновлен'
         });
