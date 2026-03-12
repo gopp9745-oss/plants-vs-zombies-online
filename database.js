@@ -120,6 +120,11 @@ class MongoDB {
         this.connected = true;
     }
     
+    // Возвращает объект базы данных
+    getDb() {
+        return db;
+    }
+    
     // Users
     async findUser(query) {
         const collection = getDb().collection('users');
