@@ -619,7 +619,7 @@ app.post('/api/profile/update', async (req, res) => {
         );
         
         // Получаем обновленного пользователя (преобразуем в строку)
-        const updatedUser = db.findUser({ _id: userIdStr });
+        const updatedUser = await db.findUser({ _id: userIdStr });
         res.json({
             success: true,
             profile: {
