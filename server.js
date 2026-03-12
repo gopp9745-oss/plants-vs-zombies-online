@@ -613,7 +613,7 @@ app.post('/api/profile/update', async (req, res) => {
     }
     
     try {
-        await db.collection('users').updateOne(
+        await db.getDb().collection('users').updateOne(
             { _id: session.userId },
             { $set: updates }
         );
