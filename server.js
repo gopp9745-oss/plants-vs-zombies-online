@@ -596,7 +596,9 @@ app.post('/api/profile/update', async (req, res) => {
     const session = db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const user = db.findUser({ _id: session.userId });
+    // Преобразуем ObjectId в строку для findUser
+    const userIdStr = session.userId.toString ? session.userId.toString() : session.userId;
+    const user = db.findUser({ _id: userIdStr });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     // Обновляем только предоставленные поля
@@ -616,8 +618,8 @@ app.post('/api/profile/update', async (req, res) => {
             { $set: updates }
         );
         
-        // Получаем обновленного пользователя
-        const updatedUser = db.findUser({ _id: session.userId });
+        // Получаем обновленного пользователя (преобразуем в строку)
+        const updatedUser = db.findUser({ _id: userIdStr });
         res.json({
             success: true,
             profile: {
@@ -638,7 +640,7 @@ app.post('/api/profile/update', async (req, res) => {
         });
     } catch (error) {
         console.error('Ошибка обновления профиля:', error);
-        res.json({ success: false, message: 'Ошибка сервера' });
+        res.json({ success: false, message: 'Ошибка сервера: ' + error.message });
     }
 });
 
