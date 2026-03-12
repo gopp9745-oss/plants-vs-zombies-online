@@ -22,6 +22,9 @@ async function initDatabase() {
     try {
         await db.init();
         console.log('✓ База данных MongoDB подключена');
+        // Проверяем, что можем получить доступ к коллекциям
+        const testDb = db.getDb();
+        console.log('✓ Database object ready:', testDb ? 'OK' : 'NULL');
     } catch (error) {
         console.error('✗ Ошибка подключения к MongoDB:', error.message);
         console.log('Попробуйте запустить MongoDB или измените MONGO_URI в database.js');
