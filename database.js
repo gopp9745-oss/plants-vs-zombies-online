@@ -1,7 +1,7 @@
 // MongoDB база данных
 const { MongoClient, ObjectId } = require('mongodb');
 
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017';
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb+srv://grimteam:kolop908@cluster0.iifadf8.mongodb.net/?retryWrites=true&w=majority';
 const DB_NAME = process.env.DB_NAME || 'pvz_online';
 
 let client = null;
