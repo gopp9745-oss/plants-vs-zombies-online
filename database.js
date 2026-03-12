@@ -90,7 +90,12 @@ async function createAdminIfNotExists() {
                 isPremium: false,
                 premiumRequestedAt: null
             },
-            inventory: {}
+            inventory: {},
+            // Поля профиля
+            displayName: null,
+            avatar: null,
+            avatarColor: null,
+            description: ''
         });
         console.log('✓ Создан админ (admin / admin123)');
     }

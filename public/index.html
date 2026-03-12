@@ -25,7 +25,7 @@
         .screen.animate-in { animation: screenIn 0.5s ease-out; }
         @keyframes screenIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
         
-        .game-title { font-size: 3.5rem; font-weight: bold; margin-bottom: 10px; background: linear-gradient(90deg, #4ade80, #22c55e, #16a34a); background-size: 200% 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 3s ease infinite; }
+        .game-title { font-size: 3.5rem; font-weight: bold; margin-bottom: 10px; background: linear-gradient(90deg, #4ade80, #22c55e, #16a34a); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 3s ease infinite; }
         @keyframes gradientShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
         .game-subtitle { font-size: 1.2rem; color: #94a3b8; margin-bottom: 30px; }
         
@@ -314,7 +314,7 @@
         .pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
         @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 10px rgba(74, 222, 128, 0.5); } 50% { box-shadow: 0 0 30px rgba(74, 222, 128, 0.8), 0 0 50px rgba(74, 222, 128, 0.4); } }
         
-        .gradient-text { background: linear-gradient(90deg, #4ade80, #60a5fa, #a78bfa, #f472b6); background-size: 300% 100%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientMove 3s linear infinite; }
+        .gradient-text { background: linear-gradient(90deg, #4ade80, #60a5fa, #a78bfa, #f472b6); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: gradientMove 3s linear infinite; }
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
         
         .floating-icon { position: absolute; animation: floatIcon 3s ease-in-out infinite; pointer-events: none; }
@@ -498,7 +498,7 @@
         
         /* Пульсирующая рамка */
         .pulse-border { position: relative; }
-        .pulse-border::before { content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px; border-radius: inherit; border: 2px solid transparent; background: linear-gradient(45deg, #4ade80, #60a5fa, #a78bfa, #f472b6) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: borderPulse 2s linear infinite; }
+        .pulse-border::before { content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px; border-radius: inherit; border: 2px solid transparent; background: linear-gradient(45deg, #4ade80, #60a5fa, #a78bfa, #f472b6) border-box; -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: borderPulse 2s linear infinite; }
         @keyframes borderPulse { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
         
         /* Эффект градиентной подсветки */
@@ -844,6 +844,9 @@
                 <span class="interface-toggle-icon">🔄</span>
                 <span class="interface-toggle-text">Авто</span>
             </button>
+            <button class="btn edit-profile-btn" onclick="openEditProfileModal()" title="Редактировать профиль" style="margin-left: 10px; padding: 8px 16px; font-size: 0.9rem;">
+                ✏️ Редактировать
+            </button>
         </div>
         
         <!-- НОВОЕ РАСПОЛОЖЕНИЕ КНОПОК -->
@@ -866,6 +869,10 @@
                 <span class="btn-icon">🏆</span>
                 <span class="btn-text">Достижения</span>
             </button>
+            <div class="profile-description" style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 10px 0; color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">О себе</h4>
+                <p id="profileDescription" style="margin: 0; color: #e5e7eb; font-size: 0.95rem; line-height: 1.5; word-wrap: break-word;">Нет описания</p>
+            </div>
         </div>
         
         <!-- ЦЕНТР - Карта и кнопки игры -->
@@ -1795,13 +1802,28 @@
                 const res = await fetch('/api/profile/' + username);
                 const data = await res.json();
                 if (data.success && data.profile) {
-                    document.getElementById('profileViewAvatar').textContent = username[0].toUpperCase();
-                    document.getElementById('profileViewUsername').textContent = data.profile.username;
-                    document.getElementById('profileViewLevel').textContent = 'Уровень ' + (data.profile.level || 1);
-                    document.getElementById('profileViewWins').textContent = data.profile.wins || 0;
-                    document.getElementById('profileViewXP').textContent = data.profile.xp || 0;
-                    document.getElementById('profileViewGames').textContent = data.profile.totalGames || 0;
-                    document.getElementById('profileViewStreak').textContent = data.profile.longestWinStreak || 0;
+                    const profile = data.profile;
+                    const avatarEl = document.getElementById('profileViewAvatar');
+                    // Аватар с эмодзи или первой буквой
+                    if (profile.avatar) {
+                        avatarEl.textContent = profile.avatar;
+                    } else {
+                        avatarEl.textContent = (profile.displayName || profile.username)[0].toUpperCase();
+                    }
+                    // Цвет аватара
+                    if (profile.avatarColor) {
+                        avatarEl.style.background = profile.avatarColor;
+                        avatarEl.style.color = '#000';
+                    } else {
+                        avatarEl.style.background = 'rgba(255, 255, 255, 0.2)';
+                        avatarEl.style.color = 'white';
+                    }
+                    document.getElementById('profileViewUsername').textContent = profile.displayName || profile.username;
+                    document.getElementById('profileViewLevel').textContent = 'Уровень ' + (profile.level || 1);
+                    document.getElementById('profileViewWins').textContent = profile.wins || 0;
+                    document.getElementById('profileViewXP').textContent = profile.xp || 0;
+                    document.getElementById('profileViewGames').textContent = profile.totalGames || 0;
+                    document.getElementById('profileViewStreak').textContent = profile.longestWinStreak || 0;
                     document.getElementById('profileViewAddFriendBtn').onclick = function() { addFriendByName(username); };
                     showScreen('profileViewScreen');
                 } else {
@@ -2415,14 +2437,32 @@
         function showProfile() {
             showScreen('profileScreen');
             const level = currentUser.level || 1;
-            document.getElementById('userAvatar').textContent = currentUser.username[0].toUpperCase();
-            document.getElementById('profileUsername').textContent = currentUser.username;
+            // Отображаем аватар с эмодзи или первой буквой
+            const avatarEl = document.getElementById('userAvatar');
+            if (currentUser.avatar) {
+                avatarEl.textContent = currentUser.avatar;
+            } else {
+                avatarEl.textContent = (currentUser.displayName || currentUser.username)[0].toUpperCase();
+            }
+            // Устанавливаем цвет аватара если есть
+            if (currentUser.avatarColor) {
+                avatarEl.style.background = currentUser.avatarColor;
+                avatarEl.style.color = '#000';
+            } else {
+                avatarEl.style.background = 'rgba(255, 255, 255, 0.2)';
+                avatarEl.style.color = 'white';
+            }
+            // Отображаем отображаемое имя или username
+            document.getElementById('profileUsername').textContent = currentUser.displayName || currentUser.username;
             document.getElementById('profileLevel').textContent = 'Уровень ' + level;
             document.getElementById('profileRole').textContent = currentUser.role==='admin'?'Админ':'Игрок';
             document.getElementById('statCoins').textContent = currentUser.coins || 0;
             document.getElementById('statWins').textContent = currentUser.wins || 0;
             document.getElementById('statXP').textContent = currentUser.xp || 0;
             document.getElementById('adminBtn').style.display = currentUser.role==='admin'?'block':'none';
+            // Отображаем описание профиля
+            const description = currentUser.description || 'Нет описания';
+            document.getElementById('profileDescription').textContent = description;
             
             // Обновляем отображение наград (всегда видно)
             const userLevel = currentUser.level || 1;
@@ -4511,6 +4551,95 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
             setTimeout(() => showNextRewardModal(), 150);
         }
 
+        // === РЕДАКТИРОВАНИЕ ПРОФИЛЯ ===
+        let currentEditAvatar = null;
+        let currentEditAvatarColor = null;
+
+        function openEditProfileModal() {
+            if (!sessionId) {
+                alert('Сначала войдите в аккаунт!');
+                return;
+            }
+            // Заполняем форму текущими данными
+            document.getElementById('editDisplayName').value = currentUser.displayName || currentUser.username;
+            document.getElementById('editAvatar').value = currentUser.avatar || '';
+            document.getElementById('editAvatarColor').value = currentUser.avatarColor || '';
+            document.getElementById('editDescription').value = currentUser.description || '';
+            
+            currentEditAvatar = currentUser.avatar || null;
+            currentEditAvatarColor = currentUser.avatarColor || null;
+            
+            // Сбрасываем выделение аватаров
+            document.querySelectorAll('.avatar-option').forEach(btn => btn.style.border = '2px solid transparent');
+            if (currentEditAvatar) {
+                const avatarBtn = document.querySelector(`.avatar-option[data-avatar="${currentEditAvatar}"]`);
+                if (avatarBtn) avatarBtn.style.border = '2px solid #4ade80';
+            }
+            
+            // Сбрасываем выделение цветов
+            document.querySelectorAll('.color-option').forEach(btn => btn.style.border = '2px solid transparent');
+            if (currentEditAvatarColor) {
+                const colorBtn = document.querySelector(`.color-option[data-color="${currentEditAvatarColor}"]`);
+                if (colorBtn) colorBtn.style.border = '2px solid #4ade80';
+            }
+            
+            document.getElementById('editProfileModal').style.display = 'flex';
+        }
+
+        function closeEditProfileModal() {
+            document.getElementById('editProfileModal').style.display = 'none';
+        }
+
+        function selectAvatar(avatar) {
+            currentEditAvatar = avatar;
+            document.getElementById('editAvatar').value = avatar;
+            // Обновляем выделение
+            document.querySelectorAll('.avatar-option').forEach(btn => {
+                btn.style.border = btn.dataset.avatar === avatar ? '2px solid #4ade80' : '2px solid transparent';
+            });
+        }
+
+        function selectAvatarColor(color) {
+            currentEditAvatarColor = color;
+            document.getElementById('editAvatarColor').value = color;
+            // Обновляем выделение
+            document.querySelectorAll('.color-option').forEach(btn => {
+                btn.style.border = btn.dataset.color === color ? '2px solid #4ade80' : '2px solid transparent';
+            });
+        }
+
+        async function saveProfile() {
+            const displayName = document.getElementById('editDisplayName').value.trim();
+            const avatar = currentEditAvatar;
+            const avatarColor = currentEditAvatarColor;
+            const description = document.getElementById('editDescription').value.trim();
+            
+            try {
+                const res = await fetch('/api/profile/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, displayName, avatar, avatarColor, description })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // Обновляем currentUser
+                    currentUser = data.profile;
+                    // Сохраняем в localStorage
+                    localStorage.setItem('pvz_user', JSON.stringify(currentUser));
+                    // Обновляем интерфейс
+                    showProfile();
+                    closeEditProfileModal();
+                    alert('Профиль успешно обновлен!');
+                } else {
+                    alert('Ошибка: ' + data.message);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Ошибка сохранения профиля');
+            }
+        }
+
     </script>
 
     <!-- Reward Modal -->
@@ -4524,6 +4653,67 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
                 </div>
             </div>
             <button class="btn btn-primary" style="width:100%;padding:12px 14px;font-size:0.95rem" onclick="closeRewardModal()">OK</button>
+        </div>
+    </div>
+    
+    <!-- Модальное окно редактирования профиля -->
+    <div id="editProfileModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; border: 2px solid rgba(251, 191, 36, 0.5); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #fbbf24; font-size: 1.5rem;">✏️ Редактировать профиль</h3>
+                <button onclick="closeEditProfileModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">✕</button>
+            </div>
+            
+            <form id="editProfileForm" onsubmit="event.preventDefault(); saveProfile();">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-weight: 500;">Отображаемое имя</label>
+                    <input type="text" id="editDisplayName" placeholder="Введите отображаемое имя" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 1rem; box-sizing: border-box;" maxlength="30">
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-weight: 500;">Аватар (эмодзи)</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+                        <button type="button" class="avatar-option" data-avatar="🧑" onclick="selectAvatar('🧑')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🧑</button>
+                        <button type="button" class="avatar-option" data-avatar="👤" onclick="selectAvatar('👤')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">👤</button>
+                        <button type="button" class="avatar-option" data-avatar="🦸" onclick="selectAvatar('🦸')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🦸</button>
+                        <button type="button" class="avatar-option" data-avatar="🧙" onclick="selectAvatar('🧙')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🧙</button>
+                        <button type="button" class="avatar-option" data-avatar="🥷" onclick="selectAvatar('🥷')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🥷</button>
+                        <button type="button" class="avatar-option" data-avatar="🧟" onclick="selectAvatar('🧟')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🧟</button>
+                        <button type="button" class="avatar-option" data-avatar="👻" onclick="selectAvatar('👻')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">👻</button>
+                        <button type="button" class="avatar-option" data-avatar="🤖" onclick="selectAvatar('🤖')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🤖</button>
+                        <button type="button" class="avatar-option" data-avatar="👽" onclick="selectAvatar('👽')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">👽</button>
+                        <button type="button" class="avatar-option" data-avatar="🦊" onclick="selectAvatar('🦊')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🦊</button>
+                        <button type="button" class="avatar-option" data-avatar="🐼" onclick="selectAvatar('🐼')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🐼</button>
+                        <button type="button" class="avatar-option" data-avatar="🦁" onclick="selectAvatar('🦁')" style="width: 40px; height: 40px; font-size: 1.5rem; background: rgba(255, 255, 255, 0.1); border: 2px solid transparent; border-radius: 8px; cursor: pointer;">🦁</button>
+                    </div>
+                    <input type="hidden" id="editAvatar" value="">
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-weight: 500;">Цвет аватара</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <button type="button" class="color-option" data-color="#4ade80" onclick="selectAvatarColor('#4ade80')" style="width: 36px; height: 36px; background: #4ade80; border: 2px solid transparent; border-radius: 50%; cursor: pointer;"></button>
+                        <button type="button" class="color-option" data-color="#60a5fa" onclick="selectAvatarColor('#60a5fa')" style="width: 36px; height: 36px; background: #60a5fa; border: 2px solid transparent; border-radius: 50%; cursor: pointer;"></button>
+                        <button type="button" class="color-option" data-color="#a78bfa" onclick="selectAvatarColor('#a78bfa')" style="width: 36px; height: 36px; background: #a78bfa; border: 2px solid transparent; border-radius: 50%; cursor: pointer;"></button>
+                        <button type="button" class="color-option" data-color="#f472b6" onclick="selectAvatarColor('#f472b6')" style="width: 36px; height: 36px; background: #f472b6; border: 2px solid transparent; border-radius: 50%; cursor: pointer;"></button>
+                        <button type="button" class="color-option" data-color="#fbbf24" onclick="selectAvatarColor('#fbbf24')" style="width: 36px; height: 36px; background: #fbbf24; border: 2px solid transparent; border-radius: 50%; cursor: pointer;"></button>
+                        <button type="button" class="color-option" data-color="#ef4444" onclick="selectAvatarColor('#ef4444')" style="width: 36px; height: 36px; background: #ef4444; border: 2px solid transparent; border-radius: 50%; cursor: pointer;"></button>
+                        <button type="button" class="color-option" data-color="#10b981" onclick="selectAvatarColor('#10b981')" style="width: 36px; height: 36px; background: #10b981; border: 2px solid transparent; border-radius: 50%; cursor: pointer;"></button>
+                        <button type="button" class="color-option" data-color="#6366f1" onclick="selectAvatarColor('#6366f1')" style="width: 36px; height: 36px; background: #6366f1; border: 2px solid transparent; border-radius: 50%; cursor: pointer;"></button>
+                    </div>
+                    <input type="hidden" id="editAvatarColor" value="">
+                </div>
+                
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; margin-bottom: 8px; color: #e5e7eb; font-weight: 500;">Описание профиля</label>
+                    <textarea id="editDescription" placeholder="Расскажите о себе..." rows="3" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 1rem; resize: vertical; min-height: 80px; box-sizing: border-box;" maxlength="200"></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" onclick="closeEditProfileModal()" style="flex: 1; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; color: white; font-size: 1rem; cursor: pointer;">Отмена</button>
+                    <button type="submit" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #4ade80, #22c55e); border: none; border-radius: 8px; color: white; font-size: 1rem; font-weight: bold; cursor: pointer;">Сохранить</button>
+                </div>
+            </form>
         </div>
     </div>
 </body>

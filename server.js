@@ -400,10 +400,41 @@ app.post('/api/register', async (req, res) => {
         currentWinStreak: 0,
         achievements: [],
         dailyQuests: [],
-        dailyQuestsDate: null
+        dailyQuestsDate: null,
+        // Поля профиля
+        displayName: null,
+        avatar: null,
+        avatarColor: null,
+        description: ''
     });
     
-    res.json({ success: true, message: 'Регистрация успешна!' });
+    // Автоматически входим после регистрации
+    const user = await db.findUserByUsername(username);
+    const sessionId = uuidv4();
+    await db.createSession({ sessionId, userId: user._id });
+    
+    res.json({
+        success: true,
+        sessionId,
+        user: {
+            username: user.username,
+            displayName: user.displayName || user.username,
+            avatar: user.avatar,
+            avatarColor: user.avatarColor,
+            description: user.description || '',
+            role: user.role,
+            coins: user.coins,
+            crystals: user.crystals || 0,
+            wins: user.wins,
+            losses: user.losses,
+            xp: user.xp,
+            level: user.level,
+            totalGames: user.totalGames,
+            elo: user.elo || ELO_CONFIG.initial,
+            seasonElo: user.seasonElo || ELO_CONFIG.initial
+        },
+        message: 'Регистрация успешна!'
+    });
 });
 
 // Вход
@@ -423,11 +454,15 @@ app.post('/api/login', async (req, res) => {
     const sessionId = uuidv4();
     await db.createSession({ sessionId, userId: user._id });
     
-    res.json({ 
-        success: true, 
+    res.json({
+        success: true,
         sessionId,
-        user: { 
+        user: {
             username: user.username,
+            displayName: user.displayName || user.username,
+            avatar: user.avatar,
+            avatarColor: user.avatarColor,
+            description: user.description || '',
             role: user.role,
             coins: user.coins,
             crystals: user.crystals || 0,
@@ -459,10 +494,14 @@ app.post('/api/check-session', async (req, res) => {
         return res.json({ success: false, message: 'Ваш аккаунт заблокирован' });
     }
     
-    res.json({ 
-        success: true, 
+    res.json({
+        success: true,
         user: {
             username: user.username,
+            displayName: user.displayName || user.username,
+            avatar: user.avatar,
+            avatarColor: user.avatarColor,
+            description: user.description || '',
             role: user.role,
             coins: user.coins,
             crystals: user.crystals || 0,
@@ -534,7 +573,73 @@ app.get('/api/profile/:username', (req, res) => {
     const user = db.findUserByUsername(req.params.username);
     if (!user) return res.json({ success: false, message: 'Игрок не найден' });
     
-    res.json({ success: true, profile: { username: user.username, wins: user.wins, losses: user.losses, level: user.level, xp: user.xp, totalGames: user.totalGames, longestWinStreak: user.longestWinStreak, createdAt: user.createdAt }});
+    res.json({ success: true, profile: {
+        username: user.username,
+        displayName: user.displayName || user.username,
+        avatar: user.avatar,
+        avatarColor: user.avatarColor,
+        description: user.description || '',
+        wins: user.wins,
+        losses: user.losses,
+        level: user.level,
+        xp: user.xp,
+        totalGames: user.totalGames,
+        longestWinStreak: user.longestWinStreak,
+        createdAt: user.createdAt
+    }});
+});
+
+// Обновление профиля
+app.post('/api/profile/update', async (req, res) => {
+    const { sessionId, displayName, avatar, avatarColor, description } = req.body;
+    
+    const session = db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const user = db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    // Обновляем только предоставленные поля
+    const updates = {};
+    if (displayName !== undefined) updates.displayName = displayName.trim() || null;
+    if (avatar !== undefined) updates.avatar = avatar;
+    if (avatarColor !== undefined) updates.avatarColor = avatarColor;
+    if (description !== undefined) updates.description = description || '';
+    
+    if (Object.keys(updates).length === 0) {
+        return res.json({ success: false, message: 'Нет данных для обновления' });
+    }
+    
+    try {
+        await db.collection('users').updateOne(
+            { _id: session.userId },
+            { $set: updates }
+        );
+        
+        // Получаем обновленного пользователя
+        const updatedUser = db.findUser({ _id: session.userId });
+        res.json({
+            success: true,
+            profile: {
+                username: updatedUser.username,
+                displayName: updatedUser.displayName || updatedUser.username,
+                avatar: updatedUser.avatar,
+                avatarColor: updatedUser.avatarColor,
+                description: updatedUser.description || '',
+                wins: updatedUser.wins,
+                losses: updatedUser.losses,
+                level: updatedUser.level,
+                xp: updatedUser.xp,
+                totalGames: updatedUser.totalGames,
+                longestWinStreak: updatedUser.longestWinStreak,
+                createdAt: updatedUser.createdAt
+            },
+            message: 'Профиль успешно обновлен'
+        });
+    } catch (error) {
+        console.error('Ошибка обновления профиля:', error);
+        res.json({ success: false, message: 'Ошибка сервера' });
+    }
 });
 
 // Ежедневная награда с учётом серий
