@@ -8,8 +8,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
       - key: MONGO_URI
         value: mongodb+srv://grimteam:%3Ckolop908%3E@cluster0.iifadf8.mongodb.net/
       - key: DB_NAME
