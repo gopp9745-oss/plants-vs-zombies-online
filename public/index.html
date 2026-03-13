@@ -25,7 +25,7 @@
         .screen.animate-in { animation: screenIn 0.5s ease-out; }
         @keyframes screenIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
         
-        .game-title { font-size: 3.5rem; font-weight: bold; margin-bottom: 10px; background: linear-gradient(90deg, #4ade80, #22c55e, #16a34a); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 3s ease infinite; }
+         .game-title { font-size: 3.5rem; font-weight: bold; margin-bottom: 10px; background: linear-gradient(90deg, #4ade80, #22c55e, #16a34a); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 3s ease infinite; }
         @keyframes gradientShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
         .game-subtitle { font-size: 1.2rem; color: #94a3b8; margin-bottom: 30px; }
         
@@ -867,6 +867,10 @@
     <div id="mainMenu" class="screen animate-in">
         <h1 class="game-title">🌻 PvZ Онлайн 🧟</h1>
         <p class="game-subtitle">Мультиплеер с друзьями</p>
+        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
+            <div class="resource sun" id='mainMenuCoinsDisplay'><span id='mainMenuCoinsValue'>0</span></div>
+            <div class="resource brain" id='mainMenuCrystalsDisplay' style='color:#60a5fa'>💎 <span id='mainMenuCrystalsValue'>0</span></div>
+        </div>
         <div class="menu-buttons">
             <button class="btn btn-primary" onclick="showAuth('login')">Вход</button>
             <button class="btn btn-secondary" onclick="showAuth('register')">Регистрация</button>
@@ -894,16 +898,8 @@
     
 <div id="profileScreen" class="screen">
 <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='profileCoinsDisplay'>🌻 <span id='profileCoinsValue'>0</span></div>
-    <div class="resource brain" id='profileCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='profileCrystalsValue'>0</span></div>
-</div>
-<div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='profileCoinsDisplay'>🌻 <span id='profileCoinsValue'>0</span></div>
-    <div class="resource brain" id='profileCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='profileCrystalsValue'>0</span></div>
-</div>
-<div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='profileCoinsDisplay'>🌻 <span id='profileCoinsValue'>0</span></div>
-    <div class="resource brain" id='profileCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='profileCrystalsValue'>0</span></div>
+    <div class="resource sun" id='profileCoinsDisplay'><span id='profileCoinsValue'>0</span></div>
+    <div class="resource brain" id='profileCrystalsDisplay' style='color:#60a5fa'>💎 <span id='profileCrystalsValue'>0</span></div>
 </div>
         <div class="profile-header">
             <div class="user-info">
@@ -1104,12 +1100,8 @@
     
 <div id="shopScreen" class="screen">
 <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='shopCoinsDisplay'>🌻 <span id='shopCoinsValue'>0</span></div>
-    <div class="resource brain" id='shopCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='shopCrystalsValue'>0</span></div>
-</div>
-<div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='shopCoinsDisplay'>🌻 <span id='shopCoinsValue'>0</span></div>
-    <div class="resource brain" id='shopCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='shopCrystalsValue'>0</span></div>
+    <div class="resource sun" id='shopCoinsDisplay'><span id='shopCoinsValue'>0</span></div>
+    <div class="resource brain" id='shopCrystalsDisplay' style='color:#60a5fa'>💎 <span id='shopCrystalsValue'>0</span></div>
 </div>
         <h2 style="font-size:1.8rem;margin-bottom:20px">🏪 Магазин</h2>
         <div class="shop-container">
@@ -1139,12 +1131,8 @@
     
 <div id="matchHistoryScreen" class="screen">
 <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='matchHistoryCoinsDisplay'>🌻 <span id='matchHistoryCoinsValue'>0</span></div>
-    <div class="resource brain" id='matchHistoryCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='matchHistoryCrystalsValue'>0</span></div>
-</div>
-<div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='matchHistoryCoinsDisplay'>🌻 <span id='matchHistoryCoinsValue'>0</span></div>
-    <div class="resource brain" id='matchHistoryCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='matchHistoryCrystalsValue'>0</span></div>
+    <div class="resource sun" id='matchHistoryCoinsDisplay'><span id='matchHistoryCoinsValue'>0</span></div>
+    <div class="resource brain" id='matchHistoryCrystalsDisplay' style='color:#60a5fa'>💎 <span id='matchHistoryCrystalsValue'>0</span></div>
 </div>
         <h2 class="leaderboard-title">📜 История матчей</h2>
         <div class="match-history-container">
@@ -1155,12 +1143,8 @@
     
 <div id="hallOfFameScreen" class="screen">
 <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='hallOfFameCoinsDisplay'>🌻 <span id='hallOfFameCoinsValue'>0</span></div>
-    <div class="resource brain" id='hallOfFameCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='hallOfFameCrystalsValue'>0</span></div>
-</div>
-<div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='hallOfFameCoinsDisplay'>🌻 <span id='hallOfFameCoinsValue'>0</span></div>
-    <div class="resource brain" id='hallOfFameCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='hallOfFameCrystalsValue'>0</span></div>
+    <div class="resource sun" id='hallOfFameCoinsDisplay'><span id='hallOfFameCoinsValue'>0</span></div>
+    <div class="resource brain" id='hallOfFameCrystalsDisplay' style='color:#60a5fa'>💎 <span id='hallOfFameCrystalsValue'>0</span></div>
 </div>
         <h2 class="leaderboard-title">🏆 Путь Славы</h2>
         <div class="match-history-container">
@@ -1171,12 +1155,8 @@
     
 <div id="achievementsScreen" class="screen">
 <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='achievementsCoinsDisplay'>🌻 <span id='achievementsCoinsValue'>0</span></div>
-    <div class="resource brain" id='achievementsCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='achievementsCrystalsValue'>0</span></div>
-</div>
-<div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='achievementsCoinsDisplay'>🌻 <span id='achievementsCoinsValue'>0</span></div>
-    <div class="resource brain" id='achievementsCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='achievementsCrystalsValue'>0</span></div>
+    <div class="resource sun" id='achievementsCoinsDisplay'><span id='achievementsCoinsValue'>0</span></div>
+    <div class="resource brain" id='achievementsCrystalsDisplay' style='color:#60a5fa'>💎 <span id='achievementsCrystalsValue'>0</span></div>
 </div>
         <h2 class="leaderboard-title" style="color:#fbbf24">🏅 Достижения</h2>
         <div class="match-history-container">
@@ -1187,12 +1167,8 @@
     
 <div id="seasonScreen" class="screen">
 <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='seasonCoinsDisplay'>🌻 <span id='seasonCoinsValue'>0</span></div>
-    <div class="resource brain" id='seasonCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='seasonCrystalsValue'>0</span></div>
-</div>
-<div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='seasonCoinsDisplay'>🌻 <span id='seasonCoinsValue'>0</span></div>
-    <div class="resource brain" id='seasonCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='seasonCrystalsValue'>0</span></div>
+    <div class="resource sun" id='seasonCoinsDisplay'><span id='seasonCoinsValue'>0</span></div>
+    <div class="resource brain" id='seasonCrystalsDisplay' style='color:#60a5fa'>💎 <span id='seasonCrystalsValue'>0</span></div>
 </div>
         <h2 class="leaderboard-title" style="color:#60a5fa">🏅 Сезон</h2>
         <div class="match-history-container" style="max-width:600px">
@@ -1203,12 +1179,8 @@
     
 <div id="eloScreen" class="screen">
 <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='eloCoinsDisplay'>🌻 <span id='eloCoinsValue'>0</span></div>
-    <div class="resource brain" id='eloCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='eloCrystalsValue'>0</span></div>
-</div>
-<div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-    <div class="resource sun" id='eloCoinsDisplay'>🌻 <span id='eloCoinsValue'>0</span></div>
-    <div class="resource brain" id='eloCrystalsDisplay' style='color:#60a5fa'>🧠 <span id='eloCrystalsValue'>0</span></div>
+    <div class="resource sun" id='eloCoinsDisplay'><span id='eloCoinsValue'>0</span></div>
+    <div class="resource brain" id='eloCrystalsDisplay' style='color:#60a5fa'>💎 <span id='eloCrystalsValue'>0</span></div>
 </div>
         <h2 class="leaderboard-title" style="color:#a78bfa">🔢 ELO Рейтинг</h2>
         <div class="match-history-container" style="max-width:600px">
@@ -1219,6 +1191,10 @@
 
     <!-- BATTLE PASS -->
 <div id="battlePassScreen" class="screen">
+        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
+            <div class="resource sun" id='battlePassCoinsDisplay'><span id='battlePassCoinsValue'>0</span></div>
+            <div class="resource brain" id='battlePassCrystalsDisplay' style='color:#60a5fa'>💎 <span id='battlePassCrystalsValue'>0</span></div>
+        </div>
         <h2 class="leaderboard-title" style="color:#fbbf24">🎖️ Battle Pass</h2>
         <div class="match-history-container" style="max-width:700px">
             <!-- Общая информация -->
@@ -1282,6 +1258,10 @@
     </div>
 
     <div id="questsScreen" class="screen">
+        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
+            <div class="resource sun" id='questsCoinsDisplay'><span id='questsCoinsValue'>0</span></div>
+            <div class="resource brain" id='questsCrystalsDisplay' style='color:#60a5fa'>💎 <span id='questsCrystalsValue'>0</span></div>
+        </div>
         <h2 class="leaderboard-title" style="color:#22c55e">📋 Ежедневные квесты</h2>
         <div id="questTimer" style="text-align:center;margin-bottom:15px;color:#f59e0b;font-size:0.9rem"></div>
         <div class="match-history-container">
@@ -1291,6 +1271,10 @@
     </div>
     
     <div id="friendsScreen" class="screen">
+        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
+            <div class="resource sun" id='friendsCoinsDisplay'><span id='friendsCoinsValue'>0</span></div>
+            <div class="resource brain" id='friendsCrystalsDisplay' style='color:#60a5fa'>💎 <span id='friendsCrystalsValue'>0</span></div>
+        </div>
         <h2 class="leaderboard-title">👥 Друзья</h2>
         <div class="match-history-container">
             <div style="margin-bottom:20px">
@@ -1308,6 +1292,10 @@
     </div>
     
     <div id="inventoryScreen" class="screen">
+        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
+            <div class="resource sun" id='inventoryCoinsDisplay'><span id='inventoryCoinsValue'>0</span></div>
+            <div class="resource brain" id='inventoryCrystalsDisplay' style='color:#60a5fa'>💎 <span id='inventoryCrystalsValues'>0</span></div>
+        </div>
         <h2 class="leaderboard-title" style="color:#4ade80">🎒 Инвентарь</h2>
         <div style="margin-bottom:15px;display:flex;gap:15px;justify-content:center;flex-wrap:wrap">
             <button class="btn btn-primary" onclick="showInventory('plants')">🌻 Растения</button>
@@ -1321,6 +1309,10 @@
     </div>
     
     <div id="tutorialScreen" class="screen">
+        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
+            <div class="resource sun" id='tutorialCoinsDisplay'><span id='tutorialCoinsValue'>0</span></div>
+            <div class="resource brain" id='tutorialCrystalsDisplay' style='color:#60a5fa'>💎 <span id='tutorialCrystalsValue'>0</span></div>
+        </div>
         <h2 class="leaderboard-title" style="color:#4ade80">📚 Обучение</h2>
         <div class="match-history-container" style="max-width:700px;text-align:left">
             <div id="tutorialContent"></div>
@@ -1630,6 +1622,10 @@
     </div>
     
     <div id="waitingScreen" class="screen">
+        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
+            <div class="resource sun" id='waitingCoinsDisplay'><span id='waitingCoinsValue'>0</span></div>
+            <div class="resource brain" id='waitingCrystalsDisplay' style='color:#60a5fa'>💎 <span id='waitingCrystalsValue'>0</span></div>
+        </div>
         <div class="waiting-animation">🌱</div>
         <p style="font-size:1.5rem;margin-top:20px">Поиск противника...</p>
         <button class="btn btn-danger" style="margin-top:30px" onclick="cancelQueue()">Отмена</button>
@@ -1663,6 +1659,10 @@
     </div>
     
     <div id="gameEndScreen" class="screen">
+        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
+            <div class="resource sun" id='gameEndCoinsDisplay'><span id='gameEndCoinsValue'>0</span></div>
+            <div class="resource brain" id='gameEndCrystalsDisplay' style='color:#60a5fa'>💎 <span id='gameEndCrystalsValue'>0</span></div>
+        </div>
         <h2 class="game-result" id="gameResultTitle">Победа!</h2>
         <p class="rewards" id="gameRewards">+50 монет</p>
         <button class="btn btn-primary" onclick="backToProfile()">В меню</button>
@@ -2421,6 +2421,7 @@
                 // После успешного получения награды обновляем данные Battle Pass и профиль
                 loadBattlePass();
                 loadProfile(); // чтобы обновились монеты / уровень / инвентарь
+                updateCurrencyOnAllScreens();
             } catch (e) {
                 console.error(e);
                 alert('Ошибка получения награды');
@@ -2635,6 +2636,7 @@
                     // Обновляем данные
                     currentUser.coins = data.coins;
                     document.getElementById('statCoins').textContent = currentUser.coins;
+                    updateCurrencyOnAllScreens();
                     await loadChests();
                 } else {
                     alert(data.message || 'Ошибка открытия сундука');
@@ -2674,6 +2676,13 @@
             document.getElementById('statCoins').textContent = currentUser.coins || 0;
             document.getElementById('statWins').textContent = currentUser.wins || 0;
             document.getElementById('statXP').textContent = currentUser.xp || 0;
+            
+            // Обновляем верхний блок валюты на profileScreen
+            const profileCoinsEl = document.getElementById('profileCoinsValue');
+            const profileCrystalsEl = document.getElementById('profileCrystalsValue');
+            if (profileCoinsEl) profileCoinsEl.textContent = currentUser.coins || 0;
+            if (profileCrystalsEl) profileCrystalsEl.textContent = currentUser.crystals || 0;
+            
             document.getElementById('adminBtn').style.display = currentUser.role==='admin'?'block':'none';
             // Отображаем описание профиля
             const description = currentUser.description || 'Нет описания';
@@ -2753,6 +2762,9 @@
             document.getElementById('displayWins').textContent = currentUser.wins || 0;
             document.getElementById('displayCrystals').textContent = currentUser.crystals || 0;
             
+            // Обновляем валюту на всех экранах
+            updateCurrencyOnAllScreens();
+            
             // Загружаем сундуки
             loadChests();
 
@@ -2762,6 +2774,43 @@
             // Стартуем опрос уведомлений (награды/подарки от админа)
             ensureNotificationPolling();
             pollNotifications();
+        }
+        
+        // Универсальная функция обновления валюты на всех экранах
+        function updateCurrencyOnAllScreens() {
+            if (!currentUser) return;
+            
+            const coins = currentUser.coins || 0;
+            const crystals = currentUser.crystals || 0;
+            
+            // Маппинг экранов к ID элементов валюты
+            const currencyElements = [
+                { screen: 'profileScreen', coinsId: 'profileCoinsValue', crystalsId: 'profileCrystalsValue' },
+                { screen: 'shopScreen', coinsId: 'shopCoinsValue', crystalsId: 'shopCrystalsValue' },
+                { screen: 'matchHistoryScreen', coinsId: 'matchHistoryCoinsValue', crystalsId: 'matchHistoryCrystalsValue' },
+                { screen: 'hallOfFameScreen', coinsId: 'hallOfFameCoinsValue', crystalsId: 'hallOfFameCrystalsValue' },
+                { screen: 'achievementsScreen', coinsId: 'achievementsCoinsValue', crystalsId: 'achievementsCrystalsValue' },
+                { screen: 'seasonScreen', coinsId: 'seasonCoinsValue', crystalsId: 'seasonCrystalsValue' },
+                { screen: 'eloScreen', coinsId: 'eloCoinsValue', crystalsId: 'eloCrystalsValue' },
+                { screen: 'battlePassScreen', coinsId: 'battlePassCoinsValue', crystalsId: 'battlePassCrystalsValue' },
+                { screen: 'questsScreen', coinsId: 'questsCoinsValue', crystalsId: 'questsCrystalsValue' },
+                { screen: 'friendsScreen', coinsId: 'friendsCoinsValue', crystalsId: 'friendsCrystalsValue' },
+                { screen: 'inventoryScreen', coinsId: 'inventoryCoinsValue', crystalsId: 'inventoryCrystalsValue' },
+                { screen: 'tutorialScreen', coinsId: 'tutorialCoinsValue', crystalsId: 'tutorialCrystalsValue' },
+                { screen: 'mainMenu', coinsId: 'mainMenuCoinsValue', crystalsId: 'mainMenuCrystalsValue' },
+                { screen: 'waitingScreen', coinsId: 'waitingCoinsValue', crystalsId: 'waitingCrystalsValue' },
+                { screen: 'gameEndScreen', coinsId: 'gameEndCoinsValue', crystalsId: 'gameEndCrystalsValue' }
+            ];
+            
+            currencyElements.forEach(({ screen, coinsId, crystalsId }) => {
+                const screenEl = document.getElementById(screen);
+                if (screenEl && screenEl.style.display !== 'none') {
+                    const coinsEl = document.getElementById(coinsId);
+                    const crystalsEl = document.getElementById(crystalsId);
+                    if (coinsEl) coinsEl.textContent = coins;
+                    if (crystalsEl) crystalsEl.textContent = crystals;
+                }
+            });
         }
         
         async function handleAuth(e) {
@@ -2927,6 +2976,7 @@
                 if (salesData.success) currentSales = salesData.sales || [];
                 
                 renderShopItems();
+                updateCurrencyOnAllScreens();
             } catch(e) { console.error(e); }
         }
         
@@ -3042,6 +3092,7 @@
                     currentUser.coins = data.coins;
                     userInventory = data.inventory;
                     document.getElementById('statCoins').textContent = currentUser.coins;
+                    updateCurrencyOnAllScreens();
                     await loadShop(); // Перезагружаем магазин
                 }
             } catch(e) {
@@ -3071,6 +3122,7 @@
                     currentUser.coins = data.coins;
                     userInventory = data.inventory;
                     document.getElementById('statCoins').textContent = currentUser.coins;
+                    updateCurrencyOnAllScreens();
                     await loadShop();
                 }
             } catch(e) {
@@ -3100,7 +3152,10 @@
                 const msg = document.getElementById('promoMessage');
                 msg.textContent = data.message;
                 msg.style.color = data.success?'#4ade80':'#ef4444';
-                if (data.success && data.coins!==undefined) currentUser.coins = data.coins;
+                if (data.success && data.coins!==undefined) {
+                    currentUser.coins = data.coins;
+                    updateCurrencyOnAllScreens();
+                }
             } catch(e) {}
         }
         
@@ -3109,7 +3164,11 @@
                 const res = await fetch('/api/daily-reward', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
                 const data = await res.json();
                 alert(data.message);
-                if (data.success) { currentUser.coins = data.coins; }
+                if (data.success) {
+                    currentUser.coins = data.coins;
+                    if (data.crystals) currentUser.crystals = data.crystals;
+                    updateCurrencyOnAllScreens();
+                }
             } catch(e) {}
         }
         
