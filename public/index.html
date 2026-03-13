@@ -7235,12 +7235,19 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
         function updateOverviewStats() {
             if (!currentUser) return;
             
-            document.getElementById('overviewCoins').textContent = currentUser.coins || 0;
-            document.getElementById('overviewCrystals').textContent = currentUser.crystals || 0;
-            document.getElementById('overviewWins').textContent = currentUser.wins || 0;
-            document.getElementById('overviewGames').textContent = currentUser.totalGames || 0;
-            document.getElementById('overviewStreak').textContent = currentUser.longestWinStreak || 0;
-            document.getElementById('overviewLevel').textContent = currentUser.level || 1;
+            const overviewCoins = document.getElementById('overviewCoins');
+            const overviewCrystals = document.getElementById('overviewCrystals');
+            const overviewWins = document.getElementById('overviewWins');
+            const overviewGames = document.getElementById('overviewGames');
+            const overviewStreak = document.getElementById('overviewStreak');
+            const overviewLevel = document.getElementById('overviewLevel');
+            
+            if (overviewCoins) overviewCoins.textContent = currentUser.coins || 0;
+            if (overviewCrystals) overviewCrystals.textContent = currentUser.crystals || 0;
+            if (overviewWins) overviewWins.textContent = currentUser.wins || 0;
+            if (overviewGames) overviewGames.textContent = currentUser.totalGames || 0;
+            if (overviewStreak) overviewStreak.textContent = currentUser.longestWinStreak || 0;
+            if (overviewLevel) overviewLevel.textContent = currentUser.level || 1;
             
             // Обновляем график активности (пример)
             updateActivityChart();
@@ -7252,7 +7259,7 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
         // Обновление графика активности
         function updateActivityChart() {
             const chartContainer = document.getElementById('activityChart');
-            if (!chartContainer) return;
+            if (!chartContainer || !currentUser) return;
             
             // Генерируем случайные данные для графика (в реальности будут с сервера)
             const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -7304,6 +7311,8 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
         
         // Загрузка коллекции растений (обновленная версия)
         function loadPlantsCollection() {
+            if (!currentUser) return;
+            
             const plantsGrid = document.getElementById('plantsGrid');
             if (!plantsGrid) return;
             
@@ -7354,6 +7363,8 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
         
         // Загрузка достижений (обновленная версия)
         function loadAchievementsPreview() {
+            if (!currentUser) return;
+            
             const achievementsGrid = document.getElementById('achievementsGrid');
             if (!achievementsGrid) return;
             
