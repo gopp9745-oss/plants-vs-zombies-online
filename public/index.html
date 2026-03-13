@@ -4353,6 +4353,7 @@
             const stats = document.getElementById('inventoryStats');
             const list = currentInventoryTab === 'plants' ? units.plant : units.zombie;
             const unlocked = currentInventoryTab === 'plants' ? unlockedPlants : unlockedZombies;
+            const inventory = userInventory || {};
             
             // Статистика - только купленные юниты
             const purchasedCount = unlocked.length;
