@@ -1611,12 +1611,18 @@
         <div class="profile-view">
             <div class="profile-avatar" id="profileViewAvatar">?</div>
             <h2 id="profileViewUsername" style="margin-bottom:10px">Игрок</h2>
-            <p id="profileViewLevel" style="color:#fbbf24;margin-bottom:20px">Уровень 1</p>
+            <p id="profileViewLevel" style="color:#fbbf24;margin-bottom:10px">Уровень 1</p>
+            <p id="profileViewRole" style="color:#94a3b8;margin-bottom:20px">Игрок</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px">
                 <div class="stat"><div class="stat-value" id="profileViewWins">0</div><div class="stat-label">Побед</div></div>
                 <div class="stat"><div class="stat-value" id="profileViewXP">0</div><div class="stat-label">Опыта</div></div>
                 <div class="stat"><div class="stat-value" id="profileViewGames">0</div><div class="stat-label">Игр</div></div>
                 <div class="stat"><div class="stat-value" id="profileViewStreak">0</div><div class="stat-label">Серия</div></div>
+                <div class="stat"><div class="stat-value" id="profileViewCrystals">0</div><div class="stat-label">Кристаллов</div></div>
+            </div>
+            <div id="profileViewFavoritePlant" style="margin-bottom:20px;display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px">
+                <span style="font-size:1.5rem" id="profileViewFavoritePlantIcon">🌱</span>
+                <span id="profileViewFavoritePlantName" style="color:#e5e7eb">Любимое растение: Не выбрано</span>
             </div>
             <button class="btn btn-primary" id="profileViewAddFriendBtn" onclick="addFriendByName()">Добавить в друзья</button>
             <button class="btn btn-secondary" style="margin-top:10px" onclick="backToProfile()">Назад</button>
@@ -1902,10 +1908,71 @@
                     }
                     document.getElementById('profileViewUsername').textContent = profile.displayName || profile.username;
                     document.getElementById('profileViewLevel').textContent = 'Уровень ' + (profile.level || 1);
+                    document.getElementById('profileViewRole').textContent = profile.role === 'admin' ? 'Админ' : 'Игрок';
                     document.getElementById('profileViewWins').textContent = profile.wins || 0;
                     document.getElementById('profileViewXP').textContent = profile.xp || 0;
                     document.getElementById('profileViewGames').textContent = profile.totalGames || 0;
                     document.getElementById('profileViewStreak').textContent = profile.longestWinStreak || 0;
+                    document.getElementById('profileViewCrystals').textContent = profile.crystals || 0;
+                    
+                    // Отображаем любимое растение
+                    const favoritePlantSection = document.getElementById('profileViewFavoritePlant');
+                    const favoritePlantIcon = document.getElementById('profileViewFavoritePlantIcon');
+                    const favoritePlantName = document.getElementById('profileViewFavoritePlantName');
+                    
+                    if (profile.favoritePlant) {
+                        const plantEmojis = {
+                            'sunflower': '🌻',
+                            'peashooter': '🌱',
+                            'wallnut': '🥜',
+                            'cherrybomb': '🍒',
+                            'iceshroom': '🧊',
+                            'snowpea': '❄️',
+                            'chomper': '👄',
+                            'repeater': '🔫',
+                            'squash': '🎃',
+                            'twinsunflower': '☀️',
+                            'melonpult': '🍉',
+                            'cattail': '🐱',
+                            'moonglow': '🌙',
+                            'tallnut': '🌴',
+                            'puffshroom': '🍄',
+                            'scaredyshroom': '😱',
+                            'hypnoshroom': '🌀',
+                            'magnetshroom': '🧲',
+                            'potatomine': '🥔'
+                        };
+                        
+                        const plantNames = {
+                            'sunflower': 'Подсолнух',
+                            'peashooter': 'Горохострел',
+                            'wallnut': 'Орешек',
+                            'cherrybomb': 'Вишнёвая бомба',
+                            'iceshroom': 'Ледяник',
+                            'snowpea': 'Морозник',
+                            'chomper': 'Хапунец',
+                            'repeater': 'Двуствол',
+                            'squash': 'Тыквогон',
+                            'twinsunflower': 'Двойняшка',
+                            'melonpult': 'Арбузомет',
+                            'cattail': 'Котоушка',
+                            'moonglow': 'Лунарик',
+                            'tallnut': 'Великан',
+                            'puffshroom': 'Дымовичок',
+                            'scaredyshroom': 'Трусишка',
+                            'hypnoshroom': 'Гипноз',
+                            'magnetshroom': 'Магнетик',
+                            'potatomine': 'Картошка-мина'
+                        };
+                        
+                        const plantId = profile.favoritePlant;
+                        favoritePlantIcon.textContent = plantEmojis[plantId] || '🌱';
+                        favoritePlantName.textContent = plantNames[plantId] || plantId;
+                        favoritePlantSection.style.display = 'flex';
+                    } else {
+                        favoritePlantSection.style.display = 'none';
+                    }
+                    
                     document.getElementById('profileViewAddFriendBtn').onclick = function() { addFriendByName(username); };
                     showScreen('profileViewScreen');
                 } else {
