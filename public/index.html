@@ -1705,6 +1705,14 @@
         createParticles();
         
         let currentUser = null, sessionId = localStorage.getItem('sessionId'), socket = null, gameState = null, selectedUnit = null;
+         
+        // Функция для экранирования HTML (защита от XSS)
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
         
         // === СИСТЕМА ПЕРЕКЛЮЧЕНИЯ ИНТЕРФЕЙСА ===
         let currentInterfaceMode = localStorage.getItem('interfaceMode') || 'auto'; // 'auto', 'pc', 'mobile'
@@ -1850,7 +1858,7 @@
         let selectedSkin = { plant: 'default', zombie: 'default' };
         
         function updateUnlockedUnits() {
-            const inventory = currentUser.inventory || {};
+            const inventory = userInventory || {};
             // Фильтруем только те юниты, которые есть в инвентаре пользователя
             unlockedPlants = units.plant.filter(u => inventory[u.id] && inventory[u.id].type === 'plant');
             unlockedZombies = units.zombie.filter(u => inventory[u.id] && inventory[u.id].type === 'zombie');
@@ -2668,11 +2676,11 @@
                     const sorted = [...data.leaders].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
                     
                     document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
-                        `<div class="leaderboard-row ${i<3?'top-3':''}" onclick="viewPlayerProfile('${p.username}')" style="cursor:pointer">
+                        `<div class="leaderboard-row ${i<3?'top-3':''}" onclick="viewPlayerProfile('${escapeHtml(p.username)}')" style="cursor:pointer">
                             <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
                             <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                                <div class="user-avatar" style="width: 30px; height: 30px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center;">${p.username.charAt(0).toUpperCase()}</div>
-                                <span class="username">${p.username || 'Unknown'}</span>
+                                <div class="user-avatar" style="width: 30px; height: 30px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center;">${escapeHtml(p.username.charAt(0).toUpperCase())}</div>
+                                <span class="username">${escapeHtml(p.username || 'Unknown')}</span>
                             </div>
                             <span>${sort === 'wins' ? (p.level || 1) + '/' + (p.wins || 0) : (p.level || 1) + '/' + (p.xp || 0)}</span>
                         </div>`
@@ -2689,9 +2697,9 @@
                 if (data.success) {
                     document.getElementById('matchList').innerHTML = data.matches.length ? data.matches.map(m =>
                         `<div class="match-row">
-                            <span class="match-winner">${m.winner}</span>
+                            <span class="match-winner">${escapeHtml(m.winner)}</span>
                             <span>vs</span>
-                            <span class="match-loser">${m.loser}</span>
+                            <span class="match-loser">${escapeHtml(m.loser)}</span>
                         </div>`
                     ).join('') : '<p style="text-align:center;color:#94a3b8">Нет матчей</p>';
                 }
@@ -2981,8 +2989,8 @@
                 if (data2.success) {
                     document.getElementById('adminUsersList').innerHTML = data2.users.map(u =>
                         `<div class="admin-user-row">
-                            <span>${u.username}</span>
-                            <span>${u.role}${u.battlePassPremium ? ' ⭐BP' : ''}</span>
+                            <span>${escapeHtml(u.username)}</span>
+                            <span>${escapeHtml(u.role)}${u.battlePassPremium ? ' ⭐BP' : ''}</span>
                             <span>${u.coins}💰 / ${u.crystals || 0}💎</span>
                             <span>${u.wins}п</span>
                         </div>`
@@ -3076,9 +3084,9 @@
                 
                 if (data.success && data.users.length > 0) {
                     document.getElementById('adminSearchResults').innerHTML = data.users.map(u =>
-                        `<div class="admin-user-row" style="cursor:pointer" onclick="viewPlayerProfile('${u.username}')">
-                            <span>${u.username}</span>
-                            <span>${u.role}</span>
+                        `<div class="admin-user-row" style="cursor:pointer" onclick="viewPlayerProfile('${escapeHtml(u.username)}')">
+                            <span>${escapeHtml(u.username)}</span>
+                            <span>${escapeHtml(u.role)}</span>
                             <span>${u.level}ур</span>
                             <span>${u.coins}💰</span>
                         </div>`
@@ -4051,7 +4059,7 @@
         function addChatMessage(data) {
             const div = document.createElement('div');
             div.className = 'chat-message';
-            div.innerHTML = `<span class="chat-username">${data.username}:</span> ${data.message}`;
+            div.innerHTML = `<span class="chat-username">${escapeHtml(data.username)}:</span> ${escapeHtml(data.message)}`;
             document.getElementById('chatMessages').appendChild(div);
             document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
         }
@@ -4289,8 +4297,8 @@
                         document.getElementById('friendsList').innerHTML = data.friends.map(friend =>
                             `<div class="match-row">
                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                    <div class="user-avatar" style="width: 30px; height: 30px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center;">${friend.username.charAt(0).toUpperCase()}</div>
-                                    <span style="font-weight:bold">${friend.username}</span>
+                                    <div class="user-avatar" style="width: 30px; height: 30px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center;">${escapeHtml(friend.username.charAt(0).toUpperCase())}</div>
+                                    <span style="font-weight:bold">${escapeHtml(friend.username)}</span>
                                 </div>
                                 <span>Уровень ${friend.level || 1}</span>
                                 <span>${friend.wins || 0} побед</span>
@@ -4373,6 +4381,9 @@
                     'support': '💖 Поддержка'
                 };
                 
+                // Получаем уровень владения из инвентаря
+                const ownedLevel = inventory[unit.id]?.level || 1;
+                
                 // Статистика юнита
                 const statsText = [];
                 if (unit.health) statsText.push(`❤️ HP: ${unit.health}`);
@@ -4382,11 +4393,11 @@
                 if (unit.moveSpeed) statsText.push(`🏃 Скорость: ${unit.moveSpeed}`);
                 
                 return `
-                    <div class="shop-item" style="cursor:pointer" onclick="showUnitInfo('${unit.id}', '${currentInventoryTab}')">
+                    <div class="shop-item" style="cursor:pointer" onclick="showUnitInfo('${escapeHtml(unit.id)}', '${escapeHtml(currentInventoryTab)}')">
                         <div class="shop-item-icon">${unit.icon}</div>
-                        <div style="font-weight:bold">${unit.name}</div>
+                        <div style="font-weight:bold">${escapeHtml(unit.name)}</div>
                         <div style="font-size:0.8rem;color:#94a3b8">${typeNames[unitType] || '⚔️ Атака'}</div>
-                        <div style="font-size:0.7rem;color:#4ade80">✅ Куплено (ур. ${unit.level || 1})</div>
+                        <div style="font-size:0.7rem;color:#4ade80">✅ Куплено (ур. ${ownedLevel})</div>
                         <div style="font-size:0.65rem;color:#94a3b8;margin-top:5px">${statsText.slice(0,3).join(' | ')}</div>
                     </div>
                 `;
@@ -4576,9 +4587,9 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
                         html += sorted.slice(0, 10).map((p, i) => {
                             const pRank = ranks.find(r => (p.elo || 1000) >= r.min && (p.elo || 1000) <= r.max) || ranks[0];
                             return `
-                                <div class="match-row ${i<3?'top-3':''}" style="cursor:pointer" onclick="viewPlayerProfile('${p.username}')">
+                                <div class="match-row ${i<3?'top-3':''}" style="cursor:pointer" onclick="viewPlayerProfile('${escapeHtml(p.username)}')">
                                     <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
-                                    <span class="username">${p.username}</span>
+                                    <span class="username">${escapeHtml(p.username)}</span>
                                     <span style="color:${pRank.color}">${pRank.icon} ${p.elo || 1000}</span>
                                 </div>
                             `;
@@ -4751,7 +4762,7 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
             selector.innerHTML = '';
             
             // Получаем инвентарь пользователя
-            const inventory = currentUser.inventory || {};
+            const inventory = userInventory || {};
             
             // Если нет инвентаря, показываем сообщение
             if (Object.keys(inventory).length === 0) {

@@ -315,10 +315,32 @@ function getEloRank(elo) {
     return { name: 'Новичок', icon: '🌱', color: '#86efac' };
 }
 
-// Магазин
+// Магазин (персонализированный по уровню пользователя)
 app.get('/api/shop', async (req, res) => {
+    const { sessionId } = req.query;
+    let userLevel = 1;
+    
+    // Если есть сессия, получаем уровень пользователя
+    if (sessionId) {
+        const session = await db.findSession(sessionId);
+        if (session) {
+            const user = await db.findUser({ _id: session.userId });
+            if (user) userLevel = user.level;
+        }
+    }
+    
+    // Генерируем магазин для этого уровня
+    const userShopItems = [];
+    const availablePlants = ALL_PLANTS.filter(id => (UNIT_LEVELS[id] || 1) <= userLevel);
+    const availableZombies = ALL_ZOMBIES.filter(id => (UNIT_LEVELS[id] || 1) <= userLevel);
+    
+    const plants = availablePlants.slice(0, 4).map(id => ({ id, type: 'plant', price: PLANT_PRICES[id] || 50 }));
+    const zombies = availableZombies.slice(0, 3).map(id => ({ id, type: 'zombie', price: ZOMBIE_PRICES[id] || 50 }));
+    
+    const items = [...plants, ...zombies];
     const sales = await db.getActiveSales();
-    res.json({ success: true, items: shopItems, nextUpdate: 300000, unitLevels: UNIT_LEVELS, maps: MAPS, sales });
+    
+    res.json({ success: true, items, nextUpdate: 300000, unitLevels: UNIT_LEVELS, maps: MAPS, sales });
 });
 
 // API для получения скидок
@@ -343,7 +365,7 @@ app.post('/api/inventory', async (req, res) => {
     res.json({ success: true, inventory: user.inventory || {}, userLevel: user.level });
 });
 
-// Покупка юнита
+// Покупка юнита (атомарная операция)
 app.post('/api/buy-unit', async (req, res) => {
     const { sessionId, unitId, unitType } = req.body;
     const session = await db.findSession(sessionId);
@@ -363,13 +385,37 @@ app.post('/api/buy-unit', async (req, res) => {
     const inventory = user.inventory || {};
     if (inventory[unitId]) return res.json({ success: false, message: 'Этот юнит уже куплен!' });
     
-    inventory[unitId] = { level: 1, type: unitType, purchased: new Date().toISOString() };
-    await db.updateUser(user.username, { coins: user.coins - price, inventory });
+    // Атомарное обновление: проверяем, что юнит всё ещё не куплен и монеты не изменились
+    const query = { _id: user._id };
+    query['inventory.' + unitId] = { $exists: false };
     
-    res.json({ success: true, message: `${unitId} куплен за ${price} монет!`, inventory, coins: user.coins - price });
+    const update = { $set: {} };
+    update.$set['inventory.' + unitId] = { level: 1, type: unitType, purchased: new Date().toISOString() };
+    update.$set.coins = user.coins - price;
+    
+    const result = await db.getDb().collection('users').findOneAndUpdate(
+        query,
+        update,
+        { returnDocument: 'after' }
+    );
+    
+    if (!result.value) {
+        // Операция не удалась - либо юнит уже куплен, либо монеты изменились
+        return res.json({ success: false, message: 'Не удалось купить юнита. Попробуйте ещё раз.' });
+    }
+    
+    const updatedUser = result.value;
+    // Инвалидируем кэш пользователя
+    invalidateUserCache(user._id);
+    res.json({
+        success: true,
+        message: `${unitId} куплен за ${price} монет!`,
+        inventory: updatedUser.inventory || {},
+        coins: updatedUser.coins
+    });
 });
 
-// Прокачка юнита
+// Прокачка юнита (атомарная операция)
 app.post('/api/upgrade-unit', async (req, res) => {
     const { sessionId, unitId } = req.body;
     const session = await db.findSession(sessionId);
@@ -390,10 +436,34 @@ app.post('/api/upgrade-unit', async (req, res) => {
     
     if (user.coins < upgradePrice) return res.json({ success: false, message: `Недостаточно монет! Нужно ${upgradePrice}` });
     
-    inventory[unitId].level = currentLevel + 1;
-    await db.updateUser(user.username, { coins: user.coins - upgradePrice, inventory });
+    // Атомарное обновление: проверяем, что уровень всё тот же и монеты не изменились
+    const query = { _id: user._id };
+    query['inventory.' + unitId + '.level'] = currentLevel;
     
-    res.json({ success: true, message: `${unitId} улучшен до уровня ${currentLevel + 1}!`, inventory, coins: user.coins - upgradePrice, newLevel: currentLevel + 1 });
+    const update = { $set: {} };
+    update.$set['inventory.' + unitId + '.level'] = currentLevel + 1;
+    update.$set.coins = user.coins - upgradePrice;
+    
+    const result = await db.getDb().collection('users').findOneAndUpdate(
+        query,
+        update,
+        { returnDocument: 'after' }
+    );
+    
+    if (!result.value) {
+        return res.json({ success: false, message: 'Не удалось улучшить юнита. Попробуйте ещё раз.' });
+    }
+    
+    const updatedUser = result.value;
+    // Инвалидируем кэш пользователя
+    invalidateUserCache(user._id);
+    res.json({
+        success: true,
+        message: `${unitId} улучшен до уровня ${currentLevel + 1}!`,
+        inventory: updatedUser.inventory || {},
+        coins: updatedUser.coins,
+        newLevel: currentLevel + 1
+    });
 });
 
 // Регистрация
@@ -2037,57 +2107,6 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
             };
         }
 
-        // === СИСТЕМА BATTLE PASS ===
-        // Импортируем систему Battle Pass
-        const battlePassSystem = require('./battle-pass-system');
-
-        // API для получения статуса Battle Pass
-        app.post('/api/battle-pass/status', async (req, res) => {
-            const { sessionId } = req.body;
-            const battlePass = await battlePassSystem.getBattlePassStatus(sessionId);
-            if (!battlePass) return res.json({ success: false, message: 'Сессия недействительна' });
-            res.json({ success: true, battlePass });
-        });
-
-        // API для получения награды за уровень Battle Pass
-        app.post('/api/battle-pass/claim-reward', async (req, res) => {
-            const { sessionId, tier, isPremium = false } = req.body;
-            const result = await battlePassSystem.claimBattlePassReward(sessionId, tier, isPremium);
-            res.json(result);
-        });
-
-        // API для выполнения квеста Battle Pass
-        app.post('/api/battle-pass/complete-quest', async (req, res) => {
-            const { sessionId, questId } = req.body;
-            const result = await battlePassSystem.completeBattlePassQuest(sessionId, questId);
-            res.json(result);
-        });
-
-        // API для получения ежедневных квестов Battle Pass
-        app.post('/api/battle-pass/quests', async (req, res) => {
-            const { sessionId } = req.body;
-            const session = await db.findSession(sessionId);
-            if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
-
-            const user = await db.findUser({ _id: session.userId });
-            if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
-
-            // Инициализируем Battle Pass если нет
-            if (!user.battlePass) {
-                user.battlePass = await battlePassSystem.initializeBattlePass(user.username);
-            }
-
-            // Проверяем, нужно ли обновить квесты
-            const today = new Date().toDateString();
-            if (!user.battlePass.quests || user.battlePass.questsDate !== today) {
-                user.battlePass.quests = battlePassSystem.generateBattlePassQuests();
-                user.battlePass.questsDate = today;
-                await db.updateUser(user.username, { battlePass: user.battlePass });
-            }
-
-            res.json({ success: true, quests: user.battlePass.quests, date: user.battlePass.questsDate });
-        });
-
         // === ИНТЕГРАЦИЯ С ИГРОВЫМИ СОБЫТИЯМИ ===
         // Добавляем XP к Battle Pass за победы
         function addBattlePassXpForWin(username, xpAmount) {
@@ -2422,6 +2441,13 @@ async function getCachedUser(userId) {
         userCache.set(userId, { data: user, timestamp: Date.now() });
     }
     return user;
+}
+
+// Инвалидация кэша пользователя
+function invalidateUserCache(userId) {
+    if (userId) {
+        userCache.delete(userId);
+    }
 }
 
 // Очистка кэша по истечении TTL
