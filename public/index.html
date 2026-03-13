@@ -4341,7 +4341,7 @@
         
         async function showInventory(tab) {
             showScreen('inventoryScreen');
-            if (tab) currentInventoryTab = tab;
+            currentInventoryTab = tab || 'plants'; // По умолчанию показываем растения
             
             await loadInventory(); // Загружаем актуальный инвентарь с сервера
             updateUnlockedUnits();
