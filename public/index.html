@@ -1860,8 +1860,8 @@
         function updateUnlockedUnits() {
             const inventory = userInventory || {};
             // Фильтруем только те юниты, которые есть в инвентаре пользователя
-            unlockedPlants = units.plant.filter(u => inventory[u.id] && inventory[u.id].type === 'plant');
-            unlockedZombies = units.zombie.filter(u => inventory[u.id] && inventory[u.id].type === 'zombie');
+            unlockedPlants = units.plant.filter(u => inventory[u.id]);
+            unlockedZombies = units.zombie.filter(u => inventory[u.id]);
         }
         
         document.addEventListener('DOMContentLoaded', () => { checkSession(); initGameLanes(); });
