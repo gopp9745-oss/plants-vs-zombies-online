@@ -398,6 +398,87 @@
         @keyframes damage { 0%,100% { filter: brightness(1); } 50% { filter: brightness(2); } }
         @keyframes damageText { 0% { opacity:1; transform:translateX(-50%) translateY(0); } 100% { opacity:0; transform:translateX(-50%) translateY(-30px); } }
         
+        /* === АНИМАЦИИ ОТКРЫТИЯ СУНДУКА === */
+        @keyframes chestModalIn {
+            0% { opacity: 0; transform: scale(0.8) translateY(50px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        @keyframes titleGlow {
+            0%,100% { filter: drop-shadow(0 0 10px rgba(251,191,36,0.5)); }
+            50% { filter: drop-shadow(0 0 25px rgba(251,191,36,0.8)); }
+        }
+        
+        @keyframes chestShake {
+            0%,100% { transform: translateX(0) rotate(0deg); }
+            10%,30%,50%,70%,90% { transform: translateX(-5px) rotate(-2deg); }
+            20%,40%,60%,80% { transform: translateX(5px) rotate(2deg); }
+        }
+        
+        @keyframes chestOpen {
+            0% { transform: scale(1) rotateY(0deg); opacity: 1; }
+            50% { transform: scale(1.2) rotateY(180deg); opacity: 0.8; }
+            100% { transform: scale(0) rotateY(360deg); opacity: 0; }
+        }
+        
+        @keyframes rewardReveal {
+            0% { opacity: 0; transform: scale(0.5) translateY(30px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        @keyframes plantPop {
+            0% { opacity: 0; transform: scale(0) rotate(-180deg); }
+            60% { transform: scale(1.3) rotate(10deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        
+        @keyframes textSlide {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes coinsSlide {
+            0% { opacity: 0; transform: translateX(-30px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes coinCount {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { transform: scale(1.5); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes particleFly {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+        }
+        
+        @keyframes sparkle {
+            0%,100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        
+        .chest-icon.clickable {
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        
+        .chest-icon.clickable:hover {
+            transform: scale(1.3) translateY(-5px);
+            filter: drop-shadow(0 0 15px currentColor);
+        }
+        
+        .chest-icon.clickable:active {
+            transform: scale(1.1);
+        }
+        
         /* Индикатор здоровья */
         .health-bar { position: absolute; bottom: -8px; left: 0; right: 0; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden; }
         .health-bar-fill { height: 100%; background: linear-gradient(90deg,#ef4444,#22c55e); transition: width 0.3s; }
@@ -2486,25 +2567,25 @@
                 
                 // Сначала показываем plant chests (сундуки растений) - они важнее!
                 if (userChests.plant_chest_legendary && userChests.plant_chest_legendary > 0) {
-                    iconsHtml += `<div style="position:relative" title="Сундук растений (Легендарный)">
+                    iconsHtml += `<div class="chest-icon clickable" data-rarity="legendary" title="Сундук растений (Легендарный) - кликните чтобы открыть" style="cursor:pointer;position:relative;transition:transform 0.2s" onclick="openPlantChestModal('legendary')">
                         <span style="font-size:2rem">🌱👑</span>
                         <span style="position:absolute;top:-5px;right:-5px;background:#ef4444;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.plant_chest_legendary}</span>
                     </div>`;
                 }
                 if (userChests.plant_chest_mythic && userChests.plant_chest_mythic > 0) {
-                    iconsHtml += `<div style="position:relative" title="Сундук растений (Мифический)">
+                    iconsHtml += `<div class="chest-icon clickable" data-rarity="mythic" title="Сундук растений (Мифический) - кликните чтобы открыть" style="cursor:pointer;position:relative;transition:transform 0.2s" onclick="openPlantChestModal('mythic')">
                         <span style="font-size:2rem">🌱🟧</span>
                         <span style="position:absolute;top:-5px;right:-5px;background:#f59e0b;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.plant_chest_mythic}</span>
                     </div>`;
                 }
                 if (userChests.plant_chest_epic && userChests.plant_chest_epic > 0) {
-                    iconsHtml += `<div style="position:relative" title="Сундук растений (Эпический)">
+                    iconsHtml += `<div class="chest-icon clickable" data-rarity="epic" title="Сундук растений (Эпический) - кликните чтобы открыть" style="cursor:pointer;position:relative;transition:transform 0.2s" onclick="openPlantChestModal('epic')">
                         <span style="font-size:2rem">🌱🟣</span>
                         <span style="position:absolute;top:-5px;right:-5px;background:#a855f7;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.plant_chest_epic}</span>
                     </div>`;
                 }
                 if (userChests.plant_chest_rare && userChests.plant_chest_rare > 0) {
-                    iconsHtml += `<div style="position:relative" title="Сундук растений (Редкий)">
+                    iconsHtml += `<div class="chest-icon clickable" data-rarity="rare" title="Сундук растений (Редкий) - кликните чтобы открыть" style="cursor:pointer;position:relative;transition:transform 0.2s" onclick="openPlantChestModal('rare')">
                         <span style="font-size:2rem">🌱🔵</span>
                         <span style="position:absolute;top:-5px;right:-5px;background:#3b82f6;color:white;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:flex;align-items:center;justify-content:center;font-weight:bold">${userChests.plant_chest_rare}</span>
                     </div>`;
@@ -2643,6 +2724,293 @@
                 }
             } catch(e) {
                 alert('Ошибка открытия сундука');
+            }
+        }
+        
+        // ========== ВИЗУАЛЬНОЕ ОТКРЫТИЕ СУНДУКА РАСТЕНИЙ ==========
+        let currentPlantChestType = null;
+        
+        function openPlantChestModal(rarity) {
+            if (!currentUser) {
+                alert('Сначала войдите в аккаунт');
+                return;
+            }
+            
+            currentPlantChestType = rarity;
+            const modal = document.getElementById('chestOpenModal');
+            const chestGraphic = document.getElementById('chestGraphic');
+            const chestReward = document.getElementById('chestReward');
+            const chestCloseBtn = document.getElementById('chestCloseBtn');
+            const chestTitle = document.getElementById('chestTitle');
+            const chestRarity = document.getElementById('chestRarity');
+            const chestParticles = document.getElementById('chestParticleContainer');
+            
+            // Устанавливаем редкость
+            const rarityNames = {
+                common: 'Обычный',
+                rare: 'Редкий',
+                epic: 'Эпический',
+                mythic: 'Мифический',
+                legendary: 'Легендарный'
+            };
+            
+            const rarityColors = {
+                common: { border: '#9ca3af', glow: 'rgba(156,163,175,0.5)', text: '#9ca3af' },
+                rare: { border: '#3b82f6', glow: 'rgba(59,130,246,0.6)', text: '#3b82f6' },
+                epic: { border: '#a855f7', glow: 'rgba(168,85,247,0.6)', text: '#a855f7' },
+                mythic: { border: '#f59e0b', glow: 'rgba(245,158,11,0.6)', text: '#f59e0b' },
+                legendary: { border: '#ef4444', glow: 'rgba(239,68,68,0.6)', text: '#ef4444' }
+            };
+            
+            const color = rarityColors[rarity] || rarityColors.common;
+            
+            chestTitle.textContent = '🎁 Сундук растений';
+            chestRarity.textContent = rarityNames[rarity] || rarity;
+            chestRarity.style.color = color.text;
+            document.getElementById('chestModalBox').style.borderColor = color.border;
+            chestGraphic.style.filter = `drop-shadow(0 10px 30px ${color.glow})`;
+            
+            // Сбрасываем состояние
+            chestGraphic.style.transform = 'scale(1) rotateY(0deg)';
+            chestGraphic.style.opacity = '1';
+            chestReward.style.display = 'none';
+            chestCloseBtn.style.opacity = '0';
+            chestCloseBtn.style.pointerEvents = 'none';
+            chestParticles.innerHTML = '';
+            
+            // Показываем модальное окно
+            modal.style.display = 'flex';
+            
+            // Запускаем анимацию открытия
+            setTimeout(() => {
+                animateChestOpening(chestGraphic, chestParticles, color);
+            }, 300);
+        }
+        
+        function animateChestOpening(chestGraphic, particleContainer, color) {
+            // Шейк сундука
+            chestGraphic.style.animation = 'chestShake 0.5s ease-in-out 3';
+            
+            // Создаём частицы вокруг сундука
+            createParticles(particleContainer, color);
+            
+            // После шейка - открытие
+            setTimeout(() => {
+                chestGraphic.style.animation = 'chestOpen 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards';
+                chestGraphic.style.opacity = '0';
+                
+                // Создаём всплеск частиц
+                createExplosionParticles(particleContainer, color);
+                
+                // Загружаем награду
+                setTimeout(() => {
+                    loadPlantChestReward();
+                }, 600);
+            }, 1500);
+        }
+        
+        function createParticles(container, color) {
+            const particleCount = 20;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: absolute;
+                    width: 8px;
+                    height: 8px;
+                    background: ${color.border};
+                    border-radius: 50%;
+                    left: 50%;
+                    top: 50%;
+                    --tx: ${(Math.random() - 0.5) * 200}px;
+                    --ty: ${(Math.random() - 0.5) * 200}px;
+                    animation: particleFly 1.5s ease-out forwards;
+                    animation-delay: ${Math.random() * 0.5}s;
+                    box-shadow: 0 0 10px ${color.glow};
+                `;
+                container.appendChild(particle);
+            }
+        }
+        
+        function createExplosionParticles(container, color) {
+            const particleCount = 50;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                const angle = (Math.PI * 2 * i) / particleCount;
+                const distance = 100 + Math.random() * 100;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                
+                particle.style.cssText = `
+                    position: absolute;
+                    width: ${6 + Math.random() * 8}px;
+                    height: ${6 + Math.random() * 8}px;
+                    background: ${i % 3 === 0 ? '#fbbf24' : color.border};
+                    border-radius: 50%;
+                    left: 50%;
+                    top: 50%;
+                    --tx: ${tx}px;
+                    --ty: ${ty}px;
+                    animation: particleFly 1.5s ease-out forwards;
+                    animation-delay: ${Math.random() * 0.3}s;
+                    box-shadow: 0 0 15px ${color.glow};
+                `;
+                container.appendChild(particle);
+            }
+            
+            // Добавляем сверкающие звёздочки
+            for (let i = 0; i < 15; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.textContent = '✨';
+                sparkle.style.cssText = `
+                    position: absolute;
+                    font-size: ${1 + Math.random()}rem;
+                    left: 50%;
+                    top: 50%;
+                    --tx: ${(Math.random() - 0.5) * 250}px;
+                    --ty: ${(Math.random() - 0.5) * 250}px;
+                    animation: particleFly 2s ease-out forwards;
+                    animation-delay: ${Math.random() * 0.5}s;
+                `;
+                container.appendChild(sparkle);
+            }
+        }
+        
+        async function loadPlantChestReward() {
+            if (!currentUser || !currentPlantChestType) return;
+            
+            try {
+                const res = await fetch('/api/open-chest', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        sessionId: currentUser.sessionId,
+                        chestType: currentPlantChestType
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showChestReward(data);
+                } else {
+                    alert(data.message || 'Ошибка открытия сундука');
+                    closeChestModal();
+                }
+            } catch(e) {
+                alert('Ошибка открытия сундука');
+                closeChestModal();
+            }
+        }
+        
+        function showChestReward(data) {
+            const chestReward = document.getElementById('chestReward');
+            const plantIcon = document.getElementById('plantIcon');
+            const plantName = document.getElementById('plantName');
+            const coinAmount = document.getElementById('coinAmount');
+            const chestMessage = document.getElementById('chestMessage');
+            const chestCloseBtn = document.getElementById('chestCloseBtn');
+            
+            // Получаем данные о растении
+            const plantId = data.plant;
+            const plantEmojis = {
+                'sunflower': '🌻',
+                'peashooter': '🌱',
+                'wallnut': '🥜',
+                'cherrybomb': '🍒',
+                'iceshroom': '🧊',
+                'snowpea': '❄️',
+                'chomper': '👄',
+                'repeater': '🔫',
+                'squash': '🎃',
+                'twinsunflower': '🌞',
+                'melonpult': '🍉',
+                'cattail': '🐱'
+            };
+            
+            const plantNames = {
+                'sunflower': 'Подсолнух',
+                'peashooter': 'Горохострел',
+                'wallnut': 'Орешек',
+                'cherrybomb': 'Вишнёвая бомба',
+                'iceshroom': 'Ледяник',
+                'snowpea': 'Морозник',
+                'chomper': 'Хапунец',
+                'repeater': 'Двуствол',
+                'squash': 'Тыквогон',
+                'twinsunflower': 'Двойняшка',
+                'melonpult': 'Арбузомет',
+                'cattail': 'Котоушка'
+            };
+            
+            // Устанавливаем иконку и имя
+            plantIcon.textContent = plantEmojis[plantId] || '🌱';
+            plantName.textContent = plantNames[plantId] || plantId;
+            coinAmount.textContent = '0';
+            
+            // Сообщение
+            const rarityNames = {
+                common: 'Обычный',
+                rare: 'Редкий',
+                epic: 'Эпический',
+                mythic: 'Мифический',
+                legendary: 'Легендарный'
+            };
+            chestMessage.textContent = `Вы получили ${rarityNames[currentPlantChestType]} сундук!`;
+            
+            // Показываем блок с наградой
+            chestReward.style.display = 'block';
+            
+            // Анимация счёта монет
+            setTimeout(() => {
+                animateCoinCount(coinAmount, data.coins || 0);
+            }, 800);
+            
+            // Обновляем кнопку закрытия
+            chestCloseBtn.style.opacity = '1';
+            chestCloseBtn.style.pointerEvents = 'auto';
+            
+            // Обновляем данные пользователя
+            if (data.coins !== undefined) {
+                currentUser.coins = data.coins;
+                document.getElementById('statCoins').textContent = currentUser.coins;
+                updateCurrencyOnAllScreens();
+            }
+            
+            // Обновляем инвентарь
+            if (data.inventory) {
+                currentUser.inventory = data.inventory;
+            }
+            
+            // Обновляем сундуки
+            if (data.remainingChests) {
+                currentUser.plantChests = data.remainingChests;
+            }
+        }
+        
+        function animateCoinCount(element, targetValue) {
+            let current = 0;
+            const duration = 1500;
+            const steps = 60;
+            const stepValue = targetValue / steps;
+            const stepTime = duration / steps;
+            
+            const interval = setInterval(() => {
+                current += stepValue;
+                if (current >= targetValue) {
+                    current = targetValue;
+                    clearInterval(interval);
+                }
+                element.textContent = Math.floor(current);
+            }, stepTime);
+        }
+        
+        function closeChestModal() {
+            const modal = document.getElementById('chestOpenModal');
+            modal.style.display = 'none';
+            currentPlantChestType = null;
+            
+            // Обновляем интерфейс сундуков
+            if (currentUser) {
+                loadChests();
             }
         }
         
@@ -5198,6 +5566,53 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
                 </div>
             </div>
             <button class="btn btn-primary" style="width:100%;padding:12px 14px;font-size:0.95rem" onclick="closeRewardModal()">OK</button>
+        </div>
+    </div>
+    
+    <!-- Модальное окно открытия сундука растений -->
+    <div id="chestOpenModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:5000;align-items:center;justify-content:center;animation:modalIn 0.3s ease-out">
+        <div id="chestModalBox" style="width:min(480px,95vw);background:linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98));border-radius:24px;padding:28px;box-shadow:0 30px 100px rgba(0,0,0,0.8),0 0 60px rgba(251,191,36,0.3);animation:chestModalIn 0.5s cubic-bezier(0.34,1.56,0.64,1);position:relative;overflow:hidden">
+            <!-- Анимированный фон -->
+            <div id="chestParticleContainer" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
+            
+            <!-- Заголовок -->
+            <div style="text-align:center;margin-bottom:20px;position:relative;z-index:2">
+                <div id="chestTitle" style="font-size:1.8rem;font-weight:bold;background:linear-gradient(90deg,#fbbf24,#f59e0b,#ef4444);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:titleGlow 2s ease-in-out infinite;margin-bottom:8px">🎁 Открытие сундука</div>
+                <div id="chestRarity" style="font-size:1rem;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;font-weight:bold">РЕДКИЙ</div>
+            </div>
+            
+            <!-- Анимация сундука -->
+            <div id="chestAnimation" style="display:flex;align-items:center;justify-content:center;height:200px;position:relative;margin:20px 0;z-index:2">
+                <!-- Сундук -->
+                <div id="chestGraphic" style="font-size:6rem;filter:drop-shadow(0 10px 30px rgba(251,191,36,0.5));transition:all 0.5s cubic-bezier(0.34,1.56,0.64,1);transform-style:preserve-3d">
+                    📦
+                </div>
+                <!-- Свечение -->
+                <div id="chestGlow" style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(251,191,36,0.3) 0%,transparent 70%);opacity:0;transition:opacity 0.5s;pointer-events:none"></div>
+            </div>
+            
+            <!-- Награда (скрыта до открытия) -->
+            <div id="chestReward" style="display:none;text-align:center;position:relative;z-index:2;animation:rewardReveal 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.3s both">
+                <!-- Иконка растения -->
+                <div id="plantIcon" style="font-size:5rem;margin-bottom:15px;animation:plantPop 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s both;filter:drop-shadow(0 0 30px currentColor)"></div>
+                
+                <!-- Имя растения -->
+                <div id="plantName" style="font-size:1.5rem;font-weight:bold;color:#e5e7eb;margin-bottom:10px;animation:textSlide 0.5s ease-out 0.7s both"></div>
+                
+                <!-- Монеты -->
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:15px;animation:coinsSlide 0.5s ease-out 0.9s both">
+                    <span style="font-size:2rem;color:#fbbf24;filter:drop-shadow(0 0 15px rgba(251,191,36,0.8))">💰</span>
+                    <div id="coinAmount" style="font-size:2rem;font-weight:bold;color:#fbbf24;animation:coinCount 1s ease-out 1.1s both">0</div>
+                </div>
+                
+                <!-- Сообщение -->
+                <div id="chestMessage" style="margin-top:15px;font-size:1rem;color:#4ade80;animation:fadeIn 0.5s ease-out 1.3s both"></div>
+            </div>
+            
+            <!-- Кнопка закрытия -->
+            <button id="chestCloseBtn" class="btn btn-primary" style="width:100%;margin-top:20px;padding:14px;font-size:1rem;opacity:0;pointer-events:none;animation:btnAppear 0.3s ease-out 1.5s forwards;position:relative;z-index:2" onclick="closeChestModal()">
+                🎉 Отлично!
+            </button>
         </div>
     </div>
     
