@@ -444,6 +444,7 @@ app.post('/api/register', async (req, res) => {
             username: user.username,
             displayName: user.displayName || user.username,
             description: user.description || '',
+            favoritePlant: user.favoritePlant || null,
             role: user.role,
             coins: user.coins,
             crystals: user.crystals || 0,
@@ -483,6 +484,7 @@ app.post('/api/login', async (req, res) => {
             username: user.username,
             displayName: user.displayName || user.username,
             description: user.description || '',
+            favoritePlant: user.favoritePlant || null,
             role: user.role,
             coins: user.coins,
             crystals: user.crystals || 0,
@@ -520,6 +522,7 @@ app.post('/api/check-session', async (req, res) => {
             username: user.username,
             displayName: user.displayName || user.username,
             description: user.description || '',
+            favoritePlant: user.favoritePlant || null,
             role: user.role,
             coins: user.coins,
             crystals: user.crystals || 0,
@@ -596,6 +599,7 @@ app.get('/api/profile/:username', async (req, res) => {
         username: user.username,
         displayName: user.displayName || user.username,
         description: user.description || '',
+        favoritePlant: user.favoritePlant || null,
         wins: user.wins,
         losses: user.losses,
         level: user.level,
@@ -608,7 +612,7 @@ app.get('/api/profile/:username', async (req, res) => {
 
 // Обновление профиля
 app.post('/api/profile/update', async (req, res) => {
-    const { sessionId, displayName, description } = req.body;
+    const { sessionId, displayName, description, favoritePlant } = req.body;
     
     const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
@@ -620,6 +624,7 @@ app.post('/api/profile/update', async (req, res) => {
     const updates = {};
     if (displayName !== undefined) updates.displayName = displayName.trim() || null;
     if (description !== undefined) updates.description = description || '';
+    if (favoritePlant !== undefined) updates.favoritePlant = favoritePlant || null;
     
     if (Object.keys(updates).length === 0) {
         return res.json({ success: false, message: 'Нет данных для обновления' });
@@ -637,6 +642,7 @@ app.post('/api/profile/update', async (req, res) => {
                 username: updatedUser.username,
                 displayName: updatedUser.displayName || updatedUser.username,
                 description: updatedUser.description || '',
+                favoritePlant: updatedUser.favoritePlant || null,
                 role: updatedUser.role,
                 coins: updatedUser.coins,
                 crystals: updatedUser.crystals || 0,
@@ -652,6 +658,40 @@ app.post('/api/profile/update', async (req, res) => {
         });
     } catch (error) {
         console.error('Ошибка обновления профиля:', error);
+        res.json({ success: false, message: 'Ошибка сервера: ' + error.message });
+    }
+});
+
+// Обновление любимого растения
+app.post('/api/profile/update-favorite-plant', async (req, res) => {
+    const { sessionId, favoritePlant } = req.body;
+    
+    const session = await db.findSession(sessionId);
+    if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
+    
+    const user = await db.findUser({ _id: session.userId });
+    if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
+    
+    // Проверяем, что растение существует в инвентаре пользователя
+    const inventory = user.inventory || {};
+    if (favoritePlant && !inventory[favoritePlant]) {
+        return res.json({ success: false, message: 'У вас нет этого растения в инвентаре' });
+    }
+    
+    try {
+        const result = await db.updateFavoritePlant(user.username, favoritePlant);
+        
+        if (result) {
+            res.json({
+                success: true,
+                message: 'Любимое растение обновлено',
+                favoritePlant: result.favoritePlant
+            });
+        } else {
+            res.json({ success: false, message: 'Ошибка обновления любимого растения' });
+        }
+    } catch (error) {
+        console.error('Ошибка обновления любимого растения:', error);
         res.json({ success: false, message: 'Ошибка сервера: ' + error.message });
     }
 });

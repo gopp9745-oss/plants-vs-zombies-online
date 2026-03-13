@@ -1,7 +1,7 @@
 // MongoDB база данных
 const { MongoClient, ObjectId } = require('mongodb');
 
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb+srv://grimteam:kolop908@cluster0.iifadf8.mongodb.net/?retryWrites=true&w=majority';
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017';
 const DB_NAME = process.env.DB_NAME || 'pvz_online';
 
 let client = null;
@@ -93,7 +93,8 @@ async function createAdminIfNotExists() {
             inventory: {},
             // Поля профиля
             displayName: null,
-            description: ''
+            description: '',
+            favoritePlant: null
         });
         console.log('✓ Создан админ (admin / admin123)');
     }
@@ -172,6 +173,7 @@ class MongoDB {
             // Поля профиля
             displayName: null,
             description: '',
+            favoritePlant: null,
             createdAt: new Date(),
             lastLogin: new Date()
         };
@@ -187,6 +189,19 @@ class MongoDB {
         const result = await getDb().collection('users').findOneAndUpdate(
             { usernameLower: username.toLowerCase() },
             { $set: data },
+            { returnDocument: 'after' }
+        );
+        return result;
+    }
+    
+    async updateFavoritePlant(username, favoritePlant) {
+        if (!username) {
+            console.error('updateFavoritePlant: username is undefined or null');
+            return null;
+        }
+        const result = await getDb().collection('users').findOneAndUpdate(
+            { usernameLower: username.toLowerCase() },
+            { $set: { favoritePlant: favoritePlant || null } },
             { returnDocument: 'after' }
         );
         return result;
@@ -459,7 +474,7 @@ class MongoDB {
                 questsDate: null,
                 currentTier: 1,
                 tierXp: 0,
-                maxTierXp: 1000, // Исправлено значение по умолчанию
+                maxTierXp: 1000,
                 freeRewardsClaimed: [],
                 premiumRewardsClaimed: [],
                 isPremium: false,
