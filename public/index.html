@@ -1850,9 +1850,10 @@
         let selectedSkin = { plant: 'default', zombie: 'default' };
         
         function updateUnlockedUnits() {
-            const userLevel = currentUser?.level || 1;
-            unlockedPlants = units.plant.filter(u => u.level <= userLevel);
-            unlockedZombies = units.zombie.filter(u => u.level <= userLevel);
+            const inventory = currentUser.inventory || {};
+            // Фильтруем только те юниты, которые есть в инвентаре пользователя
+            unlockedPlants = units.plant.filter(u => inventory[u.id] && inventory[u.id].type === 'plant');
+            unlockedZombies = units.zombie.filter(u => inventory[u.id] && inventory[u.id].type === 'zombie');
         }
         
         document.addEventListener('DOMContentLoaded', () => { checkSession(); initGameLanes(); });
@@ -4343,23 +4344,20 @@
             const stats = document.getElementById('inventoryStats');
             const list = currentInventoryTab === 'plants' ? units.plant : units.zombie;
             const unlocked = currentInventoryTab === 'plants' ? unlockedPlants : unlockedZombies;
-            const unlockedIds = unlocked.map(u => u.id);
             
-            // Статистика
-            const totalUnits = list.length;
-            const unlockedCount = unlockedIds.length;
-            const nextUnit = list.find(u => u.level > (currentUser?.level || 1));
+            // Статистика - только купленные юниты
+            const purchasedCount = unlocked.length;
+            const totalAvailable = list.length;
             
             stats.innerHTML = `
                 <div style="display:flex;justify-content:space-around;flex-wrap:wrap;gap:10px">
-                    <div><span style="color:#4ade80;font-weight:bold">${unlockedCount}</span>/${totalUnits} разблокировано</div>
+                    <div><span style="color:#4ade80;font-weight:bold">${purchasedCount}</span>/${totalAvailable} куплено</div>
                     <div>Уровень: <span style="color:#fbbf24;font-weight:bold">${currentUser?.level || 1}</span></div>
-                    ${nextUnit ? `<div>Следующий: <span style="color:#6366f1">${nextUnit.name}</span> (ур.${nextUnit.level})</div>` : '<div>Все доступны! ✅</div>'}
                 </div>
             `;
             
-            grid.innerHTML = list.map(unit => {
-                const isUnlocked = unlockedIds.includes(unit.id);
+            // Отображаем ТОЛЬКО купленные юниты
+            grid.innerHTML = unlocked.map(unit => {
                 const unitType = unit.type || 'attacker';
                 const typeNames = {
                     'attacker': '⚔️ Атака',
@@ -4384,11 +4382,11 @@
                 if (unit.moveSpeed) statsText.push(`🏃 Скорость: ${unit.moveSpeed}`);
                 
                 return `
-                    <div class="shop-item" style="opacity:${isUnlocked ? 1 : 0.5};cursor:pointer" onclick="showUnitInfo('${unit.id}', '${currentInventoryTab}')">
+                    <div class="shop-item" style="cursor:pointer" onclick="showUnitInfo('${unit.id}', '${currentInventoryTab}')">
                         <div class="shop-item-icon">${unit.icon}</div>
                         <div style="font-weight:bold">${unit.name}</div>
                         <div style="font-size:0.8rem;color:#94a3b8">${typeNames[unitType] || '⚔️ Атака'}</div>
-                        <div style="font-size:0.7rem;color:#fbbf24">${unit.level > (currentUser?.level || 1) ? '🔒 Уровень ' + unit.level : '✅ Доступно'}</div>
+                        <div style="font-size:0.7rem;color:#4ade80">✅ Куплено (ур. ${unit.level || 1})</div>
                         <div style="font-size:0.65rem;color:#94a3b8;margin-top:5px">${statsText.slice(0,3).join(' | ')}</div>
                     </div>
                 `;
