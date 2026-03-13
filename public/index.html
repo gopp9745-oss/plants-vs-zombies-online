@@ -4343,6 +4343,7 @@
             showScreen('inventoryScreen');
             if (tab) currentInventoryTab = tab;
             
+            await loadInventory(); // Загружаем актуальный инвентарь с сервера
             updateUnlockedUnits();
             renderInventory();
         }
