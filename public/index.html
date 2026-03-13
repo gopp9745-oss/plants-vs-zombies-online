@@ -7467,24 +7467,32 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
             
             // Аватар
             const avatarEl = document.getElementById('userAvatar');
-            const avatarText = avatarEl.querySelector('.avatar-text');
-            if (currentUser.avatar) {
-                avatarText.textContent = currentUser.avatar;
-            } else {
-                avatarText.textContent = (currentUser.displayName || currentUser.username)[0].toUpperCase();
-            }
-            
-            // Цвет аватара
-            if (currentUser.avatarColor) {
-                avatarEl.style.background = currentUser.avatarColor;
-            } else {
-                avatarEl.style.background = 'linear-gradient(135deg, #4ade80, #22c55e)';
+            if (avatarEl) {
+                const avatarText = avatarEl.querySelector('.avatar-text');
+                if (avatarText) {
+                    if (currentUser.avatar) {
+                        avatarText.textContent = currentUser.avatar;
+                    } else {
+                        avatarText.textContent = (currentUser.displayName || currentUser.username)[0].toUpperCase();
+                    }
+                }
+                // Цвет аватара
+                if (currentUser.avatarColor) {
+                    avatarEl.style.background = currentUser.avatarColor;
+                } else {
+                    avatarEl.style.background = 'linear-gradient(135deg, #4ade80, #22c55e)';
+                }
             }
             
             // Имя и роль
-            document.getElementById('profileUsername').textContent = currentUser.displayName || currentUser.username;
-            document.getElementById('profileRole').textContent = currentUser.role === 'admin' ? 'Админ' : 'Игрок';
-            document.getElementById('profileRole').className = currentUser.role === 'admin' ? 'role-badge admin' : 'role-badge player';
+            const usernameEl = document.getElementById('profileUsername');
+            if (usernameEl) usernameEl.textContent = currentUser.displayName || currentUser.username;
+            
+            const roleEl = document.getElementById('profileRole');
+            if (roleEl) {
+                roleEl.textContent = currentUser.role === 'admin' ? 'Админ' : 'Игрок';
+                roleEl.className = currentUser.role === 'admin' ? 'role-badge admin' : 'role-badge player';
+            }
             
             // Кнопка админа
             const adminBtn = document.getElementById('adminBtn');
@@ -7498,9 +7506,14 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
             const xpForNextLevel = level * 100;
             const xpProgress = Math.min(100, (xp / xpForNextLevel) * 100);
             
-            document.getElementById('profileLevel').textContent = `Уровень ${level}`;
-            document.getElementById('xpText').textContent = `${xp} / ${xpForNextLevel} XP`;
-            document.getElementById('levelProgressBar').style.width = xpProgress + '%';
+            const levelEl = document.getElementById('profileLevel');
+            if (levelEl) levelEl.textContent = `Уровень ${level}`;
+            
+            const xpTextEl = document.getElementById('xpText');
+            if (xpTextEl) xpTextEl.textContent = `${xp} / ${xpForNextLevel} XP`;
+            
+            const progressBar = document.getElementById('levelProgressBar');
+            if (progressBar) progressBar.style.width = xpProgress + '%';
             
             // Любимое растение
             const favoritePlantCard = document.getElementById('favoritePlantCard');
