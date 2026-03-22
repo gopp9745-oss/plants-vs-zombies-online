@@ -552,24 +552,34 @@ class MongoDB {
         }
 
         async resetBattlePassSeason() {
-            return await getDb().collection('users').updateMany(
-                {},
-                { 
-                    $set: { 
-                        'battlePass.season': { $add: ['$battlePass.season', 1] },
-                        'battlePass.level': 0,
-                        'battlePass.xp': 0,
-                        'battlePass.totalXp': 0,
-                        'battlePass.currentTier': 1,
-                        'battlePass.tierXp': 0,
-                        'battlePass.claimedRewards': [],
-                        'battlePass.quests': [],
-                        'battlePass.questsDate': null,
-                        'battlePass.freeRewardsClaimed': [],
-                        'battlePass.premiumRewardsClaimed': []
+            // Сначала получаем всех пользователей и обновляем каждого
+            const users = await getDb().collection('users').find({}).toArray();
+            const bulkOps = users.map(user => ({
+                updateOne: {
+                    filter: { _id: user._id },
+                    update: {
+                        $set: {
+                            'battlePass.season': (user.battlePass?.season || 1) + 1,
+                            'battlePass.level': 0,
+                            'battlePass.xp': 0,
+                            'battlePass.totalXp': 0,
+                            'battlePass.currentTier': 1,
+                            'battlePass.tierXp': 0,
+                            'battlePass.maxTierXp': 1000,
+                            'battlePass.claimedRewards': [],
+                            'battlePass.quests': [],
+                            'battlePass.questsDate': null,
+                            'battlePass.freeRewardsClaimed': [],
+                            'battlePass.premiumRewardsClaimed': []
+                        }
                     }
                 }
-            );
+            }));
+            
+            if (bulkOps.length > 0) {
+                return await getDb().collection('users').bulkWrite(bulkOps);
+            }
+            return { modifiedCount: 0 };
         }
     
     // Закрытие соединения

@@ -3538,7 +3538,11 @@
             unlockedZombies = units.zombie.filter(u => inventory[u.id]);
         }
         
-        document.addEventListener('DOMContentLoaded', () => { checkSession(); initGameLanes(); });
+        document.addEventListener('DOMContentLoaded', () => { 
+            checkSession(); 
+            initGameLanes();
+            initInterfaceMode();
+        });
         
         async function checkSession() {
             if (!sessionId) return;
@@ -4650,6 +4654,14 @@
                 return;
             }
             showScreen('profileScreen');
+            
+            // Показываем мобильную навигацию на мобильных устройствах
+            const isMobile = window.innerWidth <= 900;
+            const mobileNav = document.getElementById('mobileNav');
+            if (mobileNav) {
+                mobileNav.style.display = isMobile ? 'flex' : 'none';
+            }
+            
             const level = currentUser.level || 1;
             // Отображаем аватар с эмодзи или первой буквой
             const avatarEl = document.getElementById('userAvatar');
@@ -4681,83 +4693,65 @@
             if (profileCrystalsEl) profileCrystalsEl.textContent = currentUser.crystals || 0;
             
             document.getElementById('adminBtn').style.display = currentUser.role==='admin'?'block':'none';
+            
             // Отображаем описание профиля
             const description = currentUser.description || 'Нет описания';
             document.getElementById('profileDescription').textContent = description;
             
-            // Отображаем любимое растение
-            const favoritePlantSection = document.getElementById('favoritePlantSection');
+            // Отображаем любимое растение в карточке (для нового интерфейса)
+            const favoritePlantCard = document.getElementById('favoritePlantCard');
             const favoritePlantIcon = document.getElementById('favoritePlantIcon');
-            const favoritePlantName = document.getElementById('favoritePlantName');
+            const favoritePlantNameEl = document.getElementById('favoritePlantName');
+            
+            // Словарь эмодзи и названий растений
+            const plantEmojis = {
+                'sunflower': '🌻', 'peashooter': '🌱', 'wallnut': '🥜', 'cherrybomb': '🍒',
+                'iceshroom': '🧊', 'snowpea': '❄️', 'chomper': '👄', 'repeater': '🔫',
+                'squash': '🎃', 'twinsunflower': '🌞', 'melonpult': '🍉', 'cattail': '🐱',
+                'moonglow': '🌙', 'tallnut': '🌴', 'puffshroom': '🍄', 'scaredyshroom': '😱',
+                'hypnoshroom': '🌀', 'magnetshroom': '🧲', 'potatomine': '🥔'
+            };
+            
+            const plantNames = {
+                'sunflower': 'Подсолнух', 'peashooter': 'Горохострел', 'wallnut': 'Орешек',
+                'cherrybomb': 'Вишнёвая бомба', 'iceshroom': 'Ледяник', 'snowpea': 'Морозник',
+                'chomper': 'Хапунец', 'repeater': 'Двуствол', 'squash': 'Тыквогон',
+                'twinsunflower': 'Двойняшка', 'melonpult': 'Арбузомет', 'cattail': 'Котоушка',
+                'moonglow': 'Лунарик', 'tallnut': 'Великан', 'puffshroom': 'Дымовичок',
+                'scaredyshroom': 'Трусишка', 'hypnoshroom': 'Гипноз', 'magnetshroom': 'Магнетик',
+                'potatomine': 'Картошка-мина'
+            };
             
             if (currentUser.favoritePlant) {
-                // Отображаем любимое растение
-                const plantEmojis = {
-                    'sunflower': '🌻',
-                    'peashooter': '🌱',
-                    'wallnut': '🥜',
-                    'cherrybomb': '🍒',
-                    'iceshroom': '🧊',
-                    'snowpea': '❄️',
-                    'chomper': '👄',
-                    'repeater': '🔫',
-                    'squash': '🎃',
-                    'twinsunflower': '🌞',
-                    'melonpult': '🍉',
-                    'cattail': '🐱',
-                    'moonglow': '🌙',
-                    'tallnut': '🌴',
-                    'puffshroom': '🍄',
-                    'scaredyshroom': '😱',
-                    'hypnoshroom': '🌀',
-                    'magnetshroom': '🧲',
-                    'potatomine': '🥔'
-                };
-                
-                const plantNames = {
-                    'sunflower': 'Подсолнух',
-                    'peashooter': 'Горохострел',
-                    'wallnut': 'Орешек',
-                    'cherrybomb': 'Вишнёвая бомба',
-                    'iceshroom': 'Ледяник',
-                    'snowpea': 'Морозник',
-                    'chomper': 'Хапунец',
-                    'repeater': 'Двуствол',
-                    'squash': 'Тыквогон',
-                    'twinsunflower': 'Двойняшка',
-                    'melonpult': 'Арбузомет',
-                    'cattail': 'Котоушка',
-                    'moonglow': 'Лунарик',
-                    'tallnut': 'Великан',
-                    'puffshroom': 'Дымовичок',
-                    'scaredyshroom': 'Трусишка',
-                    'hypnoshroom': 'Гипноз',
-                    'magnetshroom': 'Магнетик',
-                    'potatomine': 'Картошка-мина'
-                };
-                
                 const plantId = currentUser.favoritePlant;
-                favoritePlantIcon.textContent = plantEmojis[plantId] || '🌱';
-                favoritePlantName.textContent = plantNames[plantId] || plantId;
-                favoritePlantSection.style.display = 'flex';
+                if (favoritePlantIcon) favoritePlantIcon.textContent = plantEmojis[plantId] || '🌱';
+                if (favoritePlantNameEl) favoritePlantNameEl.textContent = plantNames[plantId] || plantId;
+                if (favoritePlantCard) favoritePlantCard.style.display = 'flex';
             } else {
-                // Скрываем секцию любимого растения, если его нет
-                favoritePlantSection.style.display = 'none';
+                if (favoritePlantCard) favoritePlantCard.style.display = 'none';
             }
             
-            // Обновляем отображение наград (всегда видно)
+            // Обновляем отображение статистики (всегда видно)
             const userLevel = currentUser.level || 1;
             const userXP = currentUser.xp || 0;
             const xpForNextLevel = userLevel * 100;
             const xpProgress = Math.min(100, (userXP / xpForNextLevel) * 100);
             
-            document.getElementById('displayLevel').textContent = userLevel;
-            document.getElementById('xpDisplay').textContent = userXP + ' XP';
-            document.getElementById('xpProgressBar').style.width = xpProgress + '%';
-            document.getElementById('xpToNextLevel').textContent = 'До след. уровня: ' + (xpForNextLevel - userXP) + ' XP';
-            document.getElementById('displayCoins').textContent = currentUser.coins || 0;
-            document.getElementById('displayWins').textContent = currentUser.wins || 0;
-            document.getElementById('displayCrystals').textContent = currentUser.crystals || 0;
+            const displayLevelEl = document.getElementById('displayLevel');
+            const xpDisplayEl = document.getElementById('xpDisplay');
+            const xpProgressBarEl = document.getElementById('xpProgressBar');
+            const xpToNextLevelEl = document.getElementById('xpToNextLevel');
+            const displayCoinsEl = document.getElementById('displayCoins');
+            const displayWinsEl = document.getElementById('displayWins');
+            const displayCrystalsEl = document.getElementById('displayCrystals');
+            
+            if (displayLevelEl) displayLevelEl.textContent = userLevel;
+            if (xpDisplayEl) xpDisplayEl.textContent = userXP + ' XP';
+            if (xpProgressBarEl) xpProgressBarEl.style.width = xpProgress + '%';
+            if (xpToNextLevelEl) xpToNextLevelEl.textContent = 'До след. уровня: ' + (xpForNextLevel - userXP) + ' XP';
+            if (displayCoinsEl) displayCoinsEl.textContent = currentUser.coins || 0;
+            if (displayWinsEl) displayWinsEl.textContent = currentUser.wins || 0;
+            if (displayCrystalsEl) displayCrystalsEl.textContent = currentUser.crystals || 0;
             
             // Обновляем валюту на всех экранах
             updateCurrencyOnAllScreens();
