@@ -4849,21 +4849,31 @@
         
         async function switchLeaderTab(sort) {
             currentLeaderSort = sort;
-            document.getElementById('leaderTabWins').className = sort === 'wins' ? 'btn btn-primary' : 'btn btn-secondary';
-            document.getElementById('leaderTabLevel').className = sort === 'level' ? 'btn btn-primary' : 'btn btn-secondary';
+            const winsBtn = document.getElementById('leaderTabWins');
+            const levelBtn = document.getElementById('leaderTabLevel');
+            if (winsBtn) winsBtn.className = sort === 'wins' ? 'btn btn-primary' : 'btn btn-secondary';
+            if (levelBtn) levelBtn.className = sort === 'level' ? 'btn btn-primary' : 'btn btn-secondary';
             
             // Update header dynamically
             const headerRow = document.querySelector('#leaderboardScreen .leaderboard-row.header');
-            headerRow.innerHTML = '<span class="rank">#</span><span class="username">Игрок</span><span>Уровень/' + (sort === 'wins' ? 'Победы' : 'Опыт') + '</span>';
+            if (headerRow) {
+                headerRow.innerHTML = '<span class="rank">#</span><span class="username">Игрок</span><span>Уровень/' + (sort === 'wins' ? 'Победы' : 'Опыт') + '</span>';
+            }
+            
+            const listEl = document.getElementById('leaderboardList');
+            if (!listEl) return;
+            
+            // Показываем "Загрузка..."
+            listEl.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px">⏳ Загрузка...</p>';
             
             try {
                 const res = await fetch('/api/leaderboard' + (sort === 'level' ? '-level' : ''));
                 const data = await res.json();
-                if (data.success) {
+                if (data.success && data.leaders && data.leaders.length > 0) {
                     const sortKey = sort === 'wins' ? 'wins' : 'xp';
                     const sorted = [...data.leaders].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
                     
-                    document.getElementById('leaderboardList').innerHTML = sorted.map((p,i) =>
+                    listEl.innerHTML = sorted.map((p,i) =>
                         `<div class="leaderboard-row ${i<3?'top-3':''}" onclick="viewPlayerProfile('${escapeHtml(p.username)}')" style="cursor:pointer">
                             <span class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
                             <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
@@ -4873,8 +4883,15 @@
                             <span>${sort === 'wins' ? (p.level || 1) + '/' + (p.wins || 0) : (p.level || 1) + '/' + (p.xp || 0)}</span>
                         </div>`
                     ).join('');
+                } else if (data.success) {
+                    listEl.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px">📊 Нет данных о игроках</p>';
+                } else {
+                    listEl.innerHTML = '<p style="text-align:center;color:#ef4444;padding:20px">❌ ' + (data.message || 'Ошибка загрузки данных') + '</p>';
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error('Ошибка загрузки лидерборда:', e);
+                listEl.innerHTML = '<p style="text-align:center;color:#ef4444;padding:20px">❌ Ошибка подключения к серверу</p>';
+            }
         }
         
         async function showMatchHistory() {
