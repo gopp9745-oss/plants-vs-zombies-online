@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+з<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -4342,7 +4342,7 @@
             chestGraphic.style.animation = 'chestShake 0.5s ease-in-out 3';
             
             // Создаём частицы вокруг сундука
-            createParticles(particleContainer, color);
+            createChestParticles(particleContainer, color);
             
             // После шейка - открытие
             setTimeout(() => {
@@ -4359,7 +4359,7 @@
             }, 1500);
         }
         
-        function createParticles(container, color) {
+        function createChestParticles(container, color) {
             const particleCount = 20;
             for (let i = 0; i < particleCount; i++) {
                 const particle = document.createElement('div');
