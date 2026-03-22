@@ -2495,55 +2495,6 @@
    </div>
 </div>
 
-<!-- Нижняя панель с кнопками -->
-<div class="profile-bottom-panel">
-   <div class="game-buttons">
-       <button class="btn btn-primary game-btn-large" onclick="findGame()">
-           <span>🎯</span> Найти игру
-       </button>
-       <button class="btn btn-secondary game-btn-large" onclick="findBotGame()">
-           <span>🤖</span> Играть с ботом
-       </button>
-       <button class="btn btn-warning game-btn-large" onclick="showBattlePass()">
-           <span>🎖️</span> Battle Pass
-       </button>
-   </div>
-   
-   <!-- Шкала сундуков -->
-   <div id="chestBar" class="chest-bar-enhanced">
-       <div class="chest-header">
-           <span>🎁 Сундуки за победы</span>
-           <span class="chest-count" id="chestCount">0/5</span>
-       </div>
-       <div class="chest-icons-container" id="chestIcons"></div>
-       <div class="chest-info" id="chestInfo">Загружаем...</div>
-       <button class="btn btn-primary chest-btn" onclick="openChest()">🎁 Открыть сундук</button>
-   </div>
-   
-   <!-- Battle Pass миниатюра -->
-   <div id="battlePassBar" class="battlepass-mini" onclick="showBattlePass()">
-       <div class="bp-header">
-           <div class="bp-title-row">
-               <span class="bp-icon">🎖️</span>
-               <div class="bp-info">
-                   <span class="bp-name">Battle Pass</span>
-                   <span class="bp-season">Сезон <span id="bpSmallSeason">1</span></span>
-               </div>
-           </div>
-           <div class="bp-level-info">
-               <span class="bp-level">Уровень <span id="bpSmallLevel">0</span></span>
-               <span class="bp-xp"><span id="bpSmallXp">0</span>/<span id="bpSmallXpMax">1000</span> XP</span>
-           </div>
-       </div>
-       <div class="bp-progress-bar">
-           <div class="bp-progress-fill" id="bpSmallProgress"></div>
-       </div>
-       <div class="bp-next-reward" id="bpNextRewardInfo">
-           Следующая награда: данные загружаются...
-       </div>
-   </div>
-</div>
-
 <!-- ПРАВАЯ СТОРОНА - Навигация -->
 <div class="profile-right-panel">
    <button class="btn profile-btn" onclick="showLeaderboard()">
