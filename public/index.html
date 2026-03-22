@@ -4842,7 +4842,7 @@
         
         async function handleAuth(e) {
             e.preventDefault();
-            const type = document.querySelector('form').getAttribute('data-type') || 'login';
+            const type = document.getElementById('authForm').getAttribute('data-type') || 'login';
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             try {
