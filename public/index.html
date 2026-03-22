@@ -2121,11 +2121,41 @@
         .profile-avatar { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(90deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 20px; }
         
         /* === НОВЫЙ МАКЕТ ПРОФИЛЯ === */
-        .profile-left-panel, .profile-right-panel { display: flex; flex-direction: column; gap: 10px; width: 140px; }
-        .profile-left-panel { position: absolute; left: 20px; top: 180px; }
-        .profile-right-panel { position: absolute; right: 20px; top: 180px; }
+        #profileScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding-bottom: 80px;
+        }
         
-        .profile-center-panel { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+        .profile-main-content {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .profile-left-panel, .profile-right-panel { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            width: 160px; 
+            flex-shrink: 0;
+        }
+        
+        .profile-center-panel { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            flex: 1;
+            min-width: 300px;
+            max-width: 400px;
+        }
         
         /* Карта-превью игры */
         .game-preview-map {
@@ -2319,15 +2349,10 @@
     <div id="mainMenu" class="screen animate-in">
         <h1 class="game-title">🌻 PvZ Онлайн 🧟</h1>
         <p class="game-subtitle">Мультиплеер с друзьями</p>
-        <div class="currency-block" style='margin-bottom:15px;text-align:center;display:flex;justify-content:center;gap:10px;align-items:center'>
-            <div class="resource sun" id='mainMenuCoinsDisplay'>🪙 <span id='mainMenuCoinsValue'>0</span></div>
-            <div class="resource brain" id='mainMenuCrystalsDisplay' style='color:#60a5fa'>💎 <span id='mainMenuCrystalsValue'>0</span></div>
-        </div>
         <div class="menu-buttons">
             <button class="btn btn-primary" onclick="showAuth('login')">Вход</button>
             <button class="btn btn-secondary" onclick="showAuth('register')">Регистрация</button>
-            <button class="btn btn-warning" onclick="showLeaderboard()">Лидерборд</button>
-            <button class="btn btn-danger" onclick="becomeAdmin()">🔑 Код админа</button>
+            <button class="btn btn-warning" onclick="becomeAdmin()">🔑 Код админа</button>
         </div>
     </div>
     
@@ -2495,6 +2520,9 @@
    </div>
 </div>
 
+<!-- ОБЩАЯ ОБЕРТКА ДЛЯ ТРЁХ КОЛОНОК -->
+<div class="profile-main-content">
+
 <!-- ПРАВАЯ СТОРОНА - Навигация -->
 <div class="profile-right-panel">
    <button class="btn profile-btn" onclick="showLeaderboard()">
@@ -2526,144 +2554,141 @@
        <span class="btn-text">Выход</span>
    </button>
 </div>
-</div>
-        
-        <!-- НОВОЕ РАСПОЛОЖЕНИЕ КНОПОК -->
-        
-        <!-- ЛЕВАЯ СТОРОНА - Инвентарь и контент -->
-        <div class="profile-left-panel">
-            <button class="btn profile-btn inventory-btn" onclick="showInventory()">
-                <span class="btn-icon">🎒</span>
-                <span class="btn-text">Инвентарь</span>
-            </button>
-            <button class="btn profile-btn" onclick="showShop()">
-                <span class="btn-icon">🏪</span>
-                <span class="btn-text">Магазин</span>
-            </button>
-            <button class="btn profile-btn" onclick="showMatchHistory()">
-                <span class="btn-icon">📜</span>
-                <span class="btn-text">История</span>
-            </button>
-            <button class="btn profile-btn" onclick="showAchievements()">
-                <span class="btn-icon">🏆</span>
-                <span class="btn-text">Достижения</span>
-            </button>
-            
-            <!-- Коллекция растений -->
-            <div class="plants-collection" id="plantsCollection">
-                <h4>🌱 Мои растения</h4>
-                <div class="plants-grid" id="plantsGrid">
-                    <!-- Растения будут загружены динамически -->
-                </div>
-            </div>
-            
-            <!-- Последние достижения -->
-            <div class="achievements-section" id="achievementsPreview">
-                <h4>🏆 Последние достижения</h4>
-                <div class="achievements-list" id="achievementsList">
-                    <!-- Достижения будут загружены динамически -->
-                </div>
-            </div>
-            
-            <div class="profile-description" style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; width: 100%; box-sizing: border-box;">
-                <h4 style="margin: 0 0 10px 0; color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">О себе</h4>
-                <p id="profileDescription" style="margin: 0; color: #e5e7eb; font-size: 0.95rem; line-height: 1.5; word-wrap: break-word;">Нет описания</p>
-            </div>
-        </div>
-        
-        <!-- ЦЕНТР - Карта и кнопки игры -->
-        <div class="profile-center-panel">
-            <div class="game-preview-map" id="gamePreviewMap">
-                <div class="map-lanes-preview">
-                    <div class="lane-preview" style="background: rgba(74, 222, 128, 0.1);"></div>
-                    <div class="lane-preview" style="background: rgba(74, 222, 128, 0.15);"></div>
-                    <div class="lane-preview" style="background: rgba(74, 222, 128, 0.2);"></div>
-                    <div class="lane-preview" style="background: rgba(239, 68, 68, 0.15);"></div>
-                    <div class="lane-preview" style="background: rgba(239, 68, 68, 0.1);"></div>
-                </div>
-                <div class="house-preview plant">🌻</div>
-                <div class="house-preview zombie">🧟</div>
-                <div class="vs-preview">VS</div>
-            </div>
-            
-            <div class="center-buttons">
-            <button class="btn btn-primary game-btn" onclick="findGame()">
-                <span>🎯</span> Найти игру
-            </button>
-            <button class="btn btn-secondary game-btn" onclick="findBotGame()">
-                <span>🤖</span> Играть с ботом
-            </button>
-            <button class="btn btn-warning game-btn" onclick="showBattlePass()">
-                <span>🎖️</span> Battle Pass
-            </button>
-        </div>
-        
-        <!-- Секция наград и статистики - всегда видна -->
-        <div style="margin-top:15px;padding:15px;background:rgba(255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.2);text-align:center;width:100%;max-width:300px">
-            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:12px">📊 Ваша статистика</div>
-            
-            <!-- Уровень и XP -->
-            <div style="margin-bottom:15px">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-                    <span style="color:#fbbf24;font-weight:bold">⭐ Уровень <span id="displayLevel">1</span></span>
-                    <span style="color:#4ade80;font-size:0.8rem" id="xpDisplay">0 XP</span>
-                </div>
-                <div style="background:rgba(255,255,0.2);border-radius:10px;height:10px;overflow:hidden">
-                    <div id="xpProgressBar" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);height:100%;width:0%;transition:width 0.3s"></div>
-                </div>
-                <div style="font-size:0.7rem;color:#94a3b8;margin-top:3px" id="xpToNextLevel">До след. уровня: 100 XP</div>
-            </div>
-            
-            <!-- Статистика -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div style="background:rgba(255,255,0.1);padding:10px;border-radius:8px">
-                    <div style="font-size:1.2rem;font-weight:bold;color:#fbbf24" id="displayCoins">0</div>
-                    <div style="font-size:0.7rem;color:#94a3b8">💰 Монет</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px">
-                    <div style="font-size:1.2rem;font-weight:bold;color:#4ade80" id="displayWins">0</div>
-                    <div style="font-size:0.7rem;color:#94a3b8">🏆 Побед</div>
-                </div>
-                <div style="background:rgba(37,99,235,0.15);padding:10px;border-radius:8px;grid-column:span 2">
-                    <div style="font-size:1.2rem;font-weight:bold;color:#60a5fa" id="displayCrystals">0</div>
-                    <div style="font-size:0.7rem;color:#94a3b8">💎 Кристаллы</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Шкала сундуков под кнопками игры - ВСЕГДА ВИДИМА -->
-        <div id="chestBar" style="margin-top:15px;padding:12px;background:rgba(255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,0.2);text-align:center;width:100%;max-width:300px">
-            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px">🎁 Сундуки за победы</div>
-            <div style="display:flex;justify-content:center;gap:10px;margin-bottom:8px" id="chestIcons"></div>
-            <div style="font-size:0.8rem;color:#fbbf24" id="chestInfo">Загружаем...</div>
-            <button class="btn btn-primary" style="margin-top:10px;padding:8px 20px;font-size:0.85rem" onclick="openChest()">🎁 Открыть сундук</button>
-        </div>
 
-            <!-- ШКАЛА BATTLE PASS В МЕНЮ -->
-            <div id="battlePassBar" style="margin-top:15px;padding:12px;background:rgba(15,23,42,0.9);border-radius:12px;backdrop-filter:blur(12px);border:2px solid rgba(251,191,36,0.5);text-align:left;width:100%;max-width:300px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,0.4);position:relative;overflow:hidden" onclick="showBattlePass()">
-                <div style="position:absolute;top:-20px;right:-10px;font-size:3rem;opacity:0.08">🎖️</div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <span style="font-size:1.6rem">🎖️</span>
-                        <div>
-                            <div style="font-size:0.9rem;color:#e5e7eb;font-weight:bold">Battle Pass</div>
-                            <div style="font-size:0.75rem;color:#94a3b8">Сезон <span id="bpSmallSeason">1</span></div>
-                        </div>
-                    </div>
-                    <div style="text-align:right;font-size:0.8rem">
-                        <div style="color:#fbbf24;font-weight:bold">Уровень <span id="bpSmallLevel">0</span></div>
-                        <div style="font-size:0.75rem;color:#94a3b8"><span id="bpSmallXp">0</span>/<span id="bpSmallXpMax">1000</span> XP</div>
-                    </div>
-                </div>
-                <div style="background:rgba(148,163,184,0.3);border-radius:999px;height:8px;overflow:hidden">
-                    <div id="bpSmallProgress" style="background:linear-gradient(90deg,#fbbf24,#22c55e);height:100%;width:0%;transition:width 0.3s"></div>
-                </div>
-                <div id="bpNextRewardInfo" style="margin-top:6px;font-size:0.75rem;color:#94a3b8">
-                    Следующая награда: данные загружаются...
+<!-- ЛЕВАЯ СТОРОНА - Инвентарь и контент -->
+<div class="profile-left-panel">
+    <button class="btn profile-btn inventory-btn" onclick="showInventory()">
+        <span class="btn-icon">🎒</span>
+        <span class="btn-text">Инвентарь</span>
+    </button>
+    <button class="btn profile-btn" onclick="showShop()">
+        <span class="btn-icon">🏪</span>
+        <span class="btn-text">Магазин</span>
+    </button>
+    <button class="btn profile-btn" onclick="showMatchHistory()">
+        <span class="btn-icon">📜</span>
+        <span class="btn-text">История</span>
+    </button>
+    <button class="btn profile-btn" onclick="showAchievements()">
+        <span class="btn-icon">🏆</span>
+        <span class="btn-text">Достижения</span>
+    </button>
+    
+    <!-- Коллекция растений -->
+    <div class="plants-collection" id="plantsCollection">
+        <h4>🌱 Мои растения</h4>
+        <div class="plants-grid" id="plantsGrid">
+            <!-- Растения будут загружены динамически -->
+        </div>
+    </div>
+    
+    <!-- Последние достижения -->
+    <div class="achievements-section" id="achievementsPreview">
+        <h4>🏆 Последние достижения</h4>
+        <div class="achievements-list" id="achievementsList">
+            <!-- Достижения будут загружены динамически -->
+        </div>
+    </div>
+    
+    <div class="profile-description" style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; width: 100%; box-sizing: border-box;">
+        <h4 style="margin: 0 0 10px 0; color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">О себе</h4>
+        <p id="profileDescription" style="margin: 0; color: #e5e7eb; font-size: 0.95rem; line-height: 1.5; word-wrap: break-word;">Нет описания</p>
+    </div>
+</div>
+
+<!-- ЦЕНТР - Карта и кнопки игры -->
+<div class="profile-center-panel">
+    <div class="game-preview-map" id="gamePreviewMap">
+        <div class="map-lanes-preview">
+            <div class="lane-preview" style="background: rgba(74, 222, 128, 0.1);"></div>
+            <div class="lane-preview" style="background: rgba(74, 222, 128, 0.15);"></div>
+            <div class="lane-preview" style="background: rgba(74, 222, 128, 0.2);"></div>
+            <div class="lane-preview" style="background: rgba(239, 68, 68, 0.15);"></div>
+            <div class="lane-preview" style="background: rgba(239, 68, 68, 0.1);"></div>
+        </div>
+        <div class="house-preview plant">🌻</div>
+        <div class="house-preview zombie">🧟</div>
+        <div class="vs-preview">VS</div>
+    </div>
+    
+    <div class="center-buttons">
+        <button class="btn btn-primary game-btn" onclick="findGame()">
+            <span>🎯</span> Найти игру
+        </button>
+        <button class="btn btn-secondary game-btn" onclick="findBotGame()">
+            <span>🤖</span> Играть с ботом
+        </button>
+        <button class="btn btn-warning game-btn" onclick="showBattlePass()">
+            <span>🎖️</span> Battle Pass
+        </button>
+    </div>
+    
+    <!-- Секция наград и статистики - всегда видна -->
+    <div style="margin-top:15px;padding:15px;background:rgba(255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,0.2);text-align:center;width:100%;max-width:300px">
+        <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:12px">📊 Ваша статистика</div>
+        
+        <!-- Уровень и XP -->
+        <div style="margin-bottom:15px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <span style="color:#fbbf24;font-weight:bold">⭐ Уровень <span id="displayLevel">1</span></span>
+                <span style="color:#4ade80;font-size:0.8rem" id="xpDisplay">0 XP</span>
+            </div>
+            <div style="background:rgba(255,255,0.2);border-radius:10px;height:10px;overflow:hidden">
+                <div id="xpProgressBar" style="background:linear-gradient(90deg,#fbbf24,#f59e0b);height:100%;width:0%;transition:width 0.3s"></div>
+            </div>
+            <div style="font-size:0.7rem;color:#94a3b8;margin-top:3px" id="xpToNextLevel">До след. уровня: 100 XP</div>
+        </div>
+        
+        <!-- Статистика -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:rgba(255,255,0.1);padding:10px;border-radius:8px">
+                <div style="font-size:1.2rem;font-weight:bold;color:#fbbf24" id="displayCoins">0</div>
+                <div style="font-size:0.7rem;color:#94a3b8">💰 Монет</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px">
+                <div style="font-size:1.2rem;font-weight:bold;color:#4ade80" id="displayWins">0</div>
+                <div style="font-size:0.7rem;color:#94a3b8">🏆 Побед</div>
+            </div>
+            <div style="background:rgba(37,99,235,0.15);padding:10px;border-radius:8px;grid-column:span 2">
+                <div style="font-size:1.2rem;font-weight:bold;color:#60a5fa" id="displayCrystals">0</div>
+                <div style="font-size:0.7rem;color:#94a3b8">💎 Кристаллы</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Шкала сундуков под кнопками игры - ВСЕГДА ВИДИМА -->
+    <div id="chestBar" style="margin-top:15px;padding:12px;background:rgba(255,255,0.1);border-radius:12px;backdrop-filter:blur(10px);border:2px solid rgba(255,255,0.2);text-align:center;width:100%;max-width:300px">
+        <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px">🎁 Сундуки за победы</div>
+        <div style="display:flex;justify-content:center;gap:10px;margin-bottom:8px" id="chestIcons"></div>
+        <div style="font-size:0.8rem;color:#fbbf24" id="chestInfo">Загружаем...</div>
+        <button class="btn btn-primary" style="margin-top:10px;padding:8px 20px;font-size:0.85rem" onclick="openChest()">🎁 Открыть сундук</button>
+    </div>
+    
+    <!-- ШКАЛА BATTLE PASS В МЕНЮ -->
+    <div id="battlePassBar" style="margin-top:15px;padding:12px;background:rgba(15,23,42,0.9);border-radius:12px;backdrop-filter:blur(12px);border:2px solid rgba(251,191,36,0.5);text-align:left;width:100%;max-width:300px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,0.4);position:relative;overflow:hidden" onclick="showBattlePass()">
+        <div style="position:absolute;top:-20px;right:-10px;font-size:3rem;opacity:0.08">🎖️</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:1.6rem">🎖️</span>
+                <div>
+                    <div style="font-size:0.9rem;color:#e5e7eb;font-weight:bold">Battle Pass</div>
+                    <div style="font-size:0.75rem;color:#94a3b8">Сезон <span id="bpSmallSeason">1</span></div>
                 </div>
             </div>
+            <div style="text-align:right;font-size:0.8rem">
+                <div style="color:#fbbf24;font-weight:bold">Уровень <span id="bpSmallLevel">0</span></div>
+                <div style="font-size:0.75rem;color:#94a3b8"><span id="bpSmallXp">0</span>/<span id="bpSmallXpMax">1000</span> XP</div>
+            </div>
+        </div>
+        <div style="background:rgba(148,163,184,0.3);border-radius:999px;height:8px;overflow:hidden">
+            <div id="bpSmallProgress" style="background:linear-gradient(90deg,#fbbf24,#22c55e);height:100%;width:0%;transition:width 0.3s"></div>
+        </div>
+        <div id="bpNextRewardInfo" style="margin-top:6px;font-size:0.75rem;color:#94a3b8">
+            Следующая награда: данные загружаются...
+        </div>
     </div>
-    </div>
+</div>
+</div>
     
     <div id="leaderboardScreen" class="screen">
         <h2 class="leaderboard-title">🏆 Топ игроки</h2>
@@ -4002,7 +4027,7 @@
                 alert(data.message || 'Награда получена!');
                 // После успешного получения награды обновляем данные Battle Pass и профиль
                 loadBattlePass();
-                loadProfile(); // чтобы обновились монеты / уровень / инвентарь
+                checkSession(); // чтобы обновились монеты / уровень / инвентарь
                 updateCurrencyOnAllScreens();
             } catch (e) {
                 console.error(e);
@@ -7263,101 +7288,9 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
             });
         }
         
-        // Загрузка коллекции растений (обновленная версия)
-        function loadPlantsCollection() {
-            if (!currentUser) return;
-            
-            const plantsGrid = document.getElementById('plantsGrid');
-            if (!plantsGrid) return;
-            
-            // Получаем коллекцию растений пользователя
-            // В реальности это будет с сервера
-            const userPlants = currentUser.plants || {};
-            
-            const plantEmojis = {
-                'sunflower': '🌻',
-                'peashooter': '🌱',
-                'wallnut': '🥜',
-                'cherrybomb': '🍒',
-                'iceshroom': '🧊',
-                'snowpea': '❄️',
-                'chomper': '👄',
-                'repeater': '🔫',
-                'squash': '🎃',
-                'twinsunflower': '🌞',
-                'melonpult': '🍉',
-                'cattail': '🐱',
-                'moonglow': '🌙',
-                'tallnut': '🌴',
-                'puffshroom': '🍄',
-                'scaredyshroom': '😱',
-                'hypnoshroom': '🌀',
-                'magnetshroom': '🧲',
-                'potatomine': '🥔'
-            };
-            
-            plantsGrid.innerHTML = '';
-            
-            // Создаем карточки для каждого растения
-            Object.keys(plantEmojis).forEach(plantId => {
-                const plantData = userPlants[plantId] || { level: 1, owned: false };
-                const plantCard = document.createElement('div');
-                plantCard.className = 'plant-card';
-                plantCard.style.opacity = plantData.owned ? '1' : '0.4';
-                
-                plantCard.innerHTML = `
-                    ${plantEmojis[plantId] || '🌱'}
-                    ${plantData.owned ? `<div class="plant-level">${plantData.level || 1}</div>` : ''}
-                `;
-                
-                plantCard.title = `${plantId}\nУровень: ${plantData.level || 1}\nВладеет: ${plantData.owned ? 'Да' : 'Нет'}`;
-                plantsGrid.appendChild(plantCard);
-            });
-        }
+        // loadPlantsCollection уже определена выше - убрано дублирование
         
-        // Загрузка достижений (обновленная версия)
-        function loadAchievementsPreview() {
-            if (!currentUser) return;
-            
-            const achievementsGrid = document.getElementById('achievementsGrid');
-            if (!achievementsGrid) return;
-            
-            // Получаем достижения пользователя (в реальности с сервера)
-            const userAchievements = currentUser.achievements || {};
-            
-            const achievementsData = [
-                { id: 'first_win', name: 'Первая победа', description: 'Выиграйте свою первую игру', icon: '🏆', reward: '100 монет' },
-                { id: 'ten_wins', name: 'Десятикратный чемпион', description: 'Выиграйте 10 матчей', icon: '👑', reward: '500 монет' },
-                { id: 'plant_collector', name: 'Коллекционер', description: 'Соберите 10 разных растений', icon: '🌱', reward: '300 монет' },
-                { id: 'level_10', name: 'Опытный игрок', description: 'Достигните 10 уровня', icon: '⭐', reward: '1000 монет' },
-                { id: 'streak_5', name: 'Неудержимый', description: 'Выиграйте 5 матчей подряд', icon: '🔥', reward: '750 монет' },
-                { id: 'rich', name: 'Миллионер', description: 'Накопите 10000 монет', icon: '💰', reward: '2000 монет' }
-            ];
-            
-            achievementsGrid.innerHTML = '';
-            
-            achievementsData.forEach(achievement => {
-                const userAchievement = userAchievements[achievement.id] || { completed: false, progress: 0, current: 0 };
-                const progress = userAchievement.completed ? 100 : (userAchievement.progress || 0);
-                const achievementCard = document.createElement('div');
-                achievementCard.className = `achievement-card ${userAchievement.completed ? 'completed' : ''}`;
-                
-                achievementCard.innerHTML = `
-                    <div class="achievement-icon-large">${achievement.icon}</div>
-                    <div class="achievement-details">
-                        <div class="achievement-title">${achievement.name}</div>
-                        <div class="achievement-description">${achievement.description}</div>
-                        <div class="achievement-progress-bar">
-                            <div class="achievement-progress-fill" style="width: ${progress}%"></div>
-                        </div>
-                        <div class="achievement-reward">🎁 ${achievement.reward}</div>
-                    </div>
-                    ${userAchievement.completed ? '<div class="achievement-status">✅</div>' : ''}
-                `;
-                
-                achievementsGrid.appendChild(achievementCard);
-            });
-        }
+        // loadAchievementsPreview уже определена выше - убрано дублирование
         
         // Загрузка детальной статистики
         function loadDetailedStats() {
@@ -7542,31 +7475,7 @@ ${isUnlocked ? '✅ Доступно для игры!' : '🔒 Требуетс�
             loadDetailedStats();
         }
         
-        // Переписанная функция showProfile для нового интерфейса
-        function showProfile() {
-            if (!currentUser) {
-                alert('Сначала войдите в аккаунт!');
-                showMainMenu();
-                return;
-            }
-            showScreen('profileScreen');
-            
-            // Обновляем весь улучшенный интерфейс
-            updateEnhancedProfile();
-            
-            // Обновляем валюту на всех экранах
-            updateCurrencyOnAllScreens();
-            
-            // Загружаем сундуки
-            loadChests();
-            
-            // Загружаем превью Battle Pass
-            loadBattlePassPreview();
-            
-            // Стартуем опрос уведомлений
-            ensureNotificationPolling();
-            pollNotifications();
-        }
+        // showProfile уже определена выше - убрано дублирование
 
     </script>
 
