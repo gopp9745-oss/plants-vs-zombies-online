@@ -4861,14 +4861,27 @@
             }
             
             const listEl = document.getElementById('leaderboardList');
-            if (!listEl) return;
+            if (!listEl) {
+                console.error('Элемент leaderboardList не найден!');
+                return;
+            }
             
             // Показываем "Загрузка..."
             listEl.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px">⏳ Загрузка...</p>';
             
             try {
-                const res = await fetch('/api/leaderboard' + (sort === 'level' ? '-level' : ''));
+                const url = '/api/leaderboard' + (sort === 'level' ? '-level' : '');
+                console.log('Загружаем лидерборд с URL:', url);
+                const res = await fetch(url);
+                console.log('Ответ сервера:', res.status, res.statusText);
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
                 const data = await res.json();
+                console.log('Данные лидерборда:', data);
+                
                 if (data.success && data.leaders && data.leaders.length > 0) {
                     const sortKey = sort === 'wins' ? 'wins' : 'xp';
                     const sorted = [...data.leaders].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
@@ -4883,14 +4896,14 @@
                             <span>${sort === 'wins' ? (p.level || 1) + '/' + (p.wins || 0) : (p.level || 1) + '/' + (p.xp || 0)}</span>
                         </div>`
                     ).join('');
-                } else if (data.success) {
+                } else if (data.success && (!data.leaders || data.leaders.length === 0)) {
                     listEl.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px">📊 Нет данных о игроках</p>';
                 } else {
                     listEl.innerHTML = '<p style="text-align:center;color:#ef4444;padding:20px">❌ ' + (data.message || 'Ошибка загрузки данных') + '</p>';
                 }
             } catch(e) {
                 console.error('Ошибка загрузки лидерборда:', e);
-                listEl.innerHTML = '<p style="text-align:center;color:#ef4444;padding:20px">❌ Ошибка подключения к серверу</p>';
+                listEl.innerHTML = '<p style="text-align:center;color:#ef4444;padding:20px">❌ Ошибка подключения к серверу<br><small style="color:#94a3b8">(' + e.message + ')</small></p>';
             }
         }
         
