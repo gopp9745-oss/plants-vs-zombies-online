@@ -340,7 +340,7 @@ app.get('/api/shop', async (req, res) => {
     const items = [...plants, ...zombies];
     const sales = await db.getActiveSales();
     
-    res.json({ success: true, items, nextUpdate: 300000, unitLevels: UNIT_LEVELS, maps: MAPS, sales });
+    res.json({ success: true, items, nextUpdate: 300000, unitLevels: UNIT_LEVELS, maps: MAPS, sales, userLevel });
 });
 
 // API для получения скидок

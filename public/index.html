@@ -5002,11 +5002,18 @@
         async function loadShop() {
             try {
                 // Загружаем магазин и скидки
-                const [shopRes, salesRes] = await Promise.all([fetch('/api/shop'), fetch('/api/sales')]);
+                const shopUrl = sessionId ? `/api/shop?sessionId=${sessionId}` : '/api/shop';
+                const [shopRes, salesRes] = await Promise.all([fetch(shopUrl), fetch('/api/sales')]);
                 const shopData = await shopRes.json();
                 const salesData = await salesRes.json();
                 
-                if (shopData.success) shopItemsList = shopData.items || [];
+                if (shopData.success) {
+                    shopItemsList = shopData.items || [];
+                    // Обновляем уровень пользователя, если получен от сервера
+                    if (shopData.userLevel && currentUser) {
+                        currentUser.level = shopData.userLevel;
+                    }
+                }
                 if (salesData.success) currentSales = salesData.sales || [];
                 
                 renderShopItems();
@@ -5023,15 +5030,19 @@
         
         let userInventory = {};
         
-        async function loadInventory() {
-            try {
-                const res = await fetch('/api/inventory', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
-                const data = await res.json();
-                if (data.success) {
-                    userInventory = data.inventory || {};
-                }
-            } catch(e) {}
-        }
+         async function loadInventory() {
+             try {
+                 const res = await fetch('/api/inventory', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                 const data = await res.json();
+                 if (data.success) {
+                     userInventory = data.inventory || {};
+                     // Обновляем уровень пользователя
+                     if (data.userLevel && currentUser) {
+                         currentUser.level = data.userLevel;
+                     }
+                 }
+             } catch(e) {}
+         }
         
         function renderShopItems() {
             const shopEl = document.getElementById('shopItemsContainer');
@@ -5167,7 +5178,8 @@
         function startShopTimer() {
             if (shopTimer) clearInterval(shopTimer);
             shopTimer = setInterval(async () => {
-                const res = await fetch('/api/shop');
+                const shopUrl = sessionId ? `/api/shop?sessionId=${sessionId}` : '/api/shop';
+                const res = await fetch(shopUrl);
                 const data = await res.json();
                 if (data.success && data.nextUpdate) {
                     const mins = Math.floor(data.nextUpdate / 60000);
