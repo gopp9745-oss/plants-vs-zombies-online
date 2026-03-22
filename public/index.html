@@ -3674,6 +3674,13 @@
             screen.classList.add('animate-in');
             // Сбрасываем прокрутку страницы при открытии любого экрана
             window.scrollTo({ top: 0, behavior: 'instant' });
+            
+            // Показываем мобильную навигацию на мобильных устройствах
+            const isMobile = window.innerWidth <= 900;
+            const mobileNav = document.getElementById('mobileNav');
+            if (mobileNav) {
+                mobileNav.style.display = isMobile ? 'flex' : 'none';
+            }
         }
         
         function showMainMenu() { showScreen('mainMenu'); }
