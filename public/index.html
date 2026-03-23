@@ -1,8 +1,9 @@
-з<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -4832,6 +4833,7 @@
                 if (data.success) {
                     sessionId = data.sessionId; localStorage.setItem('sessionId', sessionId);
                     currentUser = data.user || {};
+                    console.log('Auth success, sessionId:', sessionId, 'currentUser:', currentUser);
                     // Показываем обучение после регистрации (новым игрокам)
                     if (type === 'register') {
                         setTimeout(() => startTutorial(), 1000);
@@ -4992,6 +4994,7 @@
         };
         
         async function showShop() { 
+            console.log('showShop called, sessionId:', sessionId);
             showScreen('shopScreen'); 
             document.getElementById('promoMessage').textContent = ''; 
             await loadInventory(); // Загружаем инвентарь
@@ -5003,15 +5006,18 @@
             try {
                 // Загружаем магазин и скидки
                 const shopUrl = sessionId ? `/api/shop?sessionId=${sessionId}` : '/api/shop';
+                console.log('loadShop URL:', shopUrl, 'sessionId:', sessionId);
                 const [shopRes, salesRes] = await Promise.all([fetch(shopUrl), fetch('/api/sales')]);
                 const shopData = await shopRes.json();
                 const salesData = await salesRes.json();
                 
                 if (shopData.success) {
                     shopItemsList = shopData.items || [];
+                    console.log('Shop items:', shopItemsList.map(i => i.id));
                     // Обновляем уровень пользователя, если получен от сервера
                     if (shopData.userLevel && currentUser) {
                         currentUser.level = shopData.userLevel;
+                        console.log('Updated user level to:', currentUser.level);
                     }
                 }
                 if (salesData.success) currentSales = salesData.sales || [];
@@ -5030,19 +5036,22 @@
         
         let userInventory = {};
         
-         async function loadInventory() {
-             try {
-                 const res = await fetch('/api/inventory', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
-                 const data = await res.json();
-                 if (data.success) {
-                     userInventory = data.inventory || {};
-                     // Обновляем уровень пользователя
-                     if (data.userLevel && currentUser) {
-                         currentUser.level = data.userLevel;
-                     }
-                 }
-             } catch(e) {}
-         }
+        async function loadInventory() {
+            try {
+                console.log('loadInventory, sessionId:', sessionId);
+                const res = await fetch('/api/inventory', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const data = await res.json();
+                if (data.success) {
+                    userInventory = data.inventory || {};
+                    console.log('Inventory loaded:', userInventory);
+                    // Обновляем уровень пользователя
+                    if (data.userLevel && currentUser) {
+                        currentUser.level = data.userLevel;
+                        console.log('Updated user level from inventory:', currentUser.level);
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
         
         function renderShopItems() {
             const shopEl = document.getElementById('shopItemsContainer');
@@ -5050,6 +5059,12 @@
             
             const plants = shopItemsList.filter(i => i.type === 'plant');
             const zombies = shopItemsList.filter(i => i.type === 'zombie');
+            
+            console.log('Rendering shop items:');
+            console.log('Plants:', plants.map(p => p.id));
+            console.log('Zombies:', zombies.map(z => z.id));
+            console.log('currentUser.level:', currentUser?.level);
+            console.log('userInventory:', userInventory);
             
             let html = '';
             
@@ -5084,6 +5099,8 @@
             const requiredLevel = UNIT_LEVELS ? (UNIT_LEVELS[item.id] || 1) : 1;
             const userLevel = currentUser?.level || 1;
             const isLocked = userLevel < requiredLevel;
+            
+            console.log(`Item: ${item.id}, userLevel: ${userLevel}, requiredLevel: ${requiredLevel}, isLocked: ${isLocked}`);
             
             let priceHtml = '';
             let btnHtml = '';
