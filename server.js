@@ -149,6 +149,44 @@ const UNIT_LEVELS = {
     zombie:1, conehead:1, buckethead:1, football:3, dancing:3, dolphin:3, digger:5, bungee:5, gargantuar:5, yeti:10, king:10, dr:10
 };
 
+// Массивы юнитов для магазина
+const PLANTS = [
+    { id: 'sunflower' }, { id: 'peashooter' }, { id: 'wallnut' }, { id: 'cherrybomb' },
+    { id: 'iceshroom' }, { id: 'snowpea' }, { id: 'chomper' }, { id: 'repeater' },
+    { id: 'squash' }, { id: 'twinsunflower' }, { id: 'melonpult' }, { id: 'cattail' }
+];
+const ZOMBIES = [
+    { id: 'zombie' }, { id: 'conehead' }, { id: 'buckethead' }, { id: 'football' },
+    { id: 'dancing' }, { id: 'dolphin' }, { id: 'digger' }, { id: 'bungee' },
+    { id: 'gargantuar' }, { id: 'yeti' }, { id: 'king' }, { id: 'dr' }
+];
+
+// Иконки и имена
+const PLANT_ICONS = {
+    sunflower: '🌻', peashooter: '🟢', wallnut: '🥜', cherrybomb: '🍒', iceshroom: '🧊',
+    snowpea: '❄️', chomper: '👄', repeater: '🔫', squash: '🎃', twinsunflower: '🌞',
+    melonpult: '🍉', cattail: '🐱'
+};
+const PLANT_NAMES = {
+    sunflower: 'Подсолнух', peashooter: 'Горох', wallnut: 'Стена', cherrybomb: 'Вишня',
+    iceshroom: 'Лед', snowpea: 'Мороз', chomper: 'Хапун', repeater: 'Дубль',
+    squash: 'Тыква', twinsunflower: 'Двойня', melonpult: 'Арбуз', cattail: 'Котоушка'
+};
+const ZOMBIE_ICONS = {
+    zombie: '🧟', conehead: '🧢', buckethead: '🪣', football: '🏈', dancing: '💃',
+    dolphin: '🐬', digger: '⛏️', bungee: '🪝', gargantuar: '👹', yeti: '🦬',
+    king: '🤴', dr: '🧙'
+};
+const ZOMBIE_NAMES = {
+    zombie: 'Зомби', conehead: 'Конус', buckethead: 'Ведро', football: 'Спорт',
+    dancing: 'Танцор', dolphin: 'Дельфин', digger: 'Копатель', bungee: 'Крюк',
+    gargantuar: 'Гигант', yeti: 'Йети', king: 'Король', dr: 'Доктор'
+};
+
+// Массивы id для удобства
+const ALL_PLANTS = PLANTS.map(p => p.id);
+const ALL_ZOMBIES = ZOMBIES.map(z => z.id);
+
 const PLANT_PRICES = { sunflower:50, peashooter:50, wallnut:75, cherrybomb:150, iceshroom:75, snowpea:75, chomper:75, repeater:100, squash:100, twinsunflower:150, melonpult:200, cattail:150 };
 const ZOMBIE_PRICES = { zombie:50, conehead:75, buckethead:100, football:125, dancing:100, dolphin:100, digger:125, bungee:150, gargantuar:300, yeti:200, king:250, dr:300 };
 
@@ -159,9 +197,6 @@ const MAPS = [
     { id: 'snow', name: 'Зимний сад', icon: '❄️', background: 'linear-gradient(180deg, #e0f7fa, #b2ebf2)', unlockLevel: 7, price: 350 },
     { id: 'volcano', name: 'Вулкан', icon: '🌋', background: 'linear-gradient(180deg, #8B0000, #4a0000)', unlockLevel: 10, price: 500 }
 ];
-
-const ALL_PLANTS = ['sunflower','peashooter','wallnut','cherrybomb','iceshroom','snowpea','chomper','repeater','squash','twinsunflower','melonpult','cattail'];
-const ALL_ZOMBIES = ['zombie','conehead','buckethead','football','dancing','dolphin','digger','bungee','gargantuar','yeti','king','dr'];
 
 // Цены сундуков растений за кристаллы
 const PLANT_CHEST_PRICES = {

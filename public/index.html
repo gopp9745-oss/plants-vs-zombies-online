@@ -3548,7 +3548,7 @@
         async function checkSession() {
             if (!sessionId) return;
             try {
-                const res = await fetch('/api/check-session', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId})});
+                const res = await fetch('/api/check-session?sessionId=' + encodeURIComponent(sessionId));
                 const data = await res.json();
                 if (data.success) { currentUser = data.user; showProfile(); }
             } catch(e) {}
