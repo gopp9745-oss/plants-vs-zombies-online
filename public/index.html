@@ -9,15 +9,189 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Растения против Зомби - Онлайн v2</title>
     <style>
+        :root {
+            --bg-primary: #1a0a2e;
+            --bg-secondary: #2d0a0a;
+            --bg-tertiary: #0a1628;
+            --accent-plant: #00ff88;
+            --accent-zombie: #ff3333;
+            --text-primary: #e5e7eb;
+            --text-secondary: #94a3b8;
+            --gold: #fbbf24;
+            --purple: #a855f7;
+            --blue: #60a5fa;
+            --pink: #f472b6;
+            --orange: #fb923c;
+        }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: white; overflow-x: hidden; }
+        body { 
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%); 
+            min-height: 100vh; 
+            color: var(--text-primary); 
+            overflow-x: hidden; 
+        }
         
-        /* Анимированный фон */
+        /* Анимированный фон с новыми частицами */
         .bg-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
-        .particle { position: absolute; font-size: 1.5rem; opacity: 0.3; animation: float 15s infinite ease-in-out; }
-        @keyframes float { 0%,100% { transform: translateY(100vh) rotate(0deg); opacity: 0; } 10% { opacity: 0.3; } 90% { opacity: 0.3; } 100% { transform: translateY(-100px) rotate(360deg); opacity: 0; } }
+        .particle { position: absolute; font-size: 1.5rem; opacity: 0.4; animation: float 15s infinite ease-in-out; filter: drop-shadow(0 0 10px currentColor); }
+        .particle.plant { color: var(--accent-plant); }
+        .particle.zombie { color: var(--accent-zombie); }
+        @keyframes float { 0%,100% { transform: translateY(100vh) rotate(0deg); opacity: 0; } 10% { opacity: 0.4; } 90% { opacity: 0.4; } 100% { transform: translateY(-100px) rotate(360deg); opacity: 0; } }
         
-        #mainMenu, #authScreen, #profileScreen, #leaderboardScreen, #shopScreen, #adminScreen, #waitingScreen, #gameScreen, #gameEndScreen, #matchHistoryScreen, #profileViewScreen { display: none; }
+        /* Новые эффекты частиц */
+        @keyframes particlePulse { 0%,100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.2); opacity: 0.7; } }
+        @keyframes particleGlow { 0%,100% { filter: drop-shadow(0 0 5px currentColor); } 50% { filter: drop-shadow(0 0 20px currentColor); } }
+        
+        /* === НОВЫЕ ВИЗУАЛЬНЫЕ ЭФФЕКТЫ === */
+        
+        /* Эффект крови для зомби */
+        @keyframes bloodSplash {
+            0% { transform: scale(0); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        /* Эффект лепестков для растений */
+        @keyframes petalBurst {
+            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
+            100% { transform: scale(0) rotate(360deg); opacity: 0; }
+        }
+        
+        /* Эффект инея для заморозки */
+        @keyframes frostEffect {
+            0% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.8); }
+            50% { box-shadow: 0 0 20px 10px rgba(96, 165, 250, 0.4); }
+            100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0); }
+        }
+        
+        /* Эффект молнии */
+        @keyframes lightningStrike {
+            0% { opacity: 0; transform: scaleY(0); }
+            20% { opacity: 1; transform: scaleY(1); }
+            40% { opacity: 0.5; transform: scaleY(0.8); }
+            60% { opacity: 1; transform: scaleY(1.2); }
+            80% { opacity: 0.3; transform: scaleY(0.6); }
+            100% { opacity: 0; transform: scaleY(0); }
+        }
+        
+        /* Эффект токсичности */
+        @keyframes toxicBubbles {
+            0% { transform: translateY(0) scale(1); opacity: 0.8; }
+            50% { transform: translateY(-10px) scale(1.2); opacity: 0.6; }
+            100% { transform: translateY(-20px) scale(0.8); opacity: 0; }
+        }
+        
+        /* Эффект притяжения */
+        @keyframes magneticPull {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-3px); }
+            100% { transform: translateX(0); }
+        }
+        
+        /* Эффект ярости */
+        @keyframes rageMode {
+            0%,100% { filter: hue-rotate(0deg) brightness(1); }
+            25% { filter: hue-rotate(-30deg) brightness(1.3); }
+            50% { filter: hue-rotate(-60deg) brightness(1.5); }
+            75% { filter: hue-rotate(-30deg) brightness(1.3); }
+        }
+        
+        /* Эффект исцеления */
+        @keyframes healPulse {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.8); }
+            50% { box-shadow: 0 0 20px 10px rgba(74, 222, 128, 0.4); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        
+        /* Эффект щита */
+        @keyframes shieldGlow {
+            0%,100% { box-shadow: 0 0 10px rgba(96, 165, 250, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(96, 165, 250, 0.8), 0 0 50px rgba(96, 165, 250, 0.4); }
+        }
+        
+        /* Эффект призыва */
+        @keyframes summonCircle {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1) rotate(180deg); opacity: 1; }
+            100% { transform: scale(1.5) rotate(360deg); opacity: 0; }
+        }
+        
+        /* Эффект землетрясения */
+        @keyframes earthquake {
+            0%,100% { transform: translateX(0) translateY(0); }
+            10% { transform: translateX(-2px) translateY(-1px); }
+            20% { transform: translateX(2px) translateY(1px); }
+            30% { transform: translateX(-1px) translateY(-2px); }
+            40% { transform: translateX(1px) translateY(2px); }
+            50% { transform: translateX(-2px) translateY(-1px); }
+            60% { transform: translateX(2px) translateY(1px); }
+            70% { transform: translateX(-1px) translateY(-2px); }
+            80% { transform: translateX(1px) translateY(2px); }
+            90% { transform: translateX(-2px) translateY(-1px); }
+        }
+        
+        /* Эффект взрыва волной */
+        @keyframes shockwave {
+            0% { transform: scale(0); opacity: 1; border: 3px solid rgba(239, 68, 68, 0.8); }
+            100% { transform: scale(3); opacity: 0; border: 3px solid rgba(239, 68, 68, 0); }
+        }
+        
+        /* Эффект появления из земли */
+        @keyframes riseFromGround {
+            0% { transform: translateY(100%); opacity: 0; }
+            50% { transform: translateY(50%); opacity: 0.5; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        
+        /* Эффект погружения в землю */
+        @keyframes sinkIntoGround {
+            0% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(50%); opacity: 0.5; }
+            100% { transform: translateY(100%); opacity: 0; }
+        }
+        
+        /* Эффект прыжка */
+        @keyframes jumpAttack {
+            0% { transform: translateY(0) scale(1); }
+            30% { transform: translateY(-30px) scale(1.1); }
+            50% { transform: translateY(-40px) scale(1.2); }
+            70% { transform: translateY(-30px) scale(1.1); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        
+        /* Эффект отравления */
+        @keyframes poisonEffect {
+            0%,100% { filter: hue-rotate(0deg) saturate(1); }
+            25% { filter: hue-rotate(60deg) saturate(1.5); }
+            50% { filter: hue-rotate(120deg) saturate(2); }
+            75% { filter: hue-rotate(60deg) saturate(1.5); }
+        }
+        
+        /* Эффект горения */
+        @keyframes fireEffect {
+            0%,100% { filter: brightness(1) hue-rotate(0deg); }
+            25% { filter: brightness(1.2) hue-rotate(-20deg); }
+            50% { filter: brightness(1.5) hue-rotate(-40deg); }
+            75% { filter: brightness(1.2) hue-rotate(-20deg); }
+        }
+        
+        /* Эффект замедления */
+        @keyframes slowEffect {
+            0%,100% { filter: saturate(1) brightness(1); }
+            50% { filter: saturate(0.5) brightness(0.8); }
+        }
+        
+        /* Эффект невидимости */
+        @keyframes invisibility {
+            0%,100% { opacity: 1; filter: blur(0); }
+            50% { opacity: 0.3; filter: blur(2px); }
+        }
+        
+        /* Эф</arg_value>
         #mainMenu { display: flex; }
         
         .screen { display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; position: relative; z-index: 1; }
@@ -6286,6 +6460,40 @@
             unit.style.top = '50%';
             unit.style.left = spawnPos;
             unit.style.transform = 'translateY(-50%)';
+            
+            // Добавляем визуальные эффекты в зависимости от типа юнита
+            if (side === 'plant') {
+                // Эффекты для растений
+                if (unitData.type === 'attacker') {
+                    unit.classList.add('plant-power'); // Эффект силы для атакующих
+                } else if (unitData.type === 'producer') {
+                    unit.style.animation = 'plantGlow 2s ease-in-out infinite'; // Свечение для производителей
+                } else if (unitData.type === 'defender') {
+                    unit.style.boxShadow = '0 0 20px rgba(74, 222, 128, 0.8)'; // Усиленная защита
+                } else if (unitData.type === 'explosive') {
+                    unit.style.animation = 'fireEffect 0.5s ease-in-out infinite alternate'; // Эффект огня
+                }
+            } else {
+                // Эффекты для зомби
+                if (unitData.type === 'fast') {
+                    unit.classList.add('speed-effect'); // Эффект скорости
+                } else if (unitData.type === 'tank') {
+                    unit.style.boxShadow = '0 0 25px rgba(239, 68, 68, 0.8)'; // Усиленная броня
+                    unit.classList.add('zombie-menace'); // Зловещее свечение
+                } else if (unitData.type === 'special') {
+                    unit.style.animation = 'poisonEffect 1s ease-in-out infinite'; // Токсичный эффект
+                } else if (unitData.ability === 'dig') {
+                    unit.classList.add('riseFromGround'); // Появление из земли
+                }
+            }
+            
+            // Добавляем класс редкости для особых юнитов
+            if (unitData.level >= 10) {
+                unit.classList.add('rare-glow'); // Редкое свечение
+            } else if (unitData.level >= 5) {
+                unit.style.border = '2px solid #a78bfa'; // Эпический стиль
+            }
+            
             lane.appendChild(unit);
             gameState.units.push({element:unit,...unitData,lane:laneIndex,side,health:unitData.health});
         }
@@ -6297,6 +6505,31 @@
             // Растения всегда слева (15%), зомби всегда справа (95%)
             const pos = data.pos || (side === 'plant' ? '15%' : '95%');
             placeUnit(data.lane, unitData, side, pos);
+            
+            // Добавляем визуальные эффекты для юнитов противника
+            const lane = document.querySelector(`.game-lane[data-lane="${data.lane}"]`);
+            if (lane) {
+                const opponentUnits = lane.querySelectorAll(`.game-unit.${side}`);
+                const lastUnit = opponentUnits[opponentUnits.length - 1];
+                
+                if (lastUnit) {
+                    // Добавляем эффект появления
+                    lastUnit.classList.add('sparkle-appear');
+                    
+                    // Добавляем специфические эффекты
+                    if (side === 'zombie') {
+                        if (unitData.type === 'tank') {
+                            lastUnit.classList.add('zombie-menace');
+                        } else if (unitData.type === 'fast') {
+                            lastUnit.classList.add('speed-effect');
+                        }
+                    } else {
+                        if (unitData.type === 'attacker') {
+                            lastUnit.classList.add('plant-power');
+                        }
+                    }
+                }
+            }
         }
         
         function updateGameTimer(s) { const m=Math.floor(s/60),sec=s%60; document.getElementById('gameTimer').textContent = `${m}:${sec.toString().padStart(2,'0')}`; }
@@ -6357,6 +6590,27 @@
             const title = document.getElementById('gameResultTitle');
             const rewards = document.getElementById('gameRewards');
             const isBotGame = data.isBotGame === true;
+            
+            // Добавляем эффекты при окончании игры
+            if (data.winnerSide===gameState.mySide) {
+                // Эффект конфетти при победе
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                document.body.appendChild(confetti);
+                
+                // Создаем 50 кусочков конфетти
+                for (let i = 0; i < 50; i++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'confetti-piece';
+                    piece.style.left = Math.random() * 100 + '%';
+                    piece.style.animationDelay = Math.random() * 2 + 's';
+                    piece.style.background = ['#4ade80', '#fbbf24', '#60a5fa', '#f472b6', '#a855f7'][Math.floor(Math.random() * 5)];
+                    confetti.appendChild(piece);
+                }
+                
+                // Удаляем конфетти через 3 секунды
+                setTimeout(() => confetti.remove(), 3000);
+            }
             
             if (data.winner==='draw') { 
                 title.textContent='Ничья!'; 
