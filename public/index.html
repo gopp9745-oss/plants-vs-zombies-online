@@ -4984,18 +4984,15 @@
             digger: 'Копатель', bungee: 'Крюк', gargantuar: 'Гигант', yeti: 'Йети', king: 'Король', dr: 'Доктор'
         };
         
+        // Уровни для юнитов (какие юниты доступны на каком уровне)
+        const UNIT_LEVELS = {
+            sunflower:1, peashooter:1, wallnut:1, cherrybomb:3, snowpea:3, chomper:3, repeater:3, iceshroom:5, squash:5, twinsunflower:10, melonpult:10, cattail:10,
+            zombie:1, conehead:1, buckethead:1, football:3, dancing:3, dolphin:3, digger:5, bungee:5, gargantuar:5, yeti:10, king:10, dr:10
+        };
+        
         // Цены для магазина
         const PLANT_PRICES = { sunflower:50, peashooter:50, wallnut:75, cherrybomb:150, iceshroom:75, snowpea:75, chomper:75, repeater:100, squash:100, twinsunflower:150, melonpult:200, cattail:150 };
         const ZOMBIE_PRICES = { zombie:50, conehead:75, buckethead:100, football:125, dancing:100, dolphin:100, digger:125, bungee:150, gargantuar:300, yeti:200, king:250, dr:300 };
-        
-        // Уровни для разблокировки
-        let UNIT_LEVELS = {
-            sunflower:1, peashooter:1, wallnut:1, potatomine:1, puffshroom:1, scaredyshroom:1,
-            cherrybomb:3, snowpea:3, chomper:3, repeater:3, iceshroom:5, squash:5, magnetshroom:5,
-            tallnut:5, twinsunflower:10, melonpult:10, cattail:10, moonglow:15, hypnoshroom:15,
-            zombie:1, conehead:1, buckethead:1, football:3, dancing:3, dolphin:3, newspaper:3,
-            digger:5, bungee:5, pogo:5, catapult:5, gargantuar:5, yeti:10, king:10, dr:10
-        };
         
         async function showShop() { 
             console.log('showShop called, sessionId:', sessionId);
