@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const db = require('./database');
+const battlePassSystem = require('./battle-pass-system');
 
 // Кэш для сессий и пользователей
 const sessionCache = new Map();
@@ -604,7 +605,41 @@ app.post('/api/login', async (req, res) => {
     });
 });
 
-// Проверка сессии
+// Проверка сессии (GET для удобства)
+app.get('/api/check-session', async (req, res) => {
+    const { sessionId } = req.query;
+    const session = await getCachedSession(sessionId);
+    if (!session) return res.json({ success: false });
+
+    const user = await getCachedUser(session.userId);
+    if (!user) return res.json({ success: false });
+
+    if (user.role === 'banned') {
+        await db.deleteSession(sessionId);
+        sessionCache.delete(sessionId);
+        userCache.delete(session.userId);
+        return res.json({ success: false, message: 'Ваш аккаунт заблокирован' });
+    }
+
+    res.json({
+        success: true,
+        user: {
+            username: user.username,
+            level: user.level,
+            coins: user.coins,
+            crystals: user.crystals,
+            xp: user.xp,
+            role: user.role,
+            displayName: user.displayName,
+            description: user.description,
+            avatar: user.avatar,
+            avatarColor: user.avatarColor,
+            favoritePlant: user.favoritePlant
+        }
+    });
+});
+
+// Проверка сессии (POST для совместимости)
 app.post('/api/check-session', async (req, res) => {
     const { sessionId } = req.body;
     const session = await getCachedSession(sessionId);
@@ -671,17 +706,6 @@ app.get('/api/leaderboard-elo', async (req, res) => {
     const users = (await db.getAllUsers()).filter(u => u.role !== 'banned').sort((a,b) => (b.elo || 1000) - (a.elo || 1000)).slice(0, 10);
     res.json({ success: true, leaders: users.map(u => ({ username: u.username, elo: u.elo || 1000, wins: u.wins, level: u.level })) });
 });
-
-
-
-function getEloRank(elo) {
-    if (elo >= 2500) return 'Алмаз';
-    if (elo >= 2000) return 'Платина';
-    if (elo >= 1500) return 'Золото';
-    if (elo >= 1200) return 'Серебро';
-    if (elo >= 1000) return 'Бронза';
-    return 'Новичок';
-}
 
 // Сезоны
 app.get('/api/seasons', (req, res) => {

@@ -13,24 +13,6 @@ const BATTLE_PASS_CONFIG = {
 let client = null;
 let db = null;
 
-// Функция расчета уровня (должна совпадать с server.js)
-function calculateLevel(totalXP) {
-    const xpPerLevel = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450];
-    let level = 1;
-    let remainingXP = 0;
-
-    for (let i = 0; i < xpPerLevel.length; i++) {
-        if (totalXP >= xpPerLevel[i]) {
-            level = i + 1;
-            remainingXP = totalXP - xpPerLevel[i];
-        } else {
-            break;
-        }
-    }
-
-    return { level, xp: remainingXP };
-}
-
 // Подключение к MongoDB
 async function connect() {
     try {

@@ -1256,20 +1256,8 @@
         }
         .user-info { display: flex; align-items: center; gap: 15px; }
         
-        /* Секция любимого растения */
-        .favorite-plant-section { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            background: rgba(255,255,255,0.1); 
-            padding: 8px 12px; 
-            border-radius: 10px; 
-            border: 1px solid rgba(255,255,255,0.2);
-            margin-left: 15px;
-            min-width: 180px;
-        }
-        .favorite-plant-icon { 
-            font-size: 1.5rem; 
+        .favorite-plant-icon {
+            font-size: 1.5rem;
             width: 40px; 
             height: 40px; 
             display: flex; 
@@ -1289,22 +1277,10 @@
             color: #94a3b8; 
         }
         
-        /* Секция любимого растения */
-        .favorite-plant-section { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            background: rgba(255,255,255,0.1); 
-            padding: 8px 12px; 
-            border-radius: 10px; 
-            border: 1px solid rgba(255,255,255,0.2);
-            margin-left: 15px;
-            min-width: 180px;
-        }
-        .favorite-plant-icon { 
-            font-size: 1.5rem; 
-            width: 40px; 
-            height: 40px; 
+        .favorite-plant-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
             display: flex; 
             align-items: center; 
             justify-content: center; 
@@ -4677,26 +4653,34 @@
             const level = currentUser.level || 1;
             // Отображаем аватар с эмодзи или первой буквой
             const avatarEl = document.getElementById('userAvatar');
-            if (currentUser.avatar) {
-                avatarEl.textContent = currentUser.avatar;
-            } else {
-                avatarEl.textContent = (currentUser.displayName || currentUser.username)[0].toUpperCase();
-            }
-            // Устанавливаем цвет аватара если есть
-            if (currentUser.avatarColor) {
-                avatarEl.style.background = currentUser.avatarColor;
-                avatarEl.style.color = '#000';
-            } else {
-                avatarEl.style.background = 'rgba(255, 255, 255, 0.2)';
-                avatarEl.style.color = 'white';
+            if (avatarEl) {
+                if (currentUser.avatar) {
+                    avatarEl.textContent = currentUser.avatar;
+                } else {
+                    avatarEl.textContent = (currentUser.displayName || currentUser.username)[0].toUpperCase();
+                }
+                // Устанавливаем цвет аватара если есть
+                if (currentUser.avatarColor) {
+                    avatarEl.style.background = currentUser.avatarColor;
+                    avatarEl.style.color = '#000';
+                } else {
+                    avatarEl.style.background = 'rgba(255, 255, 255, 0.2)';
+                    avatarEl.style.color = 'white';
+                }
             }
             // Отображаем отображаемое имя или username
-            document.getElementById('profileUsername').textContent = currentUser.displayName || currentUser.username;
-            document.getElementById('profileLevel').textContent = 'Уровень ' + level;
-            document.getElementById('profileRole').textContent = currentUser.role==='admin'?'Админ':'Игрок';
-            document.getElementById('statCoins').textContent = currentUser.coins || 0;
-            document.getElementById('statWins').textContent = currentUser.wins || 0;
-            document.getElementById('statXP').textContent = currentUser.xp || 0;
+            const profileUsernameEl = document.getElementById('profileUsername');
+            if (profileUsernameEl) profileUsernameEl.textContent = currentUser.displayName || currentUser.username;
+            const profileLevelEl = document.getElementById('profileLevel');
+            if (profileLevelEl) profileLevelEl.textContent = 'Уровень ' + level;
+            const profileRoleEl = document.getElementById('profileRole');
+            if (profileRoleEl) profileRoleEl.textContent = currentUser.role==='admin'?'Админ':'Игрок';
+            const statCoinsEl = document.getElementById('statCoins');
+            if (statCoinsEl) statCoinsEl.textContent = currentUser.coins || 0;
+            const statWinsEl = document.getElementById('statWins');
+            if (statWinsEl) statWinsEl.textContent = currentUser.wins || 0;
+            const statXPEl = document.getElementById('statXP');
+            if (statXPEl) statXPEl.textContent = currentUser.xp || 0;
             
             // Обновляем верхний блок валюты на profileScreen
             const profileCoinsEl = document.getElementById('profileCoinsValue');
@@ -4704,11 +4688,13 @@
             if (profileCoinsEl) profileCoinsEl.textContent = currentUser.coins || 0;
             if (profileCrystalsEl) profileCrystalsEl.textContent = currentUser.crystals || 0;
             
-            document.getElementById('adminBtn').style.display = currentUser.role==='admin'?'block':'none';
+            const adminBtn = document.getElementById('adminBtn');
+            if (adminBtn) adminBtn.style.display = currentUser.role==='admin'?'block':'none';
             
             // Отображаем описание профиля
             const description = currentUser.description || 'Нет описания';
-            document.getElementById('profileDescription').textContent = description;
+            const profileDescriptionEl = document.getElementById('profileDescription');
+            if (profileDescriptionEl) profileDescriptionEl.textContent = description;
             
             // Отображаем любимое растение в карточке (для нового интерфейса)
             const favoritePlantCard = document.getElementById('favoritePlantCard');

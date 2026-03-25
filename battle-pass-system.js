@@ -146,14 +146,14 @@ async function addBattlePassXp(username, xpAmount) {
         levelsGained += 1;
     }
 
-    // Проверяем повышение Tier
+    // Проверяем повышение Tier (единая формула с database.js)
     let tiersGained = 0;
     while (battlePass.tierXp >= battlePass.maxTierXp) {
         battlePass.tierXp -= battlePass.maxTierXp;
         battlePass.currentTier += 1;
         tiersGained += 1;
-        // Увеличиваем требования к XP за каждый Tier
-        battlePass.maxTierXp = 1000 + (battlePass.currentTier - 1) * 100;
+        // Увеличиваем требования к XP за каждый Tier (единая формула: +50 за каждый уровень)
+        battlePass.maxTierXp = 1000 + (battlePass.currentTier - 1) * 50;
     }
 
     await db.updateUser(username, { battlePass });
@@ -252,14 +252,14 @@ async function completeBattlePassQuest(sessionId, questId) {
         levelsGained += 1;
     }
 
-    // Проверяем повышение Tier
+    // Проверяем повышение Tier (единая формула)
     let tiersGained = 0;
     while (user.battlePass.tierXp >= user.battlePass.maxTierXp) {
         user.battlePass.tierXp -= user.battlePass.maxTierXp;
         user.battlePass.currentTier += 1;
         tiersGained += 1;
-        // Увеличиваем требования к XP за каждый Tier
-        user.battlePass.maxTierXp = 1000 + (user.battlePass.currentTier - 1) * 100;
+        // Увеличиваем требования к XP за каждый Tier (единая формула: +50 за каждый уровень)
+        user.battlePass.maxTierXp = 1000 + (user.battlePass.currentTier - 1) * 50;
     }
 
     await db.updateUser(user.username, { battlePass: user.battlePass });
