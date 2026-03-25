@@ -654,8 +654,8 @@ app.get('/api/seasons', (req, res) => {
 });
 
 // История матчей
-app.get('/api/match-history', (req, res) => {
-    const matches = db.getMatches(20);
+app.get('/api/match-history', async (req, res) => {
+    const matches = await db.getMatches(20);
     res.json({ success: true, matches });
 });
 
@@ -767,12 +767,12 @@ app.post('/api/profile/update-favorite-plant', async (req, res) => {
 });
 
 // Ежедневная награда с учётом серий
-app.post('/api/daily-reward', (req, res) => {
+app.post('/api/daily-reward', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     const now = new Date();
@@ -818,7 +818,7 @@ app.post('/api/daily-reward', (req, res) => {
     
     const totalReward = baseReward + bonusReward;
     const crystalReward = 1 + Math.floor(newStreak / 3);
-    db.updateUser(user.username, { 
+    await db.updateUser(user.username, { 
         lastDaily: now.toISOString(),
         lastDailyDate: today,
         lastDailyStreak: newStreak,
@@ -855,12 +855,12 @@ const BASE_CHEST_REWARDS = [
     { min: 50, max: 120 }
 ];
 
-app.post('/api/chest', (req, res) => {
+app.post('/api/chest', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     const today = new Date().toDateString();
@@ -909,7 +909,7 @@ app.post('/api/chest', (req, res) => {
     // Проверяем повышение уровня
     const { level: newLevel, xp: newXPAfterLevel } = calculateLevel(newXP);
     
-    db.updateUser(user.username, { 
+    await db.updateUser(user.username, { 
         chestsToday: chestsToday + 1,
         chestRarity: newRarity,
         coins: newCoins,
@@ -944,12 +944,12 @@ app.post('/api/chest', (req, res) => {
     });
 });
 
-app.post('/api/chests', (req, res) => {
+app.post('/api/chests', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false });
     
     const today = new Date().toDateString();
@@ -989,12 +989,12 @@ app.post('/api/chests', (req, res) => {
     });
 });
 
-app.post('/api/open-chest', (req, res) => {
+app.post('/api/open-chest', async (req, res) => {
     const { sessionId, chestType } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     // Проверяем тип сундука
@@ -1036,7 +1036,7 @@ app.post('/api/open-chest', (req, res) => {
             };
         }
         
-        db.updateUser(user.username, {
+        await db.updateUser(user.username, {
             plantChests: plantChests,
             coins: newCoins,
             inventory: inventory
@@ -1107,12 +1107,12 @@ app.post('/api/open-chest', (req, res) => {
 });
 
 // API для получения информации о сундуке
-app.post('/api/chest-status', (req, res) => {
+app.post('/api/chest-status', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false });
     
     const today = new Date().toDateString();
@@ -1165,12 +1165,12 @@ app.post('/api/chest-status', (req, res) => {
 });
 
 // Сундуки растений за кристаллы
-app.post('/api/plant-chests', (req, res) => {
+app.post('/api/plant-chests', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
 
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
 
     res.json({
@@ -1180,12 +1180,12 @@ app.post('/api/plant-chests', (req, res) => {
     });
 });
 
-app.post('/api/buy-plant-chest', (req, res) => {
+app.post('/api/buy-plant-chest', async (req, res) => {
     const { sessionId, rarity } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
 
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
 
     const price = PLANT_CHEST_PRICES[rarity];
@@ -1199,7 +1199,7 @@ app.post('/api/buy-plant-chest', (req, res) => {
     const chests = user.plantChests || { common: 0, rare: 0, epic: 0, mythic: 0, legendary: 0 };
     chests[rarity] = (chests[rarity] || 0) + 1;
 
-    db.updateUser(user.username, {
+    await db.updateUser(user.username, {
         crystals: currentCrystals - price,
         plantChests: chests
     });
@@ -1215,10 +1215,10 @@ app.post('/api/buy-plant-chest', (req, res) => {
 // API для засчитывания победы (вызывается после игры)
 app.post('/api/add-win', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false });
     
     const today = new Date().toDateString();
@@ -1235,7 +1235,7 @@ app.post('/api/add-win', async (req, res) => {
     const maxChests = Math.min(4, winsToday);
     const currentChests = user.chestsToday || 0;
     
-    db.updateUser(user.username, { 
+    await db.updateUser(user.username, { 
         winsToday: winsToday,
         lastWinDay: today,
         chestsToday: currentChests > maxChests ? maxChests : currentChests
@@ -1267,12 +1267,12 @@ function calculateLevel(totalXP) {
 }
 
 // API для получения информации о серии
-app.post('/api/streak', (req, res) => {
+app.post('/api/streak', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false });
     
     const today = new Date().toDateString();
@@ -1307,31 +1307,31 @@ app.post('/api/streak', (req, res) => {
 });
 
 // Промокоды
-app.post('/api/promocode', (req, res) => {
+app.post('/api/promocode', async (req, res) => {
     const { sessionId, code } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const promo = db.findPromo(code);
+    const promo = await db.findPromo(code);
     if (!promo) return res.json({ success: false, message: 'Неверный промокод' });
     if (promo.uses >= promo.maxUses) return res.json({ success: false, message: 'Промокод больше недействителен' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
-    db.updateUser(user.username, { coins: user.coins + promo.reward });
-    db.updatePromo(code, { uses: promo.uses + 1 });
+    await db.updateUser(user.username, { coins: user.coins + promo.reward });
+    await db.updatePromo(code, { uses: promo.uses + 1 });
     
     res.json({ success: true, message: `Получено ${promo.reward} монет!`, coins: user.coins + promo.reward });
 });
 
 // Квесты
-app.post('/api/daily-quests', (req, res) => {
+app.post('/api/daily-quests', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false });
     
     const today = new Date().toDateString();
@@ -1341,7 +1341,7 @@ app.post('/api/daily-quests', (req, res) => {
             { id: 'win_1_game', name: 'Победа', desc: 'Выиграйте 1 матч', reward: 50, type: 'wins', progress: 0, completed: false },
             { id: 'earn_100_coins', name: 'Копилка', desc: 'Заработайте 100 монет', reward: 25, type: 'coins', progress: 0, completed: false }
         ];
-        db.updateUser(user.username, { dailyQuests: quests, dailyQuestsDate: today });
+        await db.updateUser(user.username, { dailyQuests: quests, dailyQuestsDate: today });
         user.dailyQuests = quests;
     }
     
@@ -1349,12 +1349,12 @@ app.post('/api/daily-quests', (req, res) => {
 });
 
 // Достижения
-app.post('/api/check-achievements', (req, res) => {
+app.post('/api/check-achievements', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false });
     
     res.json({ success: true, userAchievements: user.achievements || [] });
@@ -1520,17 +1520,17 @@ function pushNotificationToUser(username, notification) {
 }
 
 // Забрать/получить уведомления (и очистить очередь)
-app.post('/api/notifications/poll', (req, res) => {
+app.post('/api/notifications/poll', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const user = db.findUser({ _id: session.userId });
+    const user = await db.findUser({ _id: session.userId });
     if (!user) return res.json({ success: false, message: 'Пользователь не найден' });
     
     const notifications = user.notifications || [];
     if (notifications.length) {
-        db.updateUser(user.username, { notifications: [] });
+        await db.updateUser(user.username, { notifications: [] });
     }
     res.json({ success: true, notifications });
 });
@@ -1554,41 +1554,42 @@ app.post('/api/admin/stats', (req, res) => {
     res.json({ success: true, stats });
 });
 
-app.post('/api/admin/users', (req, res) => {
+app.post('/api/admin/users', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
-    
-    const user = db.findUser({ _id: session.userId });
+
+    const user = await db.findUser({ _id: session.userId });
     if (!user || user.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
-    
-    res.json({ success: true, users: db.getAllUsers().map(u => ({ username: u.username, role: u.role, coins: u.coins, crystals: u.crystals || 0, wins: u.wins, level: u.level, battlePassPremium: !!u.battlePass?.isPremium })) });
+
+    const users = await db.getAllUsers();
+    res.json({ success: true, users: users.map(u => ({ username: u.username, role: u.role, coins: u.coins, crystals: u.crystals || 0, wins: u.wins, level: u.level, battlePassPremium: !!u.battlePass?.isPremium })) });
 });
 
-app.post('/api/admin/create-promo', (req, res) => {
+app.post('/api/admin/create-promo', async (req, res) => {
     const { sessionId, code, reward, maxUses } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
-    
-    const user = db.findUser({ _id: session.userId });
+
+    const user = await db.findUser({ _id: session.userId });
     if (!user || user.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    db.createPromo({ code: code.toUpperCase(), reward: parseInt(reward), maxUses: parseInt(maxUses), createdBy: 'admin' });
+    await db.createPromo({ code: code.toUpperCase(), reward: parseInt(reward), maxUses: parseInt(maxUses), createdBy: 'admin' });
     res.json({ success: true, message: 'Промокод создан!' });
 });
 
-app.post('/api/admin/give-coins', (req, res) => {
+app.post('/api/admin/give-coins', async (req, res) => {
     const { sessionId, username, coins } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const admin = db.findUser({ _id: session.userId });
+    const admin = await db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    const target = db.findUserByUsername(username);
+    const target = await db.findUserByUsername(username);
     if (!target) return res.json({ success: false, message: 'Игрок не найден' });
     
-    db.updateUser(username, { coins: target.coins + parseInt(coins) });
+    await db.updateUser(username, { coins: target.coins + parseInt(coins) });
     pushNotificationToUser(username, createRewardNotification({
         title: 'Получены монеты!',
         subtitle: `+${parseInt(coins)} монет`,
@@ -1599,12 +1600,12 @@ app.post('/api/admin/give-coins', (req, res) => {
     res.json({ success: true, message: `Игроку ${username} выдано ${coins} монет!` });
 });
 
-app.post('/api/admin/set-level', (req, res) => {
+app.post('/api/admin/set-level', async (req, res) => {
     const { sessionId, username, level } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const admin = db.findUser({ _id: session.userId });
+    const admin = await db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
     // Проверяем, что уровень является допустимым числом
@@ -1613,43 +1614,43 @@ app.post('/api/admin/set-level', (req, res) => {
         return res.json({ success: false, message: 'Недопустимый уровень (1-100)' });
     }
     
-    db.updateUser(username, { level: newLevel, xp: 0 });
+    await db.updateUser(username, { level: newLevel, xp: 0 });
     res.json({ success: true, message: `Уровень игрока ${username} изменён на ${newLevel}!` });
 });
 
-app.post('/api/admin/ban', (req, res) => {
+app.post('/api/admin/ban', async (req, res) => {
     const { sessionId, username } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const admin = db.findUser({ _id: session.userId });
+    const admin = await db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    db.updateUser(username, { role: 'banned' });
+    await db.updateUser(username, { role: 'banned' });
     res.json({ success: true, message: `Игрок ${username} заблокирован!` });
 });
 
-app.post('/api/admin/unban', (req, res) => {
+app.post('/api/admin/unban', async (req, res) => {
     const { sessionId, username } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const admin = db.findUser({ _id: session.userId });
+    const admin = await db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    db.updateUser(username, { role: 'player' });
+    await db.updateUser(username, { role: 'player' });
     res.json({ success: true, message: `Игрок ${username} разблокирован!` });
 });
 
-app.post('/api/admin/reset-progress', (req, res) => {
+app.post('/api/admin/reset-progress', async (req, res) => {
     const { sessionId, username } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const admin = db.findUser({ _id: session.userId });
+    const admin = await db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
-    db.updateUser(username, { coins: 100, wins: 0, losses: 0, xp: 0, level: 1, totalGames: 0, longestWinStreak: 0, currentWinStreak: 0, achievements: [], inventory: {} });
+    await db.updateUser(username, { coins: 100, wins: 0, losses: 0, xp: 0, level: 1, totalGames: 0, longestWinStreak: 0, currentWinStreak: 0, achievements: [], inventory: {} });
     res.json({ success: true, message: `Прогресс игрока ${username} сброшен!` });
 });
 
@@ -1924,19 +1925,19 @@ app.post('/api/admin/export-users', (req, res) => {
 });
 
 // Статистика по БД
-app.post('/api/admin/db-stats', (req, res) => {
+app.post('/api/admin/db-stats', async (req, res) => {
     const { sessionId } = req.body;
-    const session = db.findSession(sessionId);
+    const session = await db.findSession(sessionId);
     if (!session) return res.json({ success: false, message: 'Сессия недействительна', error: 'invalid_session' });
     
-    const admin = db.findUser({ _id: session.userId });
+    const admin = await db.findUser({ _id: session.userId });
     if (!admin || admin.role !== 'admin') return res.json({ success: false, message: 'Доступ запрещен' });
     
     res.json({ success: true, stats: {
-        users: db.getUsersCount(),
-        matches: db.getMatchesCount(),
-        promos: db.getPromosCount(),
-        sessions: db.getSessionsCount()
+        users: await db.getUsersCount(),
+        matches: await db.getMatchesCount(),
+        promos: await db.getPromosCount(),
+        sessions: await db.getSessionsCount()
     }});
 });
 
@@ -2133,11 +2134,11 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
     
     socket.on('findBotGame', async (data) => {
         const { sessionId, difficulty = 'medium', side: requestedSide } = data;
-        const session = db.findSession(sessionId);
+        const session = await db.findSession(sessionId);
         
         if (!session) { socket.emit('error', { message: 'Сессия недействительна' }); return; }
         
-        currentUser = db.findUser({ _id: session.userId });
+        currentUser = await db.findUser({ _id: session.userId });
         if (!currentUser) return;
         
         const roomId = uuidv4();
@@ -2194,11 +2195,11 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
     
     socket.on('findGame', async (data) => {
         const { sessionId, difficulty = 'medium' } = data;
-        const session = db.findSession(sessionId);
+        const session = await db.findSession(sessionId);
         
         if (!session) { socket.emit('error', { message: 'Сессия недействительна' }); return; }
         
-        currentUser = db.findUser({ _id: session.userId });
+        currentUser = await db.findUser({ _id: session.userId });
         if (!currentUser) return;
         
         // Поиск игрока
@@ -2341,7 +2342,7 @@ app.post('/api/admin/broadcast-coins', (req, res) => {
     });
 });
 
-function endRound(roomId, result) {
+async function endRound(roomId, result) {
     const room = gameRooms.get(roomId);
     if (!room) return;
     
@@ -2356,18 +2357,18 @@ function endRound(roomId, result) {
             
             if (!winner.user.isBot) {
                 // Обновляем прогресс Battle Pass для победителя
-                db.updateUser(winner.user.username, { wins: (winner.user.wins || 0) + 1, totalGames: (winner.user.totalGames || 0) + 1, coins: winner.user.coins + (giveRewards ? 50 : 0) });
+                await db.updateUser(winner.user.username, { wins: (winner.user.wins || 0) + 1, totalGames: (winner.user.totalGames || 0) + 1, coins: winner.user.coins + (giveRewards ? 50 : 0) });
                 // Добавляем XP к Battle Pass за победу
-                db.addBattlePassXp(winner.user.username, 50);
+                await db.addBattlePassXp(winner.user.username, 50);
             }
             if (!loser.user.isBot) {
-                db.updateUser(loser.user.username, { losses: (loser.user.losses || 0) + 1, totalGames: (loser.user.totalGames || 0) + 1, coins: loser.user.coins + (giveRewards ? 10 : 0) });
+                await db.updateUser(loser.user.username, { losses: (loser.user.losses || 0) + 1, totalGames: (loser.user.totalGames || 0) + 1, coins: loser.user.coins + (giveRewards ? 10 : 0) });
                 // Добавляем XP к Battle Pass за игру (даже за поражение)
-                db.addBattlePassXp(loser.user.username, 20);
+                await db.addBattlePassXp(loser.user.username, 20);
             }
             
             if (!room.isBotGame || (winner.user.isBot === false && loser.user.isBot === false)) {
-                db.createMatch({ winner: winner.user.username, loser: loser.user.username, winnerSide: winner.side });
+                await db.createMatch({ winner: winner.user.username, loser: loser.user.username, winnerSide: winner.side });
             }
             
             io.to(roomId).emit('gameEnd', { winner: winner.user.username, winnerSide: winner.side, rewards: { winner: 50, loser: 10 }, isBotGame: room.isBotGame });
@@ -2377,9 +2378,9 @@ function endRound(roomId, result) {
         
         for (const p of room.players) {
             if (!p.user.isBot) {
-                db.updateUser(p.user.username, { totalGames: (p.user.totalGames || 0) + 1, coins: p.user.coins + (giveRewards ? 20 : 0) });
+                await db.updateUser(p.user.username, { totalGames: (p.user.totalGames || 0) + 1, coins: p.user.coins + (giveRewards ? 20 : 0) });
                 // Добавляем XP к Battle Pass за ничью
-                db.addBattlePassXp(p.user.username, 30);
+                await db.addBattlePassXp(p.user.username, 30);
             }
         }
         

@@ -4,8 +4,32 @@ const { MongoClient, ObjectId } = require('mongodb');
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017';
 const DB_NAME = process.env.DB_NAME || 'pvz_online';
 
+// Конфигурация Battle Pass (должна совпадать с server.js)
+const BATTLE_PASS_CONFIG = {
+    xpPerLevel: 1000,
+    maxLevel: 100
+};
+
 let client = null;
 let db = null;
+
+// Функция расчета уровня (должна совпадать с server.js)
+function calculateLevel(totalXP) {
+    const xpPerLevel = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450];
+    let level = 1;
+    let remainingXP = 0;
+
+    for (let i = 0; i < xpPerLevel.length; i++) {
+        if (totalXP >= xpPerLevel[i]) {
+            level = i + 1;
+            remainingXP = totalXP - xpPerLevel[i];
+        } else {
+            break;
+        }
+    }
+
+    return { level, xp: remainingXP };
+}
 
 // Подключение к MongoDB
 async function connect() {
