@@ -1,62 +1,50 @@
-// MongoDB база данных
-const { MongoClient, ObjectId } = require('mongodb');
+// In-memory база данных для локальной разработки
+const { v4: uuidv4 } = require('uuid');
 
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb+srv://grimteam:kolop908@cluster0.iifadf8.mongodb.net/pvz_online?retryWrites=true&w=majority';
-const DB_NAME = process.env.DB_NAME || 'pvz_online';
+const users = new Map();
+const sessions = new Map();
+const matches = [];
+const promos = new Map();
+const sales = [];
 
-// Конфигурация Battle Pass (должна совпадать с server.js)
+let dbConnected = false;
+
 const BATTLE_PASS_CONFIG = {
     xpPerLevel: 1000,
     maxLevel: 100
 };
 
-let client = null;
-let db = null;
-
-// Подключение к MongoDB
 async function connect() {
     try {
-        client = new MongoClient(MONGO_URI);
-        await client.connect();
-        db = client.db(DB_NAME);
-        
-        // Создаём индексы
-        await db.collection('users').createIndex({ username: 1 }, { unique: true });
-        await db.collection('users').createIndex({ usernameLower: 1 }, { unique: true });
-        await db.collection('sessions').createIndex({ sessionId: 1 });
-        await db.collection('matches').createIndex({ timestamp: -1 });
-        await db.collection('promos').createIndex({ code: 1 }, { unique: true });
-        
-        console.log('✓ Подключено к MongoDB');
-        
-        // Создаём админа если нет
+        dbConnected = true;
+        console.log('✓ In-memory база данных инициализирована');
         await createAdminIfNotExists();
-        
-        return db;
+        return { users, sessions, matches, promos, sales };
     } catch (error) {
-        console.error('Ошибка подключения к MongoDB:', error.message);
+        console.error('Ошибка инициализации базы данных:', error.message);
         throw error;
     }
 }
 
 async function createAdminIfNotExists() {
-    const admin = await db.collection('users').findOne({ username: 'admin' });
+    const admin = users.get('admin');
     if (!admin) {
         const bcrypt = require('bcryptjs');
-        await db.collection('users').insertOne({
+        const adminUser = {
+            _id: 'admin_' + Date.now(),
             username: 'admin',
             usernameLower: 'admin',
             password: bcrypt.hashSync('admin123', 10),
             role: 'admin',
-            coins: 0,
-            crystals: 0,
+            coins: 999999,
+            crystals: 9999,
             wins: 0,
             losses: 0,
             xp: 0,
-            level: 1,
-            elo: 1000,
-            seasonElo: 1000,
-            totalCoins: 0,
+            level: 100,
+            elo: 3000,
+            seasonElo: 3000,
+            totalCoins: 999999,
             createdAt: new Date(),
             lastLogin: new Date(),
             lastDaily: null,
@@ -71,530 +59,116 @@ async function createAdminIfNotExists() {
             dailyQuestsCoins: 0,
             dailyQuestsUnits: 0,
             dailyQuestsChat: 0,
-            plantChests: {
-                common: 0,
-                rare: 0,
-                epic: 0,
-                mythic: 0,
-                legendary: 0
-            },
+            plantChests: { common: 99, rare: 99, epic: 99, mythic: 99, legendary: 99 },
             notifications: [],
             battlePass: {
-                season: 1,
-                level: 0,
-                xp: 0,
-                totalXp: 0,
-                claimedRewards: [],
-                quests: [],
-                questsDate: null,
-                // Добавляем новые поля для Battle Pass
-                currentTier: 1,
-                tierXp: 0,
-                maxTierXp: 1000,
-                freeRewardsClaimed: [],
-                premiumRewardsClaimed: [],
-                isPremium: false,
-                premiumRequestedAt: null
+                season: 1, level: 100, xp: 0, totalXp: 100000,
+                claimedRewards: [], quests: [], questsDate: null,
+                currentTier: 100, tierXp: 0, maxTierXp: 1000,
+                freeRewardsClaimed: [], premiumRewardsClaimed: [],
+                isPremium: true, premiumRequestedAt: new Date()
             },
-            inventory: {},
-            // Поля профиля
-            displayName: null,
-            description: '',
-            favoritePlant: null
-        });
+            inventory: {
+                sunflower: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                peashooter: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                wallnut: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                cherrybomb: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                iceshroom: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                snowpea: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                chomper: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                repeater: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                squash: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                twinsunflower: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                melonpult: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                cattail: { level: 10, type: 'plant', purchased: new Date().toISOString() },
+                zombie: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                conehead: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                buckethead: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                football: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                dancing: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                dolphin: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                digger: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                bungee: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                gargantuar: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                yeti: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                king: { level: 10, type: 'zombie', purchased: new Date().toISOString() },
+                dr: { level: 10, type: 'zombie', purchased: new Date().toISOString() }
+            },
+            displayName: 'Admin',
+            description: 'Администратор сервера',
+            favoritePlant: 'cherrybomb',
+            friends: []
+        };
+        users.set('admin', adminUser);
         console.log('✓ Создан админ (admin / admin123)');
     }
 }
 
-function getDb() {
-    if (!db) {
-        console.warn('Предупреждение: База данных не подключена');
-        return null;
-    }
-    return db;
-}
-
-// Класс базы данных MongoDB
-class MongoDB {
-    constructor() {
-        this.connected = false;
-    }
-    
-    async init() {
-        await connect();
-        this.connected = true;
-    }
-    
-    // Возвращает объект базы данных
-    getDb() {
-        return db;
-    }
-    
-    // Users
+class InMemoryDB {
+    constructor() { this.connected = false; }
+    async init() { await connect(); this.connected = true; }
+    getDb() { return { users, sessions, matches, promos, sales }; }
     async findUser(query) {
-        const collection = getDb().collection('users');
-        if (query.username) {
-            return await collection.findOne({ usernameLower: query.username.toLowerCase() });
-        }
-        if (query._id) {
-            return await collection.findOne({ _id: new ObjectId(query._id) });
-        }
+        if (query.username) return users.get(query.username.toLowerCase()) || null;
+        if (query._id) { for (const user of users.values()) { if (user._id === query._id) return user; } }
         return null;
     }
-    
-    async findUserByUsername(username) {
-        if (!username) return null;
-        return await getDb().collection('users').findOne({ usernameLower: username.toLowerCase() });
-    }
-    
+    async findUserByUsername(username) { if (!username) return null; return users.get(username.toLowerCase()) || null; }
     async createUser(userData) {
-        const user = {
-            ...userData,
-            coins: 0,
-            crystals: 0,
-            plantChests: {
-                common: 0,
-                rare: 0,
-                epic: 0,
-                mythic: 0,
-                legendary: 0
-            },
-            notifications: [],
-            battlePass: {
-                season: 1,
-                level: 0,
-                xp: 0,
-                totalXp: 0,
-                claimedRewards: [],
-                quests: [],
-                questsDate: null,
-                currentTier: 1,
-                tierXp: 0,
-                maxTierXp: 1000,
-                freeRewardsClaimed: [],
-                premiumRewardsClaimed: [],
-                isPremium: false,
-                premiumRequestedAt: null
-            },
-            // Поля профиля
-            displayName: null,
-            description: '',
-            favoritePlant: null,
-            createdAt: new Date(),
-            lastLogin: new Date()
-        };
-        const result = await getDb().collection('users').insertOne(user);
-        return { ...user, _id: result.insertedId };
+        const user = { ...userData, _id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            coins: userData.coins || 100, crystals: userData.crystals || 0,
+            plantChests: userData.plantChests || { common: 0, rare: 0, epic: 0, mythic: 0, legendary: 0 },
+            notifications: userData.notifications || [],
+            battlePass: userData.battlePass || { season: 1, level: 0, xp: 0, totalXp: 0, claimedRewards: [], quests: [], questsDate: null, currentTier: 1, tierXp: 0, maxTierXp: 1000, freeRewardsClaimed: [], premiumRewardsClaimed: [], isPremium: false, premiumRequestedAt: null },
+            inventory: userData.inventory || {}, displayName: userData.displayName || userData.username,
+            description: userData.description || '', favoritePlant: userData.favoritePlant || null,
+            createdAt: new Date(), lastLogin: new Date(), friends: userData.friends || [] };
+        users.set(userData.usernameLower || userData.username.toLowerCase(), user);
+        return user;
     }
-    
-    async updateUser(username, data) {
-        if (!username) {
-            console.error('updateUser: username is undefined or null');
-            return null;
-        }
-        const result = await getDb().collection('users').findOneAndUpdate(
-            { usernameLower: username.toLowerCase() },
-            { $set: data },
-            { returnDocument: 'after' }
-        );
-        return result;
-    }
-    
-    async updateFavoritePlant(username, favoritePlant) {
-        if (!username) {
-            console.error('updateFavoritePlant: username is undefined or null');
-            return null;
-        }
-        const result = await getDb().collection('users').findOneAndUpdate(
-            { usernameLower: username.toLowerCase() },
-            { $set: { favoritePlant: favoritePlant || null } },
-            { returnDocument: 'after' }
-        );
-        return result;
-    }
-    
-    async deleteUser(username) {
-        if (!username) return false;
-        const result = await getDb().collection('users').deleteOne({ usernameLower: username.toLowerCase() });
-        return result.deletedCount > 0;
-    }
-    
-    async getAllUsers() {
-        return await getDb().collection('users').find({}).toArray();
-    }
-    
-    async getUsersCount() {
-        return await getDb().collection('users').countDocuments();
-    }
-    
-    async getUserById(id) {
-        return await getDb().collection('users').findOne({ _id: new ObjectId(id) });
-    }
-    
-    async searchUsers(query) {
-        const regex = new RegExp(query, 'i');
-        return await getDb().collection('users').find({
-            $or: [
-                { username: regex },
-                { usernameLower: regex }
-            ]
-        }).limit(10).toArray();
-    }
-    
-    async getTopByCoins(limit = 10) {
-        return await getDb().collection('users')
-            .find({})
-            .sort({ coins: -1 })
-            .limit(limit)
-            .toArray();
-    }
-    
-    async getTopByWins(limit = 10) {
-        return await getDb().collection('users')
-            .find({})
-            .sort({ wins: -1 })
-            .limit(limit)
-            .toArray();
-    }
-    
-    async getTopByXP(limit = 10) {
-        return await getDb().collection('users')
-            .find({})
-            .sort({ xp: -1 })
-            .limit(limit)
-            .toArray();
-    }
-    
-    async getTopByLevel(limit = 10) {
-        return await getDb().collection('users')
-            .find({})
-            .sort({ level: -1, xp: -1 })
-            .limit(limit)
-            .toArray();
-    }
-    
-    async getLevelStats() {
-        return await getDb().collection('users')
-            .aggregate([
-                { $group: { _id: '$level', count: { $sum: 1 } } },
-                { $sort: { _id: 1 } }
-            ])
-            .toArray();
-    }
-    
-    // Sessions
-    async createSession(sessionData) {
-        const session = {
-            ...sessionData,
-            createdAt: new Date()
-        };
-        const result = await getDb().collection('sessions').insertOne(session);
-        return { ...session, _id: result.insertedId };
-    }
-    
-    async findSession(sessionId) {
-        return await getDb().collection('sessions').findOne({ sessionId });
-    }
-    
-    async deleteSession(sessionId) {
-        const result = await getDb().collection('sessions').deleteOne({ sessionId });
-        return result.deletedCount > 0;
-    }
-    
-    async getSessionsCount() {
-        return await getDb().collection('sessions').countDocuments();
-    }
-    
-    async getAllSessions() {
-        return await getDb().collection('sessions').find({}).toArray();
-    }
-    
-    // Matches
-    async createMatch(matchData) {
-        const match = {
-            ...matchData,
-            timestamp: new Date()
-        };
-        const result = await getDb().collection('matches').insertOne(match);
-        return { ...match, _id: result.insertedId };
-    }
-    
-    async getMatches(limit = 20) {
-        return await getDb().collection('matches')
-            .find({})
-            .sort({ timestamp: -1 })
-            .limit(limit)
-            .toArray();
-    }
-    
-    async getMatchesCount() {
-        return await getDb().collection('matches').countDocuments();
-    }
-    
-    async clearMatches() {
-        return await getDb().collection('matches').deleteMany({});
-    }
-    
-    // Promos
-    async createPromo(promoData) {
-        const promo = {
-            ...promoData,
-            uses: 0,
-            createdAt: new Date()
-        };
-        const result = await getDb().collection('promos').insertOne(promo);
-        return { ...promo, _id: result.insertedId };
-    }
-    
-    async findPromo(code) {
-        if (!code) return null;
-        return await getDb().collection('promos').findOne({ code: code.toUpperCase() });
-    }
-    
-    async updatePromo(code, data) {
-        if (!code) return null;
-        const result = await getDb().collection('promos').findOneAndUpdate(
-            { code: code.toUpperCase() },
-            { $set: data },
-            { returnDocument: 'after' }
-        );
-        return result;
-    }
-    
-    async getPromosCount() {
-        return await getDb().collection('promos').countDocuments();
-    }
-    
-    async clearPromos() {
-        return await getDb().collection('promos').deleteMany({});
-    }
-    
-    // Sales
-    async createSale(saleData) {
-        const sale = {
-            ...saleData,
-            createdAt: new Date()
-        };
-        const result = await getDb().collection('sales').insertOne(sale);
-        return { ...sale, _id: result.insertedId };
-    }
-    
-    async getActiveSales() {
-        return await getDb().collection('sales')
-            .find({ expiresAt: { $gt: new Date() } })
-            .toArray();
-    }
-    
-    async getSalesCount() {
-        return await getDb().collection('sales').countDocuments();
-    }
-    
-    async clearExpiredSales() {
-        return await getDb().collection('sales').deleteMany({ expiresAt: { $lt: new Date() } });
-    }
-    
-    // Stats
-    async getTotalWins() {
-        const result = await getDb().collection('users').aggregate([
-            { $group: { _id: null, total: { $sum: '$wins' } } }
-        ]).toArray();
-        return result[0]?.total || 0;
-    }
-    
-    async getTotalGames() {
-        const result = await getDb().collection('users').aggregate([
-            { $group: { _id: null, total: { $sum: { $add: ['$wins', '$losses'] } } } }
-        ]).toArray();
-        return result[0]?.total || 0;
-    }
-    
-    async getTotalCoins() {
-        const result = await getDb().collection('users').aggregate([
-            { $group: { _id: null, total: { $sum: '$coins' } } }
-        ]).toArray();
-        return result[0]?.total || 0;
-    }
-    
-    async getTotalCrystals() {
-        const result = await getDb().collection('users').aggregate([
-            { $group: { _id: null, total: { $sum: '$crystals' } } }
-        ]).toArray();
-        return result[0]?.total || 0;
-    }
-    
-    // Give coins to all users
-    async giveCoinsToAll(amount) {
-        return await getDb().collection('users').updateMany(
-            {},
-            { $inc: { coins: amount } }
-        );
-    }
-    
-    // Reset quests for all users
-    async resetAllQuests() {
-        return await getDb().collection('users').updateMany(
-            {},
-            { 
-                $set: { 
-                    dailyQuests: [],
-                    dailyQuestsDate: null,
-                    dailyQuestsGames: 0,
-                    dailyQuestsWins: 0,
-                    dailyQuestsCoins: 0,
-                    dailyQuestsUnits: 0,
-                    dailyQuestsChat: 0
-                }
-            }
-        );
-    }
-
-    // Battle Pass functions
-    async updateBattlePass(username, battlePassData) {
-        return await this.updateUser(username, { battlePass: battlePassData });
-    }
-
-    async resetBattlePassQuests() {
-        return await getDb().collection('users').updateMany(
-            {},
-            { 
-                $set: { 
-                    'battlePass.quests': [],
-                    'battlePass.questsDate': null
-                }
-            }
-        );
-    }
-
-        // Новые методы для Battle Pass
-        async addBattlePassXp(username, xpAmount) {
-            const user = await this.findUserByUsername(username);
-            if (!user) return null;
-            
-            const battlePass = user.battlePass || {
-                season: 1,
-                level: 0,
-                xp: 0,
-                totalXp: 0,
-                claimedRewards: [],
-                quests: [],
-                questsDate: null,
-                currentTier: 1,
-                tierXp: 0,
-                maxTierXp: 1000,
-                freeRewardsClaimed: [],
-                premiumRewardsClaimed: [],
-                isPremium: false,
-                premiumRequestedAt: null
-            };
-            
-            // Добавляем XP
-            battlePass.xp += xpAmount;
-            battlePass.totalXp += xpAmount;
-            battlePass.tierXp += xpAmount;
-            
-            // Проверяем, набрал ли Tier XP нужное количество
-            let levelsGained = 0;
-            while (battlePass.tierXp >= battlePass.maxTierXp) {
-                battlePass.tierXp -= battlePass.maxTierXp;
-                battlePass.currentTier += 1;
-                battlePass.level += 1;
-                levelsGained += 1;
-                // Увеличиваем требования к XP за каждый уровень
-                battlePass.maxTierXp = 1000 + (battlePass.currentTier - 1) * 50;
-            }
-            
-            await this.updateUser(username, { battlePass });
-            return { battlePass, levelsGained };
-        }
-
-        async claimBattlePassReward(username, tier, isPremium = false) {
-            const user = await this.findUserByUsername(username);
-            if (!user) return null;
-            
-            const battlePass = user.battlePass;
-            if (!battlePass) return { success: false, message: 'Battle Pass не инициализирован' };
-
-            if (isPremium && !battlePass.isPremium) {
-                return { success: false, message: 'Для этой награды нужен Premium Battle Pass' };
-            }
-            const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`;
-            
-            // Проверяем, не получал ли пользователь эту награду
-            const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed;
-            if (claimedList.includes(rewardId)) {
-                return { success: false, message: 'Награда уже получена' };
-            }
-            
-            // Добавляем в список полученных наград
-            if (isPremium) {
-                battlePass.premiumRewardsClaimed.push(rewardId);
-            } else {
-                battlePass.freeRewardsClaimed.push(rewardId);
-            }
-            
-            await this.updateUser(username, { battlePass });
-            return { success: true, battlePass };
-        }
-
-        async updateBattlePassQuestProgress(username, questId, progressIncrement) {
-            const user = await this.findUserByUsername(username);
-            if (!user) return null;
-            
-            const battlePass = user.battlePass;
-            if (!battlePass || !battlePass.quests) return null; // Добавлена проверка на существование battlePass и quests
-            
-            const quest = battlePass.quests.find(q => q.id === questId);
-            if (!quest || quest.completed) return null;
-            
-            quest.progress = Math.min(quest.progress + progressIncrement, quest.target);
-            if (quest.progress >= quest.target) {
-                quest.completed = true;
-                // Добавляем XP за выполнение квеста
-                await this.addBattlePassXp(username, quest.reward);
-            }
-            
-            await this.updateUser(username, { battlePass });
-            return { battlePass, quest };
-        }
-
-        async resetBattlePassSeason() {
-            // Сначала получаем всех пользователей и обновляем каждого
-            const users = await getDb().collection('users').find({}).toArray();
-            const bulkOps = users.map(user => ({
-                updateOne: {
-                    filter: { _id: user._id },
-                    update: {
-                        $set: {
-                            'battlePass.season': (user.battlePass?.season || 1) + 1,
-                            'battlePass.level': 0,
-                            'battlePass.xp': 0,
-                            'battlePass.totalXp': 0,
-                            'battlePass.currentTier': 1,
-                            'battlePass.tierXp': 0,
-                            'battlePass.maxTierXp': 1000,
-                            'battlePass.claimedRewards': [],
-                            'battlePass.quests': [],
-                            'battlePass.questsDate': null,
-                            'battlePass.freeRewardsClaimed': [],
-                            'battlePass.premiumRewardsClaimed': []
-                        }
-                    }
-                }
-            }));
-            
-            if (bulkOps.length > 0) {
-                return await getDb().collection('users').bulkWrite(bulkOps);
-            }
-            return { modifiedCount: 0 };
-        }
-    
-    // Закрытие соединения
-    async close() {
-        if (client) {
-            await client.close();
-            console.log('✓ Отключено от MongoDB');
-        }
-    }
+    async updateUser(username, data) { if (!username) return null; const user = users.get(username.toLowerCase()); if (!user) return null; Object.assign(user, data); users.set(username.toLowerCase(), user); return user; }
+    async updateFavoritePlant(username, favoritePlant) { if (!username) return null; const user = users.get(username.toLowerCase()); if (!user) return null; user.favoritePlant = favoritePlant || null; users.set(username.toLowerCase(), user); return user; }
+    async deleteUser(username) { if (!username) return false; return users.delete(username.toLowerCase()); }
+    async getAllUsers() { return Array.from(users.values()); }
+    async getUsersCount() { return users.size; }
+    async getUserById(id) { for (const user of users.values()) { if (user._id === id) return user; } return null; }
+    async searchUsers(query) { const regex = new RegExp(query, 'i'); return Array.from(users.values()).filter(u => regex.test(u.username) || regex.test(u.usernameLower)).slice(0, 10); }
+    async getTopByCoins(limit = 10) { return Array.from(users.values()).sort((a, b) => (b.coins || 0) - (a.coins || 0)).slice(0, limit); }
+    async getTopByWins(limit = 10) { return Array.from(users.values()).sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, limit); }
+    async getTopByXP(limit = 10) { return Array.from(users.values()).sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, limit); }
+    async getTopByLevel(limit = 10) { return Array.from(users.values()).sort((a, b) => (b.level || 1) - (a.level || 1) || (b.xp || 0) - (a.xp || 0)).slice(0, limit); }
+    async getLevelStats() { const stats = {}; for (const user of users.values()) { const level = user.level || 1; stats[level] = (stats[level] || 0) + 1; } return Object.entries(stats).map(([level, count]) => ({ _id: parseInt(level), count })); }
+    async createSession(sessionData) { const session = { ...sessionData, _id: 'session_' + Date.now(), createdAt: new Date() }; sessions.set(sessionData.sessionId, session); return session; }
+    async findSession(sessionId) { return sessions.get(sessionId) || null; }
+    async deleteSession(sessionId) { return sessions.delete(sessionId); }
+    async getSessionsCount() { return sessions.size; }
+    async getAllSessions() { return Array.from(sessions.values()); }
+    async createMatch(matchData) { const match = { ...matchData, _id: 'match_' + Date.now(), timestamp: new Date() }; matches.push(match); return match; }
+    async getMatches(limit = 20) { return matches.slice(-limit).reverse(); }
+    async getMatchesCount() { return matches.length; }
+    async clearMatches() { matches.length = 0; return true; }
+    async createPromo(promoData) { const promo = { ...promoData, _id: 'promo_' + Date.now(), uses: 0, createdAt: new Date() }; promos.set(promoData.code.toUpperCase(), promo); return promo; }
+    async findPromo(code) { if (!code) return null; return promos.get(code.toUpperCase()) || null; }
+    async updatePromo(code, data) { if (!code) return null; const promo = promos.get(code.toUpperCase()); if (!promo) return null; Object.assign(promo, data); promos.set(code.toUpperCase(), promo); return promo; }
+    async getPromosCount() { return promos.size; }
+    async clearPromos() { promos.clear(); return true; }
+    async createSale(saleData) { const sale = { ...saleData, _id: 'sale_' + Date.now(), createdAt: new Date() }; sales.push(sale); return sale; }
+    async getActiveSales() { return sales.filter(s => s.expiresAt > new Date()); }
+    async getSalesCount() { return sales.length; }
+    async clearExpiredSales() { const now = new Date(); const before = sales.length; for (let i = sales.length - 1; i >= 0; i--) { if (sales[i].expiresAt < now) { sales.splice(i, 1); } } return before - sales.length; }
+    async getTotalWins() { let total = 0; for (const user of users.values()) { total += user.wins || 0; } return total; }
+    async getTotalGames() { let total = 0; for (const user of users.values()) { total += (user.wins || 0) + (user.losses || 0); } return total; }
+    async getTotalCoins() { let total = 0; for (const user of users.values()) { total += user.coins || 0; } return total; }
+    async getTotalCrystals() { let total = 0; for (const user of users.values()) { total += user.crystals || 0; } return total; }
+    async giveCoinsToAll(amount) { for (const user of users.values()) { user.coins = (user.coins || 0) + amount; } return { modifiedCount: users.size }; }
+    async resetAllQuests() { for (const user of users.values()) { user.dailyQuests = []; user.dailyQuestsDate = null; user.dailyQuestsGames = 0; user.dailyQuestsWins = 0; user.dailyQuestsCoins = 0; user.dailyQuestsUnits = 0; user.dailyQuestsChat = 0; } return { modifiedCount: users.size }; }
+    async updateBattlePass(username, battlePassData) { return await this.updateUser(username, { battlePass: battlePassData }); }
+    async resetBattlePassQuests() { for (const user of users.values()) { if (user.battlePass) { user.battlePass.quests = []; user.battlePass.questsDate = null; } } return { modifiedCount: users.size }; }
+    async addBattlePassXp(username, xpAmount) { const user = await this.findUserByUsername(username); if (!user) return null; const battlePass = user.battlePass || { season: 1, level: 0, xp: 0, totalXp: 0, claimedRewards: [], quests: [], questsDate: null, currentTier: 1, tierXp: 0, maxTierXp: 1000, freeRewardsClaimed: [], premiumRewardsClaimed: [], isPremium: false, premiumRequestedAt: null }; battlePass.xp += xpAmount; battlePass.totalXp += xpAmount; battlePass.tierXp += xpAmount; let levelsGained = 0; while (battlePass.tierXp >= battlePass.maxTierXp) { battlePass.tierXp -= battlePass.maxTierXp; battlePass.currentTier += 1; battlePass.level += 1; levelsGained += 1; battlePass.maxTierXp = 1000 + (battlePass.currentTier - 1) * 50; } await this.updateUser(username, { battlePass }); return { battlePass, levelsGained }; }
+    async claimBattlePassReward(username, tier, isPremium = false) { const user = await this.findUserByUsername(username); if (!user) return null; const battlePass = user.battlePass; if (!battlePass) return { success: false, message: 'Battle Pass не инициализирован' }; if (isPremium && !battlePass.isPremium) { return { success: false, message: 'Для этой награды нужен Premium Battle Pass' }; } const rewardId = `${tier}_${isPremium ? 'premium' : 'free'}`; const claimedList = isPremium ? battlePass.premiumRewardsClaimed : battlePass.freeRewardsClaimed; if (claimedList.includes(rewardId)) { return { success: false, message: 'Награда уже получена' }; } if (isPremium) { battlePass.premiumRewardsClaimed.push(rewardId); } else { battlePass.freeRewardsClaimed.push(rewardId); } await this.updateUser(username, { battlePass }); return { success: true, battlePass }; }
+    async updateBattlePassQuestProgress(username, questId, progressIncrement) { const user = await this.findUserByUsername(username); if (!user) return null; const battlePass = user.battlePass; if (!battlePass || !battlePass.quests) return null; const quest = battlePass.quests.find(q => q.id === questId); if (!quest || quest.completed) return null; quest.progress = Math.min(quest.progress + progressIncrement, quest.target); if (quest.progress >= quest.target) { quest.completed = true; await this.addBattlePassXp(username, quest.reward); } await this.updateUser(username, { battlePass }); return { battlePass, quest }; }
+    async resetBattlePassSeason() { for (const user of users.values()) { if (user.battlePass) { user.battlePass.season = (user.battlePass.season || 1) + 1; user.battlePass.level = 0; user.battlePass.xp = 0; user.battlePass.totalXp = 0; user.battlePass.currentTier = 1; user.battlePass.tierXp = 0; user.battlePass.maxTierXp = 1000; user.battlePass.claimedRewards = []; user.battlePass.quests = []; user.battlePass.questsDate = null; user.battlePass.freeRewardsClaimed = []; user.battlePass.premiumRewardsClaimed = []; } } return { modifiedCount: users.size }; }
+    async close() { console.log('✓ In-memory база данных закрыта'); }
 }
 
-module.exports = new MongoDB();
+module.exports = new InMemoryDB();

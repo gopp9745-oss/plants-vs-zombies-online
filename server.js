@@ -421,33 +421,22 @@ app.post('/api/buy-unit', async (req, res) => {
     const inventory = user.inventory || {};
     if (inventory[unitId]) return res.json({ success: false, message: 'Этот юнит уже куплен!' });
     
-    // Атомарное обновление: проверяем, что юнит всё ещё не куплен и монеты не изменились
-    const query = { _id: user._id };
-    query['inventory.' + unitId] = { $exists: false };
+    // Простая покупка для in-memory базы данных
+    const updatedInventory = user.inventory || {};
+    updatedInventory[unitId] = { level: 1, type: unitType, purchased: new Date().toISOString() };
     
-    const update = { $set: {} };
-    update.$set['inventory.' + unitId] = { level: 1, type: unitType, purchased: new Date().toISOString() };
-    update.$set.coins = user.coins - price;
+    await db.updateUser(user.username, { 
+        inventory: updatedInventory,
+        coins: user.coins - price
+    });
     
-    const result = await db.getDb().collection('users').findOneAndUpdate(
-        query,
-        update,
-        { returnDocument: 'after' }
-    );
-    
-    if (!result.value) {
-        // Операция не удалась - либо юнит уже куплен, либо монеты изменились
-        return res.json({ success: false, message: 'Не удалось купить юнита. Попробуйте ещё раз.' });
-    }
-    
-    const updatedUser = result.value;
     // Инвалидируем кэш пользователя
     invalidateUserCache(user._id);
     res.json({
         success: true,
         message: `${unitId} куплен за ${price} монет!`,
-        inventory: updatedUser.inventory || {},
-        coins: updatedUser.coins
+        inventory: updatedInventory,
+        coins: user.coins - price
     });
 });
 
@@ -472,32 +461,26 @@ app.post('/api/upgrade-unit', async (req, res) => {
     
     if (user.coins < upgradePrice) return res.json({ success: false, message: `Недостаточно монет! Нужно ${upgradePrice}` });
     
-    // Атомарное обновление: проверяем, что уровень всё тот же и монеты не изменились
-    const query = { _id: user._id };
-    query['inventory.' + unitId + '.level'] = currentLevel;
-    
-    const update = { $set: {} };
-    update.$set['inventory.' + unitId + '.level'] = currentLevel + 1;
-    update.$set.coins = user.coins - upgradePrice;
-    
-    const result = await db.getDb().collection('users').findOneAndUpdate(
-        query,
-        update,
-        { returnDocument: 'after' }
-    );
-    
-    if (!result.value) {
-        return res.json({ success: false, message: 'Не удалось улучшить юнита. Попробуйте ещё раз.' });
+    // Простое улучшение для in-memory базы данных
+    const upgradeInventory = user.inventory || {};
+    if (!upgradeInventory[unitId]) {
+        return res.json({ success: false, message: 'У вас нет этого юнита!' });
     }
     
-    const updatedUser = result.value;
+    upgradeInventory[unitId].level = currentLevel + 1;
+    
+    await db.updateUser(user.username, { 
+        inventory: upgradeInventory,
+        coins: user.coins - upgradePrice
+    });
+    
     // Инвалидируем кэш пользователя
     invalidateUserCache(user._id);
     res.json({
         success: true,
         message: `${unitId} улучшен до уровня ${currentLevel + 1}!`,
-        inventory: updatedUser.inventory || {},
-        coins: updatedUser.coins,
+        inventory: upgradeInventory,
+        coins: user.coins - upgradePrice,
         newLevel: currentLevel + 1
     });
 });
