@@ -5,10 +5,12 @@ services:
     region: oregon
     buildCommand: npm install
     startCommand: node server.js
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: MONGO_URI
-        value: mongodb+srv://grimteam:%3Ckolop908%3E@cluster0.iifadf8.mongodb.net/
-      - key: DB_NAME
-        value: pvz_online
+      envVars:
+        - key: NODE_ENV
+          value: production
+        - key: MONGO_URI
+          value: mongodb+srv://grimteam:%3Ckolop908%3E@cluster0.iifadf8.mongodb.net/
+        - key: DB_NAME
+          value: pvz_online
+        - key: ADMIN_SECRET_CODE
+          value: PVZ_2024_SUPER_ADMIN_SECRET_KEY_xK9mL8nP2qR5tY7uW3zA1bC4dE6fG8hJ0kM1nO2pQ3rS4tU5vW6xY7zA8bC9dE0fG1hJ2kM3nO4pQ5rS6tU7vW8xY9zA0bC1dE2fG3hJ4kM5nO6pQ7rS8tU9vW0xY1zA2bC3dE4fG5hJ6kM7nO8pQ9rS0tU1vW2xY3zA4bC5dE6fG7hJ8kM9nO0pQ1rS2tU3vW4xY5zA6bC7dE8fG9hJ0kM1nO2pQ3rS4tU5vW6xY7zA8bC9dE0fG1hJ
