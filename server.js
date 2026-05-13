@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -73,7 +74,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 const ELO_CONFIG = { initial: 1000, kFactor: 32, minRating: 100, maxRating: 3000 };
 
 // Секретный код для получения прав админа (известен только создателю)
-const ADMIN_SECRET_CODE = 'PVZ_2024_SUPER_ADMIN_SECRET_KEY_xK9mL8nP2qR5tY7uW3zA1bC4dE6fG8hJ0kM1nO2pQ3rS4tU5vW6xY7zA8bC9dE0fG1hJ2kM3nO4pQ5rS6tU7vW8xY9zA0bC1dE2fG3hJ4kM5nO6pQ7rS8tU9vW0xY1zA2bC3dE4fG5hJ6kM7nO8pQ9rS0tU1vW2xY3zA4bC5dE6fG7hJ8kM9nO0pQ1rS2tU3vW4xY5zA6bC7dE8fG9hJ0kM1nO2pQ3rS4tU5vW6xY7zA8bC9dE0fG1hJ';
+const ADMIN_SECRET_CODE = process.env.ADMIN_SECRET_CODE || 'PVZ_2024_SUPER_ADMIN_SECRET_KEY_xK9mL8nP2qR5tY7uW3zA1bC4dE6fG8hJ0kM1nO2pQ3rS4tU5vW6xY7zA8bC9dE0fG1hJ2kM3nO4pQ5rS6tU7vW8xY9zA0bC1dE2fG3hJ4kM5nO6pQ7rS8tU9vW0xY1zA2bC3dE4fG5hJ6kM7nO8pQ9rS0tU1vW2xY3zA4bC5dE6fG7hJ8kM9nO0pQ1rS2tU3vW4xY5zA6bC7dE8fG9hJ0kM1nO2pQ3rS4tU5vW6xY7zA8bC9dE0fG1hJ';
 const ADMIN_CODE_EXPLANATION = 'Этот код известен только создателю игры и используется для получения прав администратора';
 
 const SEASONS = [
